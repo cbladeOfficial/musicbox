@@ -1,4 +1,4 @@
-import { TrackRecord, PlaylistRecord } from '../types/music';
+import { TrackRecord, PlaylistRecord, RadioStation, RadioMetadata } from '../types/music';
 
 // Safely detect if running in Tauri desktop runtime
 export const isTauri = (): boolean => {
@@ -161,5 +161,78 @@ export const TauriBridge = {
   async isMaximized(): Promise<boolean> {
     if (!isTauri()) return false;
     return safeInvoke<boolean>('is_app_maximized');
+  },
+
+  async getRadioStations(): Promise<RadioStation[]> {
+    if (!isTauri()) return [];
+    return safeInvoke<RadioStation[]>('get_radio_stations');
+  },
+
+  async addRadioStation(
+    name: string,
+    url: string,
+    favicon?: string,
+    tags?: string,
+    country?: string
+  ): Promise<number> {
+    if (!isTauri()) return 1;
+    return safeInvoke<number>('add_radio_station', {
+      name,
+      url,
+      favicon: favicon || null,
+      tags: tags || null,
+      country: country || null,
+    });
+  },
+
+  async updateRadioStation(
+    id: number,
+    name: string,
+    url: string,
+    favicon?: string,
+    tags?: string
+  ): Promise<void> {
+    if (!isTauri()) return;
+    return safeInvoke<void>('update_radio_station', {
+      id,
+      name,
+      url,
+      favicon: favicon || null,
+      tags: tags || null,
+    });
+  },
+
+  async deleteRadioStation(id: number): Promise<void> {
+    if (!isTauri()) return;
+    return safeInvoke<void>('delete_radio_station', { id });
+  },
+
+  async toggleRadioFavorite(id: number): Promise<boolean> {
+    if (!isTauri()) return false;
+    return safeInvoke<boolean>('toggle_radio_favorite', { id });
+  },
+
+  async fetchRadioMetadata(streamUrl: string): Promise<RadioMetadata | null> {
+    if (!isTauri()) return null;
+    return safeInvoke<RadioMetadata | null>('fetch_radio_metadata', { streamUrl });
+  },
+
+  async updateRadioPresence(params: {
+    stationName: string;
+    songTitle?: string;
+    artist?: string;
+    iconUrl?: string;
+    isPlaying: boolean;
+    clientId?: string;
+  }): Promise<void> {
+    if (!isTauri()) return;
+    return safeInvoke<void>('update_radio_presence', {
+      stationName: params.stationName,
+      songTitle: params.songTitle || null,
+      artist: params.artist || null,
+      iconUrl: params.iconUrl || null,
+      isPlaying: params.isPlaying,
+      clientId: params.clientId || null,
+    });
   },
 };

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { TitleBar } from './components/TitleBar';
 import { Sidebar } from './components/Sidebar';
 import { PlayerBar } from './components/PlayerBar';
@@ -11,8 +11,9 @@ import { LyricsDrawer } from './components/LyricsDrawer';
 import { TrackInfoDrawer } from './components/TrackInfoDrawer';
 import { QueueDrawer } from './components/QueueDrawer';
 import { SettingsModal } from './components/SettingsModal';
+import { RadioView } from './components/RadioView';
 
-import { TrackRecord, PlaylistRecord, ViewMode, AppSettings } from './types/music';
+import { TrackRecord, PlaylistRecord, RadioStation, RadioMetadata, ViewMode, AppSettings } from './types/music';
 import { TauriBridge, isTauri } from './services/tauriBridge';
 import { audioEngine } from './services/audioEngine';
 import { lastFmScrobbler } from './services/lastfmScrobbler';
@@ -44,6 +45,10 @@ export function App() {
 
   // Player state
   const [currentTrack, setCurrentTrack] = useState<TrackRecord | null>(null);
+  const [currentRadio, setCurrentRadio] = useState<RadioStation | null>(null);
+  const [radioNowPlaying, setRadioNowPlaying] = useState<RadioMetadata | null>(null);
+  const [radioStations, setRadioStations] = useState<RadioStation[]>([]);
+  const radioTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -86,6 +91,7 @@ export function App() {
     TauriBridge.getStreamPort().then((p) => setStreamPort(p)).catch(() => {});
     loadLibrary();
     loadPlaylists();
+    loadRadioStations();
 
     if (isTauri()) {
       TauriBridge.isMaximized().then(setIsMaximized).catch(() => {});
@@ -99,7 +105,22 @@ export function App() {
         } catch { /* ignore */ }
       }
     });
+
+    return () => {
+      if (radioTimerRef.current) {
+        clearInterval(radioTimerRef.current);
+      }
+    };
   }, []);
+
+  const loadRadioStations = async () => {
+    try {
+      const data = await TauriBridge.getRadioStations();
+      setRadioStations(data);
+    } catch (e) {
+      console.warn('Failed to load radio stations:', e);
+    }
+  };
 
   const loadLibrary = async () => {
     try {
@@ -132,9 +153,21 @@ export function App() {
     }
   };
 
+  // Stop active radio stream polling
+  const stopRadioPolling = useCallback(() => {
+    if (radioTimerRef.current) {
+      clearInterval(radioTimerRef.current);
+      radioTimerRef.current = null;
+    }
+  }, []);
+
   // Play a specific track
   const handlePlayTrack = useCallback(
     async (track: TrackRecord) => {
+      stopRadioPolling();
+      setCurrentRadio(null);
+      setRadioNowPlaying(null);
+
       setCurrentTrack(track);
       setIsPlaying(true);
       setCurrentTime(0);
@@ -175,7 +208,62 @@ export function App() {
         }
       });
     },
-    [streamPort, settings]
+    [streamPort, settings, stopRadioPolling]
+  );
+
+  // Play an online radio station
+  const handlePlayRadio = useCallback(
+    async (station: RadioStation) => {
+      stopRadioPolling();
+      setCurrentTrack(null);
+      setCurrentRadio(station);
+      setRadioNowPlaying(null);
+      setIsPlaying(true);
+      setCurrentTime(0);
+      setDuration(0);
+
+      // Stream via AudioEngine
+      await audioEngine.playRadio(station.url);
+
+      const updatePresence = (meta?: RadioMetadata | null, playing = true) => {
+        if (!settings.discordRpcEnabled) return;
+        TauriBridge.updateRadioPresence({
+          stationName: station.name,
+          songTitle: meta?.title || station.name,
+          artist: meta?.artist || 'Live Radio',
+          iconUrl: station.favicon || undefined,
+          isPlaying: playing,
+          clientId: settings.discordClientId,
+        }).catch(() => {});
+      };
+
+      // Set initial Discord RPC
+      updatePresence(null, true);
+
+      // Fetch ICY metadata immediately
+      TauriBridge.fetchRadioMetadata(station.url)
+        .then((meta) => {
+          if (meta) {
+            setRadioNowPlaying(meta);
+            updatePresence(meta, true);
+          }
+        })
+        .catch(() => {});
+
+      // Poll stream ICY metadata every 10 seconds
+      radioTimerRef.current = setInterval(async () => {
+        try {
+          const meta = await TauriBridge.fetchRadioMetadata(station.url);
+          if (meta) {
+            setRadioNowPlaying(meta);
+            updatePresence(meta, true);
+          }
+        } catch {
+          // stream poll ignore
+        }
+      }, 10000);
+    },
+    [settings, stopRadioPolling]
   );
 
   // PlayNext or skip track
@@ -229,7 +317,16 @@ export function App() {
 
     audioEngine.onPlayStateChange = (playing) => {
       setIsPlaying(playing);
-      if (currentTrack && settings.discordRpcEnabled) {
+      if (currentRadio && settings.discordRpcEnabled) {
+        TauriBridge.updateRadioPresence({
+          stationName: currentRadio.name,
+          songTitle: radioNowPlaying?.title || currentRadio.name,
+          artist: radioNowPlaying?.artist || 'Live Radio',
+          iconUrl: currentRadio.favicon || undefined,
+          isPlaying: playing,
+          clientId: settings.discordClientId,
+        }).catch(() => {});
+      } else if (currentTrack && settings.discordRpcEnabled) {
         TauriBridge.updateDiscordPresence({
           title: currentTrack.title,
           artist: currentTrack.artist,
@@ -252,7 +349,7 @@ export function App() {
         handleNext();
       }
     };
-  }, [currentTrack, settings, repeatMode, resolvedCoverArt, handleNext]);
+  }, [currentTrack, currentRadio, radioNowPlaying, settings, repeatMode, resolvedCoverArt, handleNext]);
 
   // Keyboard navigation shortcuts
   useEffect(() => {
@@ -308,6 +405,37 @@ export function App() {
   };
 
   const handlePlayPause = () => {
+    if (currentRadio) {
+      if (isPlaying) {
+        audioEngine.pause();
+        setIsPlaying(false);
+        if (settings.discordRpcEnabled) {
+          TauriBridge.updateRadioPresence({
+            stationName: currentRadio.name,
+            songTitle: radioNowPlaying?.title || currentRadio.name,
+            artist: radioNowPlaying?.artist || 'Live Radio',
+            iconUrl: currentRadio.favicon || undefined,
+            isPlaying: false,
+            clientId: settings.discordClientId,
+          }).catch(() => {});
+        }
+      } else {
+        audioEngine.resume();
+        setIsPlaying(true);
+        if (settings.discordRpcEnabled) {
+          TauriBridge.updateRadioPresence({
+            stationName: currentRadio.name,
+            songTitle: radioNowPlaying?.title || currentRadio.name,
+            artist: radioNowPlaying?.artist || 'Live Radio',
+            iconUrl: currentRadio.favicon || undefined,
+            isPlaying: true,
+            clientId: settings.discordClientId,
+          }).catch(() => {});
+        }
+      }
+      return;
+    }
+
     if (!currentTrack) {
       if (tracks.length > 0) handlePlayTrack(tracks[0]);
       return;
@@ -327,6 +455,63 @@ export function App() {
     if (currentTrack && currentTrack.id === trackId) {
       setCurrentTrack((prev) => (prev ? { ...prev, is_favorite: isFav } : null));
     }
+  };
+
+  const handleToggleRadioFavorite = async (id: number) => {
+    const isFav = await TauriBridge.toggleRadioFavorite(id);
+    setRadioStations((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, is_favorite: isFav } : s))
+    );
+    if (currentRadio && currentRadio.id === id) {
+      setCurrentRadio((prev) => (prev ? { ...prev, is_favorite: isFav } : null));
+    }
+  };
+
+  const handleAddRadioStation = async (station: {
+    name: string;
+    url: string;
+    favicon?: string;
+    tags?: string;
+    country?: string;
+  }) => {
+    await TauriBridge.addRadioStation(
+      station.name,
+      station.url,
+      station.favicon,
+      station.tags,
+      station.country
+    );
+    await loadRadioStations();
+  };
+
+  const handleUpdateRadioStation = async (
+    id: number,
+    station: { name: string; url: string; favicon?: string; tags?: string }
+  ) => {
+    await TauriBridge.updateRadioStation(
+      id,
+      station.name,
+      station.url,
+      station.favicon,
+      station.tags
+    );
+    await loadRadioStations();
+    if (currentRadio && currentRadio.id === id) {
+      setCurrentRadio((prev) => (prev ? { ...prev, ...station } : null));
+    }
+  };
+
+  const handleDeleteRadioStation = async (id: number) => {
+    await TauriBridge.deleteRadioStation(id);
+    if (currentRadio && currentRadio.id === id) {
+      audioEngine.pause();
+      stopRadioPolling();
+      setCurrentRadio(null);
+      setRadioNowPlaying(null);
+      setIsPlaying(false);
+      TauriBridge.clearDiscordPresence().catch(() => {});
+    }
+    await loadRadioStations();
   };
 
   const handleScanFolder = async () => {
@@ -538,6 +723,17 @@ export function App() {
               onViewAlbum={handleNavigateToAlbum}
               onViewArtist={handleNavigateToArtist}
             />
+          ) : currentView === 'radio' ? (
+            <RadioView
+              stations={radioStations}
+              activeStationId={currentRadio?.id}
+              isPlaying={isPlaying && !!currentRadio}
+              onPlayStation={handlePlayRadio}
+              onToggleFavorite={handleToggleRadioFavorite}
+              onAddStation={handleAddRadioStation}
+              onUpdateStation={handleUpdateRadioStation}
+              onDeleteStation={handleDeleteRadioStation}
+            />
           ) : currentView === 'albums' ? (
             selectedAlbum ? (
               <AlbumDetailView
@@ -617,6 +813,8 @@ export function App() {
       {/* 4. Feishin Bottom Player Bar */}
       <PlayerBar
         currentTrack={currentTrack}
+        currentRadio={currentRadio}
+        radioNowPlaying={radioNowPlaying}
         isPlaying={isPlaying}
         currentTime={currentTime}
         duration={duration}
@@ -668,6 +866,7 @@ export function App() {
           }
         }}
         onToggleFavorite={handleToggleFavorite}
+        onToggleRadioFavorite={handleToggleRadioFavorite}
         coverArtUrl={resolvedCoverArt}
       />
 

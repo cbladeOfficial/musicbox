@@ -15,12 +15,15 @@ import {
   Info,
   Activity,
   Disc3,
+  Radio,
 } from 'lucide-react';
-import { TrackRecord, VisualizerMode } from '../types/music';
+import { TrackRecord, RadioStation, RadioMetadata, VisualizerMode } from '../types/music';
 import { getCoverUrl } from '../utils/cover';
 
 interface PlayerBarProps {
   currentTrack: TrackRecord | null;
+  currentRadio?: RadioStation | null;
+  radioNowPlaying?: RadioMetadata | null;
   isPlaying: boolean;
   currentTime: number;
   duration: number;
@@ -47,6 +50,7 @@ interface PlayerBarProps {
   onToggleQueue: () => void;
   onToggleInfo: () => void;
   onToggleFavorite: (id: number) => void;
+  onToggleRadioFavorite?: (id: number) => void;
 }
 
 function formatTime(seconds: number): string {
@@ -58,6 +62,8 @@ function formatTime(seconds: number): string {
 
 export const PlayerBar: React.FC<PlayerBarProps> = ({
   currentTrack,
+  currentRadio,
+  radioNowPlaying,
   isPlaying,
   currentTime,
   duration,
@@ -84,6 +90,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   onToggleQueue,
   onToggleInfo,
   onToggleFavorite,
+  onToggleRadioFavorite,
 }) => {
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekVal, setSeekVal] = useState(0);
@@ -168,6 +175,63 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
               <Heart className={`w-4 h-4 ${currentTrack.is_favorite ? 'fill-rose-500 stroke-rose-500' : ''}`} />
             </button>
           </>
+        ) : currentRadio ? (
+          <>
+            <div className="relative w-12 h-12 rounded bg-[var(--surface-active)] border border-[var(--border-color)] flex-shrink-0 overflow-hidden shadow-sm flex items-center justify-center">
+              {currentRadio.favicon ? (
+                <img
+                  src={currentRadio.favicon}
+                  alt={currentRadio.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <Radio className="w-5 h-5 text-[var(--accent-color)]" />
+              )}
+            </div>
+
+            <div className="flex flex-col truncate pr-2">
+              <span
+                title={radioNowPlaying?.title || currentRadio.name}
+                className="text-[13px] font-medium text-[var(--text-main)] truncate tracking-tight"
+              >
+                {radioNowPlaying?.title || currentRadio.name}
+              </span>
+              <span
+                title={radioNowPlaying?.artist || currentRadio.name}
+                className="text-[11px] text-[var(--text-muted)] truncate"
+              >
+                {radioNowPlaying?.artist && radioNowPlaying.artist !== 'Live Radio'
+                  ? `${radioNowPlaying.artist} • ${currentRadio.name}`
+                  : (currentRadio.tags ? currentRadio.tags.split(',')[0] : 'Online Radio')}
+              </span>
+              <div className="flex items-center space-x-1.5 mt-0.5">
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 font-mono border border-emerald-500/30 tracking-wider flex items-center space-x-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>LIVE</span>
+                </span>
+                {currentRadio.country && (
+                  <span className="text-[9px] text-[var(--text-muted)] font-mono opacity-80">
+                    • {currentRadio.country}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {onToggleRadioFavorite && (
+              <button
+                onClick={() => onToggleRadioFavorite(currentRadio.id)}
+                title={currentRadio.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+                className={`p-1.5 rounded-full hover:bg-[var(--surface-hover)] transition-all ${
+                  currentRadio.is_favorite ? 'text-rose-500 scale-105' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                <Heart className={`w-4 h-4 ${currentRadio.is_favorite ? 'fill-rose-500 stroke-rose-500' : ''}`} />
+              </button>
+            )}
+          </>
         ) : (
           <div className="flex items-center space-x-2 text-xs text-[var(--text-muted)]">
             <Disc3 className="w-4 h-4 opacity-40" />
@@ -181,9 +245,14 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         <div className="flex items-center space-x-3 mb-1">
           <button
             onClick={onToggleShuffle}
-            title={isShuffle ? 'Shuffle: On' : 'Shuffle: Off'}
+            disabled={!!currentRadio}
+            title={currentRadio ? 'Shuffle not available for live radio' : (isShuffle ? 'Shuffle: On' : 'Shuffle: Off')}
             className={`p-1.5 rounded transition-colors ${
-              isShuffle ? 'text-[var(--accent-color)] font-bold' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+              currentRadio
+                ? 'opacity-20 cursor-not-allowed text-[var(--text-muted)]'
+                : isShuffle
+                ? 'text-[var(--accent-color)] font-bold'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
           >
             <Shuffle className="w-3.5 h-3.5" />
@@ -191,15 +260,20 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
 
           <button
             onClick={onPrevious}
-            title="Previous (Skip / Restart)"
-            className="p-1.5 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors active:scale-95"
+            disabled={!!currentRadio}
+            title={currentRadio ? 'Previous disabled for live stream' : 'Previous (Skip / Restart)'}
+            className={`p-1.5 rounded transition-colors active:scale-95 ${
+              currentRadio
+                ? 'opacity-20 cursor-not-allowed text-[var(--text-muted)]'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+            }`}
           >
             <SkipBack className="w-4 h-4 fill-current" />
           </button>
 
           <button
             onClick={onPlayPause}
-            disabled={!currentTrack}
+            disabled={!currentTrack && !currentRadio}
             title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
             className="w-8 h-8 rounded-full bg-[var(--accent-color)] hover:brightness-110 text-white flex items-center justify-center transition-all active:scale-95 shadow-sm shadow-[var(--accent-color)]/30 disabled:opacity-40"
           >
@@ -212,66 +286,94 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
 
           <button
             onClick={onNext}
-            title="Next Track"
-            className="p-1.5 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors active:scale-95"
+            disabled={!!currentRadio}
+            title={currentRadio ? 'Next disabled for live stream' : 'Next Track'}
+            className={`p-1.5 rounded transition-colors active:scale-95 ${
+              currentRadio
+                ? 'opacity-20 cursor-not-allowed text-[var(--text-muted)]'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+            }`}
           >
             <SkipForward className="w-4 h-4 fill-current" />
           </button>
 
           <button
             onClick={onToggleRepeat}
-            title={`Repeat mode: ${repeatMode}`}
+            disabled={!!currentRadio}
+            title={currentRadio ? 'Repeat not available for live radio' : `Repeat mode: ${repeatMode}`}
             className={`p-1.5 rounded transition-colors ${
-              repeatMode !== 'off' ? 'text-[var(--accent-color)]' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+              currentRadio
+                ? 'opacity-20 cursor-not-allowed text-[var(--text-muted)]'
+                : repeatMode !== 'off'
+                ? 'text-[var(--accent-color)]'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
           >
             {repeatMode === 'one' ? <Repeat1 className="w-3.5 h-3.5" /> : <Repeat className="w-3.5 h-3.5" />}
           </button>
         </div>
 
-        {/* Timeline Slider with Tooltip */}
-        <div className="w-full flex items-center space-x-2 text-[11px] text-[var(--text-muted)] font-mono tabular-nums">
-          <span className="w-9 text-right">{formatTime(displayTime)}</span>
-          <div
-            ref={progressTrackRef}
-            onMouseMove={handleMouseMoveProgress}
-            onMouseLeave={() => setHoverTime(null)}
-            className="relative flex-1 flex items-center h-4 group cursor-pointer"
-          >
-            {/* Hover timestamp tooltip */}
-            {hoverTime !== null && (
-              <div
-                className="absolute -top-6 px-1.5 py-0.5 rounded bg-[var(--sidebar-color)] border border-[var(--border-color)] text-[10px] text-[var(--text-main)] font-mono pointer-events-none transform -translate-x-1/2 shadow-lg"
-                style={{ left: `${hoverPos}px` }}
-              >
-                {formatTime(hoverTime)}
-              </div>
-            )}
+        {/* Timeline Slider with Tooltip or Live Radio Banner */}
+        {currentRadio ? (
+          <div className="w-full flex items-center justify-center space-x-2 py-0.5 text-[11px] text-[var(--text-muted)] font-mono">
+            <span className="relative flex h-2 w-2">
+              {isPlaying && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              )}
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${isPlaying ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+            </span>
+            <span className="text-[10px] tracking-wider uppercase font-semibold text-[var(--text-main)]">
+              {isPlaying ? 'LIVE STREAM' : 'PAUSED'}
+            </span>
+            <span className="opacity-40">•</span>
+            <span className="text-[10px] text-[var(--text-muted)] truncate max-w-[260px]">
+              {currentRadio.name}
+            </span>
+          </div>
+        ) : (
+          <div className="w-full flex items-center space-x-2 text-[11px] text-[var(--text-muted)] font-mono tabular-nums">
+            <span className="w-9 text-right">{formatTime(displayTime)}</span>
+            <div
+              ref={progressTrackRef}
+              onMouseMove={handleMouseMoveProgress}
+              onMouseLeave={() => setHoverTime(null)}
+              className="relative flex-1 flex items-center h-4 group cursor-pointer"
+            >
+              {/* Hover timestamp tooltip */}
+              {hoverTime !== null && (
+                <div
+                  className="absolute -top-6 px-1.5 py-0.5 rounded bg-[var(--sidebar-color)] border border-[var(--border-color)] text-[10px] text-[var(--text-main)] font-mono pointer-events-none transform -translate-x-1/2 shadow-lg"
+                  style={{ left: `${hoverPos}px` }}
+                >
+                  {formatTime(hoverTime)}
+                </div>
+              )}
 
-            <div className="w-full h-1 bg-[var(--border-color)] rounded-full overflow-hidden group-hover:h-1.5 transition-all">
-              <div
-                className="h-full bg-[var(--accent-color)] rounded-full relative"
-                style={{ width: `${progressPercent}%` }}
+              <div className="w-full h-1 bg-[var(--border-color)] rounded-full overflow-hidden group-hover:h-1.5 transition-all">
+                <div
+                  className="h-full bg-[var(--accent-color)] rounded-full relative"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+
+              <input
+                type="range"
+                min={0}
+                max={duration || 100}
+                step={0.25}
+                value={displayTime}
+                onMouseDown={() => setIsSeeking(true)}
+                onChange={(e) => setSeekVal(parseFloat(e.target.value))}
+                onMouseUp={() => {
+                  onSeek(seekVal);
+                  setIsSeeking(false);
+                }}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
             </div>
-
-            <input
-              type="range"
-              min={0}
-              max={duration || 100}
-              step={0.25}
-              value={displayTime}
-              onMouseDown={() => setIsSeeking(true)}
-              onChange={(e) => setSeekVal(parseFloat(e.target.value))}
-              onMouseUp={() => {
-                onSeek(seekVal);
-                setIsSeeking(false);
-              }}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            />
+            <span className="w-9">{formatTime(duration)}</span>
           </div>
-          <span className="w-9">{formatTime(duration)}</span>
-        </div>
+        )}
       </div>
 
       {/* Right: Drawer Toggles, Visualizer & Volume */}

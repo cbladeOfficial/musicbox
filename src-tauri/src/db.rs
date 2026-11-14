@@ -36,6 +36,19 @@ pub struct PlaylistRecord {
     pub created_at: i64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RadioStation {
+    pub id: i64,
+    pub name: String,
+    pub url: String,
+    pub homepage: Option<String>,
+    pub favicon: Option<String>,
+    pub tags: Option<String>,
+    pub country: Option<String>,
+    pub is_favorite: bool,
+    pub created_at: i64,
+}
+
 pub fn now_timestamp() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -108,8 +121,49 @@ pub fn init_db(db_path: &Path) -> Result<Connection> {
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS radio_stations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            url TEXT UNIQUE NOT NULL,
+            homepage TEXT,
+            favicon TEXT,
+            tags TEXT,
+            country TEXT,
+            is_favorite INTEGER NOT NULL DEFAULT 0,
+            created_at INTEGER NOT NULL
+        );
         ",
     )?;
+
+    // Seed curated popular default stations if table is fresh
+    let count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM radio_stations",
+        [],
+        |row| row.get(0),
+    ).unwrap_or(0);
+
+    if count == 0 {
+        let now = now_timestamp();
+        let default_stations = [
+            ("Lofi Girl", "https://stream.zeno.fm/f3wvbbqmdg8uv", "https://play-lh.googleusercontent.com/9v4e5qH4P4fWbT9yNl59s4X1z7p6-J38N_o5M03sWJ5gB4F9rA3xXz", "Lofi, Chillhop, Beats", "France"),
+            ("Nightwave Plaza", "https://radio.plaza.one/mp3", "https://plaza.one/apple-touch-icon.png", "Vaporwave, Future Funk, Synth", "United States"),
+            ("SomaFM: Groove Salad", "https://ice1.somafm.com/groovesalad-128-mp3", "https://somafm.com/img/groovesalad120.png", "Ambient, Downtempo, Chill", "United States"),
+            ("SomaFM: DEF CON Radio", "https://ice1.somafm.com/defcon-128-mp3", "https://somafm.com/img/defcon120.png", "Cyberpunk, Electronic, Hacking", "United States"),
+            ("KEXP 90.3 FM Seattle", "https://kexp-mp3-128.streamguys1.com/kexp128.mp3", "https://kexp.org/static/assets/img/kexp-logo-square.png", "Indie, Alternative, Rock", "United States"),
+            ("Ibiza Global Radio", "https://listenssl.ibizaglobalradio.com:8024/ibizaglobalradio.mp3", "https://ibizaglobalradio.com/wp-content/uploads/2021/04/cropped-favicon-192x192.png", "House, Deep House, Electronic", "Spain"),
+            ("Classic FM UK", "https://media-ice.musicradio.com/ClassicFMMP3", "https://www.classicfm.com/assets_v5/classic/images/favicons/favicon-196x196.png", "Classical, Symphony, Relax", "United Kingdom"),
+            ("BBC Radio 1", "https://stream.live.vc.bbcmedia.co.uk/bbc_radio_one", "https://sounds.files.bbci.co.uk/2.4.0/networks/bbc_radio_one/colour_default.svg", "Top 40, Pop, Dance", "United Kingdom"),
+        ];
+
+        for (name, url, favicon, tags, country) in default_stations {
+            let _ = conn.execute(
+                "INSERT OR IGNORE INTO radio_stations (name, url, favicon, tags, country, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![name, url, favicon, tags, country, now],
+            );
+        }
+    }
 
     Ok(conn)
 }
@@ -358,4 +412,80 @@ pub fn set_setting(conn: &Connection, key: &str, value: &str) -> Result<()> {
         params![key, value],
     )?;
     Ok(())
+}
+
+pub fn get_radio_stations(conn: &Connection) -> Result<Vec<RadioStation>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, name, url, homepage, favicon, tags, country, is_favorite, created_at
+         FROM radio_stations
+         ORDER BY is_favorite DESC, name COLLATE NOCASE ASC",
+    )?;
+
+    let iter = stmt.query_map([], |row| {
+        Ok(RadioStation {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            url: row.get(2)?,
+            homepage: row.get(3)?,
+            favicon: row.get(4)?,
+            tags: row.get(5)?,
+            country: row.get(6)?,
+            is_favorite: row.get::<_, i64>(7)? != 0,
+            created_at: row.get(8)?,
+        })
+    })?;
+
+    let mut res = Vec::new();
+    for s in iter {
+        res.push(s?);
+    }
+    Ok(res)
+}
+
+pub fn add_radio_station(
+    conn: &Connection,
+    name: &str,
+    url: &str,
+    favicon: Option<&str>,
+    tags: Option<&str>,
+    country: Option<&str>,
+) -> Result<i64> {
+    let now = now_timestamp();
+    conn.execute(
+        "INSERT INTO radio_stations (name, url, favicon, tags, country, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![name, url, favicon, tags, country, now],
+    )?;
+    Ok(conn.last_insert_rowid())
+}
+
+pub fn update_radio_station(
+    conn: &Connection,
+    id: i64,
+    name: &str,
+    url: &str,
+    favicon: Option<&str>,
+    tags: Option<&str>,
+) -> Result<()> {
+    conn.execute(
+        "UPDATE radio_stations SET name = ?1, url = ?2, favicon = ?3, tags = ?4 WHERE id = ?5",
+        params![name, url, favicon, tags, id],
+    )?;
+    Ok(())
+}
+
+pub fn delete_radio_station(conn: &Connection, id: i64) -> Result<()> {
+    conn.execute("DELETE FROM radio_stations WHERE id = ?1", params![id])?;
+    Ok(())
+}
+
+pub fn toggle_radio_favorite(conn: &Connection, id: i64) -> Result<bool> {
+    let mut stmt = conn.prepare("SELECT is_favorite FROM radio_stations WHERE id = ?1")?;
+    let current: i64 = stmt.query_row(params![id], |row| row.get(0))?;
+    let new_val = if current == 0 { 1 } else { 0 };
+    conn.execute(
+        "UPDATE radio_stations SET is_favorite = ?1 WHERE id = ?2",
+        params![new_val, id],
+    )?;
+    Ok(new_val == 1)
 }

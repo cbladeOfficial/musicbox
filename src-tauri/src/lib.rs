@@ -1,6 +1,7 @@
 mod commands;
 mod db;
 mod discord;
+mod radio;
 mod scanner;
 mod server;
 
@@ -58,6 +59,13 @@ pub fn run() {
             maximize_app,
             close_app,
             is_app_maximized,
+            get_radio_stations,
+            add_radio_station,
+            update_radio_station,
+            delete_radio_station,
+            toggle_radio_favorite,
+            fetch_radio_metadata,
+            update_radio_presence,
         ])
         .run(tauri::generate_context!())
         .expect("error while building tauri application");

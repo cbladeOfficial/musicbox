@@ -3,6 +3,7 @@ import {
   Music2,
   Disc3,
   Mic2,
+  Radio,
   Heart,
   ListMusic,
   Plus,
@@ -54,6 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'tracks' as ViewMode, label: 'Tracks', icon: Music2 },
     { id: 'albums' as ViewMode, label: 'Albums', icon: Disc3 },
     { id: 'artists' as ViewMode, label: 'Artists', icon: Mic2 },
+    { id: 'radio' as ViewMode, label: 'Radio Stations', icon: Radio },
     { id: 'favorites' as ViewMode, label: 'Favorites', icon: Heart },
   ];
 

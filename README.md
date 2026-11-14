@@ -18,6 +18,14 @@
 - **Online Synced Lyrics (LRCLIB)**:
   - Synchronized karaoke lyrics with real-time active line highlighting, smooth auto-centering scroll, and click-to-seek functionality.
   - Plain lyrics toggle and offline caching.
+- **Online Radio Stations & ICY Stream Metadata**:
+  - Full online web radio player supporting high-quality live audio streams (MP3/AAC/OGG).
+  - Pre-seeded with 8 curated global stations (Lofi Girl, Nightwave Plaza, SomaFM Groove Salad, SomaFM DEF CON Radio, KEXP, Ibiza Global, Classic FM UK, BBC Radio 1).
+  - Online Radio Directory search powered by Radio Browser API (30,000+ stations worldwide searchable by name, country, and genre tags).
+  - Custom station creator and editor with stream URL, country, tag tags, and custom icon or preset selector.
+  - Favorites management and one-click quick station switching.
+  - Real-time **ICY Stream Metadata extraction** (`Icy-MetaData: 1` chunk parsing in Rust) delivers live song title and artist information from continuous streams.
+  - Dedicated **Discord Rich Presence for Live Radio** showing current radio station name, live song title, artist, station icon, and broadcast timer.
 - **Discord Rich Presence**:
   - Shows current song title, artist, album, and **release year** (e.g. `1989 (2014)`).
   - Live elapsed / remaining time progress bar inside Discord profiles.
@@ -65,14 +73,16 @@ MusicBox/
 │   │   ├── AlbumGrid.tsx         # Album cover card grid
 │   │   ├── AlbumDetailView.tsx   # Detailed album tracklist & wiki
 │   │   ├── ArtistView.tsx        # Artist bio, discography & top songs
+│   │   ├── RadioView.tsx         # Online radio explorer, favorites & station editor
 │   │   ├── Visualizer.tsx        # 60 FPS canvas frequency & wave visualizer
 │   │   ├── LyricsDrawer.tsx      # Synced karaoke lyrics (LRCLIB)
 │   │   ├── TrackInfoDrawer.tsx   # Audio specs & Last.fm artist bio
 │   │   ├── QueueDrawer.tsx       # Up next play queue
 │   │   └── SettingsModal.tsx     # Discord RPC, Last.fm, theme & art priority
 │   ├── services/
-│   │   ├── audioEngine.ts        # HTML5 Audio + Web Audio AnalyserNode
+│   │   ├── audioEngine.ts        # HTML5 Audio + Web Audio AnalyserNode (Tracks & Radio)
 │   │   ├── tauriBridge.ts        # IPC bridge to Rust backend
+│   │   ├── radioBrowserService.ts# Radio Browser API client (top stations, genre tags)
 │   │   ├── lyricsService.ts      # LRCLIB synced lyrics fetcher
 │   │   ├── metadataService.ts    # Multi-source metadata (iTunes, JioSaavn, Last.fm)
 │   │   └── lastfmScrobbler.ts    # Last.fm scrobbler & Now Playing updates
@@ -85,8 +95,9 @@ MusicBox/
     ├── src/
     │   ├── server.rs             # Local byte-range streaming server with CORS
     │   ├── scanner.rs            # Fast audio tag parser using `lofty`
-    │   ├── db.rs                 # Embedded SQLite database (WAL mode)
-    │   ├── discord.rs            # Native Discord Rich Presence IPC client
+    │   ├── radio.rs              # Native ICY stream metadata extractor
+    │   ├── db.rs                 # Embedded SQLite database (tracks, playlists, radio stations)
+    │   ├── discord.rs            # Native Discord Rich Presence IPC client (track & radio)
     │   ├── commands.rs           # Tauri IPC commands
     │   └── lib.rs                # Application builder & plugins
     ├── Cargo.toml

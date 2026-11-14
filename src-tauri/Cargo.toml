@@ -30,4 +30,5 @@ discord-rich-presence = "1.1"
 tiny_http = "0.12"
 walkdir = "2"
 base64 = "0.22"
+ureq = "3.5.2"
 

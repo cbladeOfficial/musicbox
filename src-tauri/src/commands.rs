@@ -1,5 +1,6 @@
-use crate::db::{self, PlaylistRecord, TrackRecord};
+use crate::db::{self, PlaylistRecord, RadioStation, TrackRecord};
 use crate::discord::DiscordManager;
+use crate::radio::{self, RadioMetadata};
 use crate::scanner;
 use crate::server::SERVER_PORT;
 use rusqlite::Connection;
@@ -186,4 +187,88 @@ pub fn close_app(window: Window) -> Result<(), String> {
 #[tauri::command]
 pub fn is_app_maximized(window: Window) -> Result<bool, String> {
     window.is_maximized().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_radio_stations(state: State<'_, AppState>) -> Result<Vec<RadioStation>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db::get_radio_stations(&db).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn add_radio_station(
+    name: String,
+    url: String,
+    favicon: Option<String>,
+    tags: Option<String>,
+    country: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<i64, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db::add_radio_station(
+        &db,
+        &name,
+        &url,
+        favicon.as_deref(),
+        tags.as_deref(),
+        country.as_deref(),
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn update_radio_station(
+    id: i64,
+    name: String,
+    url: String,
+    favicon: Option<String>,
+    tags: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db::update_radio_station(&db, id, &name, &url, favicon.as_deref(), tags.as_deref())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn delete_radio_station(id: i64, state: State<'_, AppState>) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db::delete_radio_station(&db, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn toggle_radio_favorite(id: i64, state: State<'_, AppState>) -> Result<bool, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db::toggle_radio_favorite(&db, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn fetch_radio_metadata(stream_url: String) -> Result<Option<RadioMetadata>, String> {
+    let res = tauri::async_runtime::spawn_blocking(move || {
+        radio::fetch_icy_metadata(&stream_url)
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+
+    Ok(res)
+}
+
+#[tauri::command]
+pub fn update_radio_presence(
+    station_name: String,
+    song_title: Option<String>,
+    artist: Option<String>,
+    icon_url: Option<String>,
+    is_playing: bool,
+    client_id: Option<String>,
+    state: State<'_, AppState>,
+) {
+    state.discord.update_radio_presence(
+        &station_name,
+        song_title.as_deref(),
+        artist.as_deref(),
+        icon_url.as_deref(),
+        is_playing,
+        client_id.as_deref(),
+    );
 }

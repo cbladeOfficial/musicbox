@@ -96,6 +96,24 @@ class AudioEngine {
     }
   }
 
+  public async playRadio(streamUrl: string) {
+    this.initWebAudio();
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      await this.audioCtx.resume();
+    }
+
+    if (this.audio.src !== streamUrl) {
+      this.audio.src = streamUrl;
+    }
+
+    try {
+      await this.audio.play();
+    } catch (err) {
+      console.error('Failed to connect to radio stream:', err);
+      if (this.onError) this.onError('Failed to connect to radio stream.');
+    }
+  }
+
   public pause() {
     this.audio.pause();
   }

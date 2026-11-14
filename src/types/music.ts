@@ -28,6 +28,25 @@ export interface PlaylistRecord {
   created_at: number;
 }
 
+export interface RadioStation {
+  id: number;
+  name: string;
+  url: string;
+  homepage?: string;
+  favicon?: string;
+  tags?: string;
+  country?: string;
+  is_favorite: boolean;
+  created_at: number;
+}
+
+export interface RadioMetadata {
+  title: string;
+  artist: string;
+  raw: string;
+  station_name?: string;
+}
+
 export interface LyricsLine {
   time: number; // in seconds
   text: string;
@@ -56,7 +75,15 @@ export interface AlbumInfo {
   listeners?: string;
 }
 
-export type ViewMode = 'tracks' | 'albums' | 'artists' | 'album_detail' | 'artist_detail' | 'playlist' | 'favorites';
+export type ViewMode =
+  | 'tracks'
+  | 'albums'
+  | 'artists'
+  | 'album_detail'
+  | 'artist_detail'
+  | 'playlist'
+  | 'favorites'
+  | 'radio';
 
 export type TableDensity = 'comfortable' | 'compact';
 
