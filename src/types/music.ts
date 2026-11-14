@@ -97,6 +97,7 @@ export interface AppSettings {
   musicFolders: string[];
   theme: ThemeId;
   fontFamily: string;
+  startMaximized: boolean;
   customAccentColor: string;
   tableDensity: TableDensity;
   visualizerMode: VisualizerMode;

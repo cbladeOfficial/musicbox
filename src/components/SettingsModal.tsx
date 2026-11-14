@@ -15,6 +15,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { AppSettings, ArtSource, ThemeId, VisualizerMode, TableDensity } from '../types/music';
+import { TauriBridge } from '../services/tauriBridge';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -541,6 +542,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </button>
                     ))}
                   </div>
+                </div>
+
+                {/* Window Startup Behavior */}
+                <div className="border-t border-[var(--border-color)] pt-3 space-y-2">
+                  <h3 className="text-xs font-medium text-[var(--text-main)]">
+                    Window Startup Behavior
+                  </h3>
+                  <label className="flex items-center space-x-2.5 cursor-pointer pt-0.5">
+                    <input
+                      type="checkbox"
+                      checked={settings.startMaximized !== false}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        onUpdateSettings({ startMaximized: checked });
+                        if (!checked) {
+                          TauriBridge.center().catch(() => {});
+                        }
+                      }}
+                      className="rounded border-[var(--border-color)] text-[var(--accent-color)]"
+                    />
+                    <span className="text-xs text-[var(--text-main)]">Start application maximized</span>
+                  </label>
+                  <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
+                    When enabled, MusicBox launches maximized to fill your display. When unchecked, it opens centered on your screen.
+                  </p>
                 </div>
               </div>
             )}

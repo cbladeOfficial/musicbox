@@ -23,6 +23,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   musicFolders: [],
   theme: 'feishin',
   fontFamily: 'Inter',
+  startMaximized: true,
   customAccentColor: '#2f81f7',
   tableDensity: 'comfortable',
   visualizerMode: 'bars',
@@ -198,7 +199,26 @@ export function App() {
         try {
           const parsed = JSON.parse(saved);
           setSettings((prev) => ({ ...prev, ...parsed }));
+          if (isTauri()) {
+            if (parsed.startMaximized === false) {
+              TauriBridge.center().catch(() => {});
+            } else {
+              TauriBridge.isMaximized().then((isMax) => {
+                if (!isMax) {
+                  TauriBridge.maximize().then(setIsMaximized).catch(() => {});
+                }
+              }).catch(() => {});
+            }
+          }
         } catch { /* ignore */ }
+      } else {
+        if (isTauri()) {
+          TauriBridge.isMaximized().then((isMax) => {
+            if (!isMax) {
+              TauriBridge.maximize().then(setIsMaximized).catch(() => {});
+            }
+          }).catch(() => {});
+        }
       }
     });
 

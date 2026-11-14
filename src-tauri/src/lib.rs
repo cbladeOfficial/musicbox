@@ -28,6 +28,23 @@ pub fn run() {
             let db_path = app_data_dir.join("musicbox.db");
             let conn = db::init_db(&db_path).expect("Failed to initialize database");
 
+            // Check if user configured startMaximized (defaults to true)
+            let start_maximized = db::get_setting(&conn, "user_settings")
+                .ok()
+                .flatten()
+                .and_then(|json_str| {
+                    serde_json::from_str::<serde_json::Value>(&json_str).ok()
+                })
+                .and_then(|val| val.get("startMaximized").and_then(|b| b.as_bool()))
+                .unwrap_or(true);
+
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.center();
+                if start_maximized {
+                    let _ = window.maximize();
+                }
+            }
+
             let state = AppState {
                 db: Mutex::new(conn),
                 discord: DiscordManager::new(),
@@ -57,6 +74,7 @@ pub fn run() {
             toggle_discord_rpc,
             minimize_app,
             maximize_app,
+            center_app,
             close_app,
             is_app_maximized,
             get_radio_stations,

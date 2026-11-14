@@ -188,6 +188,11 @@ pub fn close_app(window: Window) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn center_app(window: Window) -> Result<(), String> {
+    window.center().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn is_app_maximized(window: Window) -> Result<bool, String> {
     window.is_maximized().map_err(|e| e.to_string())
 }

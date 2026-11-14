@@ -158,6 +158,11 @@ export const TauriBridge = {
     return safeInvoke<void>('close_app');
   },
 
+  async center(): Promise<void> {
+    if (!isTauri()) return;
+    return safeInvoke<void>('center_app');
+  },
+
   async isMaximized(): Promise<boolean> {
     if (!isTauri()) return false;
     return safeInvoke<boolean>('is_app_maximized');
