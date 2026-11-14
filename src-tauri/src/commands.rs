@@ -171,11 +171,14 @@ pub fn minimize_app(window: Window) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn maximize_app(window: Window) -> Result<(), String> {
-    if window.is_maximized().map_err(|e| e.to_string())? {
-        window.unmaximize().map_err(|e| e.to_string())
+pub fn maximize_app(window: Window) -> Result<bool, String> {
+    let is_max = window.is_maximized().map_err(|e| e.to_string())?;
+    if is_max {
+        window.unmaximize().map_err(|e| e.to_string())?;
+        Ok(false)
     } else {
-        window.maximize().map_err(|e| e.to_string())
+        window.maximize().map_err(|e| e.to_string())?;
+        Ok(true)
     }
 }
 

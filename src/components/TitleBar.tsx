@@ -45,7 +45,14 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   canNavigateForward = false,
 }) => {
   return (
-    <header className="h-11 w-full bg-[var(--sidebar-color)] border-b border-[var(--border-color)] flex items-center justify-between px-3.5 select-none drag-region z-50 transition-colors">
+    <header
+      onDoubleClick={(e) => {
+        // Only trigger maximize on empty titlebar area (not on inputs/buttons)
+        if ((e.target as HTMLElement).closest('.no-drag')) return;
+        onToggleMaximize();
+      }}
+      className="h-11 w-full bg-[var(--sidebar-color)] border-b border-[var(--border-color)] flex items-center justify-between px-3.5 select-none drag-region z-50 transition-colors"
+    >
       {/* Left: Brand & Navigation History Controls */}
       <div className="flex items-center space-x-3 text-xs font-semibold tracking-wide">
         <div className="flex items-center space-x-2">
@@ -144,10 +151,21 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         </button>
         <button
           onClick={onToggleMaximize}
-          title={isMaximized ? 'Restore' : 'Maximize'}
-          className="p-1.5 text-zinc-300 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+          title={isMaximized ? 'Restore Down' : 'Maximize'}
+          className="p-1.5 text-zinc-300 hover:text-white hover:bg-white/10 rounded-md transition-colors flex items-center justify-center"
         >
-          {isMaximized ? <Copy className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
+          {isMaximized ? (
+            /* Restore Down icon: two overlapping boxes */
+            <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
+              <path d="M5 3.5V2a0.5 0.5 0 0 1 0.5-0.5h8a0.5 0.5 0 0 1 0.5 0.5v8a0.5 0.5 0 0 1-0.5 0.5H12" strokeLinecap="round" strokeLinejoin="round" />
+              <rect x="2" y="5" width="9.5" height="9.5" rx="0.5" fill="var(--sidebar-color)" />
+            </svg>
+          ) : (
+            /* Maximize icon: single box */
+            <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
+              <rect x="2.5" y="2.5" width="11" height="11" rx="0.5" />
+            </svg>
+          )}
         </button>
         <button
           onClick={() => TauriBridge.close()}

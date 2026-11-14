@@ -119,16 +119,62 @@ export function App() {
     }
   }, [settings.theme, settings.customAccentColor]);
 
+  // Window state synchronization
+  const syncMaximized = useCallback(async () => {
+    if (isTauri()) {
+      try {
+        const max = await TauriBridge.isMaximized();
+        setIsMaximized(max);
+      } catch (err) {
+        console.warn('Failed to query isMaximized', err);
+      }
+    }
+  }, []);
+
+  const handleToggleMaximize = useCallback(async () => {
+    if (isTauri()) {
+      try {
+        const nextState = await TauriBridge.maximize();
+        setIsMaximized(nextState);
+      } catch {
+        // Fallback sync with short timeout for OS window animation
+        setTimeout(syncMaximized, 60);
+      }
+    } else {
+      setIsMaximized((prev) => !prev);
+    }
+  }, [syncMaximized]);
+
+  // Window resize listeners for maximize/restore state
+  useEffect(() => {
+    syncMaximized();
+    window.addEventListener('resize', syncMaximized);
+
+    let unlistenResize: (() => void) | undefined;
+    if (isTauri()) {
+      import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+        getCurrentWindow().onResized(() => {
+          syncMaximized();
+        }).then((fn) => {
+          unlistenResize = fn;
+        }).catch(() => {});
+      }).catch(() => {});
+    }
+
+    return () => {
+      window.removeEventListener('resize', syncMaximized);
+      if (unlistenResize) {
+        unlistenResize();
+      }
+    };
+  }, [syncMaximized]);
+
   // Load stream port and initial data
   useEffect(() => {
     TauriBridge.getStreamPort().then((p) => setStreamPort(p)).catch(() => {});
     loadLibrary();
     loadPlaylists();
     loadRadioStations();
-
-    if (isTauri()) {
-      TauriBridge.isMaximized().then(setIsMaximized).catch(() => {});
-    }
 
     TauriBridge.loadSetting('user_settings').then((saved) => {
       if (saved) {
@@ -706,10 +752,7 @@ export function App() {
         onSearchChange={setSearchQuery}
         onOpenSettings={() => setIsSettingsOpen(true)}
         isMaximized={isMaximized}
-        onToggleMaximize={() => {
-          TauriBridge.maximize();
-          setIsMaximized(!isMaximized);
-        }}
+        onToggleMaximize={handleToggleMaximize}
         discordActive={settings.discordRpcEnabled}
         density={settings.tableDensity}
         onToggleDensity={() => {
