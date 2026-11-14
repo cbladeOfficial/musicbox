@@ -1,0 +1,80 @@
+export interface TrackRecord {
+  id: number;
+  path: string;
+  title: string;
+  artist: string;
+  album: string;
+  album_artist?: string;
+  track_number?: number;
+  disc_number?: number;
+  year?: number;
+  genre?: string;
+  duration: number;
+  bitrate?: number;
+  sample_rate?: number;
+  format: string;
+  cover_path?: string;
+  file_size: number;
+  play_count: number;
+  is_favorite: boolean;
+  date_added: number;
+  last_played?: number;
+}
+
+export interface PlaylistRecord {
+  id: number;
+  name: string;
+  track_count: number;
+  created_at: number;
+}
+
+export interface LyricsLine {
+  time: number; // in seconds
+  text: string;
+}
+
+export interface LyricsData {
+  synced: boolean;
+  lines: LyricsLine[];
+  plain?: string;
+}
+
+export interface ArtistInfo {
+  name: string;
+  bio: string;
+  image?: string;
+  tags: string[];
+  similar: string[];
+}
+
+export interface AlbumInfo {
+  name: string;
+  artist: string;
+  summary: string;
+  releaseDate?: string;
+  coverUrl?: string;
+  listeners?: string;
+}
+
+export type ViewMode = 'tracks' | 'albums' | 'artists' | 'album_detail' | 'artist_detail' | 'playlist' | 'favorites';
+
+export type VisualizerMode = 'bars' | 'wave' | 'circle' | 'off';
+
+export type ThemeId = 'feishin' | 'amoled' | 'nord' | 'catppuccin' | 'cyberpunk';
+
+export type ArtSource = 'itunes' | 'lastfm' | 'jiosaavn';
+
+export interface AppSettings {
+  musicFolders: string[];
+  theme: ThemeId;
+  visualizerMode: VisualizerMode;
+  visualizerHeight: number;
+  discordRpcEnabled: boolean;
+  discordShowYear: boolean;
+  artSourcePriority: ArtSource[];
+  lastfmEnabled: boolean;
+  lastfmApiKey: string;
+  lastfmSecret: string;
+  lastfmUsername: string;
+  lowMemoryMode: boolean;
+}

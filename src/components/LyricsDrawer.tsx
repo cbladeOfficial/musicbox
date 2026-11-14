@@ -1,0 +1,160 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { X, Mic2, RefreshCw, FileText } from 'lucide-react';
+import { LyricsData, TrackRecord } from '../types/music';
+import { LyricsService } from '../services/lyricsService';
+
+interface LyricsDrawerProps {
+  currentTrack: TrackRecord | null;
+  currentTime: number;
+  isOpen: boolean;
+  onClose: () => void;
+  onSeek: (time: number) => void;
+}
+
+export const LyricsDrawer: React.FC<LyricsDrawerProps> = ({
+  currentTrack,
+  currentTime,
+  isOpen,
+  onClose,
+  onSeek,
+}) => {
+  const [lyrics, setLyrics] = useState<LyricsData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [preferPlain, setPreferPlain] = useState(false);
+  const activeLineRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Fetch lyrics whenever currentTrack changes
+  useEffect(() => {
+    if (!currentTrack || !isOpen) return;
+
+    setLoading(true);
+    LyricsService.fetchLyrics(currentTrack)
+      .then((data) => {
+        setLyrics(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [currentTrack, isOpen]);
+
+  // Find active line index
+  let activeIndex = -1;
+  if (lyrics?.synced && lyrics.lines.length > 0) {
+    for (let i = 0; i < lyrics.lines.length; i++) {
+      if (currentTime >= lyrics.lines[i].time) {
+        activeIndex = i;
+      } else {
+        break;
+      }
+    }
+  }
+
+  // Smooth auto-scroll to keep active line centered
+  useEffect(() => {
+    if (activeLineRef.current && containerRef.current && lyrics?.synced && !preferPlain) {
+      activeLineRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  }, [activeIndex, lyrics, preferPlain]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="w-80 h-full bg-[var(--surface-color)] border-l border-[var(--border-color)] flex flex-col z-30 select-none shadow-xl">
+      {/* Drawer Header */}
+      <div className="h-12 border-b border-[var(--border-color)] px-4 flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Mic2 className="w-4 h-4 text-[var(--accent-color)]" />
+          <span className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider">
+            Lyrics
+          </span>
+          {lyrics?.synced && !preferPlain && (
+            <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--accent-color)]/20 text-[var(--accent-color)] font-semibold">
+              Synced
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center space-x-1">
+          {lyrics?.plain && (
+            <button
+              onClick={() => setPreferPlain(!preferPlain)}
+              title={preferPlain ? 'View Synced' : 'View Plain'}
+              className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)]"
+            >
+              <FileText className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          <button
+            onClick={() => {
+              if (currentTrack) {
+                setLoading(true);
+                localStorage.removeItem(`mb_lyrics_${currentTrack.id}`);
+                LyricsService.fetchLyrics(currentTrack).then((d) => {
+                  setLyrics(d);
+                  setLoading(false);
+                });
+              }
+            }}
+            title="Reload lyrics"
+            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)]"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+
+          <button
+            onClick={onClose}
+            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)]"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Lyrics Content */}
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-y-auto p-6 space-y-4 text-center font-medium"
+      >
+        {loading ? (
+          <div className="h-full flex flex-col items-center justify-center text-xs text-[var(--text-muted)] space-y-2">
+            <RefreshCw className="w-5 h-5 animate-spin text-[var(--accent-color)]" />
+            <span>Finding lyrics on LRCLIB...</span>
+          </div>
+        ) : !lyrics ? (
+          <div className="h-full flex flex-col items-center justify-center text-xs text-[var(--text-muted)] space-y-2 italic">
+            <span>No lyrics found for this track.</span>
+            <span className="text-[10px] opacity-70">
+              {currentTrack?.title} - {currentTrack?.artist}
+            </span>
+          </div>
+        ) : preferPlain || !lyrics.synced ? (
+          <div className="whitespace-pre-line text-xs text-[var(--text-main)] leading-loose select-text font-sans opacity-90">
+            {lyrics.plain || 'No plain text lyrics available.'}
+          </div>
+        ) : (
+          lyrics.lines.map((line, idx) => {
+            const isActive = idx === activeIndex;
+            return (
+              <div
+                key={idx}
+                ref={isActive ? activeLineRef : null}
+                onClick={() => onSeek(line.time)}
+                className={`py-1.5 px-3 rounded-lg transition-all duration-200 cursor-pointer text-sm leading-relaxed ${
+                  isActive
+                    ? 'text-[var(--text-main)] font-bold text-base scale-105 bg-[var(--surface-active)] shadow-sm'
+                    : 'text-[var(--text-muted)] opacity-60 hover:opacity-100 hover:text-[var(--text-main)]'
+                }`}
+              >
+                {line.text}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+};
