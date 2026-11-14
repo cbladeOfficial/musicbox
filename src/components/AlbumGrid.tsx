@@ -78,13 +78,13 @@ export const AlbumGrid: React.FC<AlbumGridProps> = ({
 
               {/* Album Metadata */}
               <div className="flex flex-col truncate px-0.5">
-                <span className="text-[13px] font-bold text-white truncate tracking-tight group-hover:text-[var(--accent-color)] transition-colors">
+                <span className="text-[13px] font-medium text-zinc-100 truncate group-hover:text-[var(--accent-color)] transition-colors">
                   {album.name}
                 </span>
-                <span className="text-[12px] text-zinc-300 font-medium truncate mt-0.5 hover:text-white">
+                <span className="text-[12px] text-zinc-400 font-normal truncate mt-0.5 hover:text-zinc-200">
                   {album.artist}
                 </span>
-                <div className="flex items-center space-x-1.5 text-[11px] text-zinc-400 mt-1 font-mono tabular-nums">
+                <div className="flex items-center space-x-1.5 text-[11px] text-zinc-500 mt-1 font-mono tabular-nums">
                   {album.year ? <span>{album.year}</span> : null}
                   {album.year ? <span>•</span> : null}
                   <span>{album.trackCount} {album.trackCount === 1 ? 'track' : 'tracks'}</span>

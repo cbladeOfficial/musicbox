@@ -54,12 +54,12 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       className="h-11 w-full bg-[var(--sidebar-color)] border-b border-[var(--border-color)] flex items-center justify-between px-3.5 select-none drag-region z-50 transition-colors"
     >
       {/* Left: Brand & Navigation History Controls */}
-      <div className="flex items-center space-x-3 text-xs font-semibold tracking-wide">
+      <div className="flex items-center space-x-3 text-xs font-medium">
         <div className="flex items-center space-x-2">
-          <div className="w-6 h-6 rounded-md bg-[var(--accent-color)] flex items-center justify-center text-white shadow-sm shadow-[var(--accent-color)]/30">
-            <Music2 className="w-4 h-4 stroke-[2.2]" />
+          <div className="w-5.5 h-5.5 rounded-md bg-[var(--accent-color)] flex items-center justify-center text-white shadow-sm shadow-[var(--accent-color)]/20">
+            <Music2 className="w-3.5 h-3.5" />
           </div>
-          <span className="text-white font-bold text-[13px] tracking-tight">MusicBox</span>
+          <span className="text-zinc-200 font-medium text-[13px]">MusicBox</span>
         </div>
 
         {/* Feishin History Nav Arrows */}
@@ -85,10 +85,10 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         {discordActive && (
           <div
             title="Discord Rich Presence connected"
-            className="hidden sm:flex items-center space-x-1.5 px-2 py-0.5 rounded text-[11px] bg-[#5865F2]/20 text-[#7983f5] font-semibold border border-[#5865F2]/30"
+            className="hidden sm:flex items-center space-x-1.5 px-2 py-0.5 rounded text-[11px] bg-[#5865F2]/15 text-[#7983f5] font-medium border border-[#5865F2]/20"
           >
             <Radio className="w-3 h-3 animate-pulse" />
-            <span className="tracking-wide">RPC</span>
+            <span>RPC</span>
           </div>
         )}
       </div>

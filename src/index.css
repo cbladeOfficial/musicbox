@@ -1,6 +1,16 @@
+@import '@fontsource/inter/300.css';
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/geist-sans/400.css';
+@import '@fontsource/geist-sans/500.css';
+@import '@fontsource/geist-sans/600.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
 @import "tailwindcss";
 
 :root {
+  --app-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
   --bg-color: #08090c;
   --sidebar-color: #0d0e13;
   --surface-color: #13151b;
@@ -80,7 +90,8 @@ body {
   user-select: none;
   background-color: var(--bg-color);
   color: var(--text-main);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'San Francisco', 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--app-font-family, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
+  font-weight: 400;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

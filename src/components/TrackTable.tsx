@@ -107,7 +107,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden select-none bg-[var(--bg-color)]">
       {/* Table Header */}
-      <div className="h-10 border-b border-[var(--border-color)] bg-[var(--sidebar-color)] px-4 flex items-center text-[11px] font-bold text-zinc-400 uppercase tracking-wider sticky top-0 z-10 backdrop-blur-md">
+      <div className="h-9 border-b border-[var(--border-color)] bg-[var(--sidebar-color)] px-4 flex items-center text-[11px] font-medium text-zinc-400 sticky top-0 z-10 backdrop-blur-md">
         <div className="w-10 text-center font-mono text-zinc-500">#</div>
         <div
           onClick={() => handleSort('title')}
@@ -208,15 +208,15 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                   </div>
 
                   <div className="flex flex-col truncate min-w-0 pr-1">
-                    <span className={`truncate text-[13px] ${isCurrent ? 'text-[var(--accent-color)] font-semibold' : 'text-white font-medium'}`}>
+                    <span className={`truncate text-[13px] ${isCurrent ? 'text-[var(--accent-color)] font-medium' : 'text-zinc-200 font-normal'}`}>
                       {track.title}
                     </span>
-                    <span className="text-[11px] text-zinc-400 md:hidden truncate">
+                    <span className="text-[11px] text-zinc-500 md:hidden truncate">
                       {track.artist}
                     </span>
                   </div>
 
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/5 text-zinc-300 font-mono border border-white/10 flex-shrink-0 font-semibold tracking-wider">
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/5 text-zinc-400 font-mono border border-white/5 flex-shrink-0 font-normal">
                     {track.format}
                   </span>
                 </div>
@@ -229,7 +229,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                       onViewArtist(track.artist);
                     }
                   }}
-                  className="w-48 hidden md:block text-zinc-300 truncate pr-2 hover:underline hover:text-white text-[12px] font-medium transition-colors"
+                  className="w-48 hidden md:block text-zinc-400 truncate pr-2 hover:underline hover:text-zinc-200 text-[12px] font-normal transition-colors"
                 >
                   {track.artist}
                 </div>
@@ -358,7 +358,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
           {/* Submenu: Add to Playlist */}
           {playlists.length > 0 && (
             <div className="border-t border-white/10 my-1 pt-1">
-              <div className="text-[10px] uppercase font-bold text-zinc-400 px-3.5 py-1">
+              <div className="text-[10px] font-medium text-zinc-500 px-3.5 py-1">
                 Add to Playlist
               </div>
               <div className="max-h-28 overflow-y-auto">

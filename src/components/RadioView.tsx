@@ -183,10 +183,10 @@ export const RadioView: React.FC<RadioViewProps> = ({
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
             <Radio className="w-4 h-4 text-[var(--accent-color)]" />
-            <h1 className="text-sm font-bold text-white tracking-tight">
+            <h1 className="text-sm font-medium text-white">
               Online Radio
             </h1>
-            <span className="text-[11px] px-2 py-0.2 rounded-md bg-white/5 text-zinc-300 font-mono font-semibold border border-white/10">
+            <span className="text-[11px] px-2 py-0.2 rounded-md bg-white/5 text-zinc-400 font-mono border border-white/5">
               {stations.length}
             </span>
           </div>
@@ -195,7 +195,7 @@ export const RadioView: React.FC<RadioViewProps> = ({
           <div className="flex items-center space-x-1 pl-4">
             <button
               onClick={() => setActiveTab('my_stations')}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 activeTab === 'my_stations'
                   ? 'bg-white/10 text-white border border-white/15'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
@@ -205,7 +205,7 @@ export const RadioView: React.FC<RadioViewProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('favorites')}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 activeTab === 'favorites'
                   ? 'bg-white/10 text-white border border-white/15'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
@@ -215,7 +215,7 @@ export const RadioView: React.FC<RadioViewProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('directory')}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center space-x-1.5 transition-colors ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center space-x-1.5 transition-colors ${
                 activeTab === 'directory'
                   ? 'bg-white/10 text-white border border-white/15'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
@@ -424,7 +424,7 @@ export const RadioView: React.FC<RadioViewProps> = ({
                       <div className="flex-1 min-w-0 pr-1">
                         <div className="flex items-center space-x-1.5">
                           <span
-                            className="font-bold text-[13px] text-white truncate cursor-pointer hover:underline tracking-tight"
+                            className="font-medium text-[13px] text-zinc-100 truncate cursor-pointer hover:underline"
                             onClick={() => onPlayStation(station)}
                             title={station.name}
                           >
@@ -434,7 +434,7 @@ export const RadioView: React.FC<RadioViewProps> = ({
 
                         <div className="flex items-center space-x-1.5 mt-1 text-[11px] text-zinc-400">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                          <span className="uppercase font-mono font-bold tracking-wider text-emerald-400 text-[10px]">
+                          <span className="font-mono font-medium text-emerald-400 text-[10px]">
                             Live
                           </span>
                           {station.country && (
@@ -535,7 +535,7 @@ export const RadioView: React.FC<RadioViewProps> = ({
             <div className="h-11 border-b border-[var(--border-color)] px-4 flex items-center justify-between bg-[var(--sidebar-color)]">
               <div className="flex items-center space-x-2">
                 <Radio className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-                <h3 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider">
+                <h3 className="text-xs font-medium text-[var(--text-main)]">
                   {editingStation ? 'Edit Radio Station' : 'Create Custom Radio Station'}
                 </h3>
               </div>

@@ -29,7 +29,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
       <div className="h-11 border-b border-[var(--border-color)] px-4 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <ListMusic className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-          <span className="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider">
+          <span className="text-[11px] font-medium text-[var(--text-main)]">
             Play Queue
           </span>
           <span className="text-[10px] text-[var(--text-muted)] font-mono">({queue.length})</span>
@@ -58,15 +58,15 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
         {/* Now Playing section */}
         {currentTrack && (
           <div className="space-y-1">
-            <span className="text-[11px] uppercase font-bold text-[var(--accent-color)] px-2 tracking-wider">
+            <span className="text-[11px] font-medium text-[var(--accent-color)] px-2">
               Now Playing
             </span>
             <div className="flex items-center px-3 py-2.5 rounded-lg bg-[var(--accent-color)]/15 text-xs border border-[var(--accent-color)]/30 shadow-sm">
               <div className="flex-1 truncate">
-                <div className="font-bold text-white text-[13px] truncate">
+                <div className="font-medium text-white text-[13px] truncate">
                   {currentTrack.title}
                 </div>
-                <div className="text-[12px] text-zinc-300 font-medium truncate mt-0.5">
+                <div className="text-[12px] text-zinc-400 font-normal truncate mt-0.5">
                   {currentTrack.artist}
                 </div>
               </div>
@@ -76,7 +76,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
 
         {/* Up Next List */}
         <div className="space-y-1">
-          <span className="text-[11px] uppercase font-bold text-zinc-400 px-2 tracking-wider">
+          <span className="text-[11px] font-medium text-zinc-400 px-2">
             Up Next
           </span>
           {queue.length === 0 ? (

@@ -67,10 +67,10 @@ export const ArtistView: React.FC<ArtistViewProps> = ({
                 <div className="w-24 h-24 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center mb-3 shadow-md group-hover:scale-105 transition-transform">
                   <Mic2 className="w-9 h-9 text-[var(--accent-color)]" />
                 </div>
-                <span className="text-[13px] font-bold text-white truncate w-full group-hover:text-[var(--accent-color)] tracking-tight transition-colors">
+                <span className="text-[13px] font-medium text-zinc-100 truncate w-full group-hover:text-[var(--accent-color)] transition-colors">
                   {artist.name}
                 </span>
-                <span className="text-[11px] text-zinc-400 mt-1 font-mono tabular-nums">
+                <span className="text-[11px] text-zinc-500 mt-1 font-mono tabular-nums">
                   {artist.trackCount} {artist.trackCount === 1 ? 'track' : 'tracks'}
                 </span>
               </div>
@@ -96,10 +96,10 @@ export const ArtistView: React.FC<ArtistViewProps> = ({
 
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <span className="text-[11px] uppercase font-bold text-[var(--accent-color)] tracking-wider">
+            <span className="text-[11px] font-medium text-[var(--accent-color)]">
               Artist
             </span>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight mt-0.5">
+            <h1 className="text-2xl font-semibold text-white tracking-tight mt-0.5">
               {selectedArtist.name}
             </h1>
             <div className="flex items-center space-x-2 text-xs text-zinc-400 mt-1.5 font-mono tabular-nums">
@@ -112,7 +112,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({
           <div className="flex items-center space-x-3">
             <button
               onClick={() => onPlayArtist(selectedArtist, false)}
-              className="flex items-center space-x-2 px-5 py-2.5 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white text-xs font-semibold shadow-md active:scale-95 transition-all"
+              className="flex items-center space-x-2 px-5 py-2.5 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white text-xs font-medium shadow-md active:scale-95 transition-all"
             >
               <Play className="w-4 h-4 fill-current" />
               <span>Play All</span>
@@ -160,7 +160,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({
 
       {/* Artist Tracks */}
       <div className="p-6">
-        <h3 className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-3">
+        <h3 className="text-[11px] font-medium text-zinc-400 mb-2.5">
           All Songs
         </h3>
         <div className="divide-y divide-white/[0.04] rounded-lg bg-[var(--surface-color)] border border-[var(--border-color)] overflow-hidden">
@@ -169,7 +169,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({
               key={track.id}
               onDoubleClick={() => onPlayTrack(track)}
               className={`flex items-center px-4 py-2.5 text-[13px] hover:bg-white/[0.04] cursor-pointer transition-colors ${
-                currentTrackId === track.id ? 'text-[var(--accent-color)] font-semibold bg-[var(--accent-color)]/10' : 'text-zinc-200'
+                currentTrackId === track.id ? 'text-[var(--accent-color)] font-medium bg-[var(--accent-color)]/10' : 'text-zinc-200'
               }`}
             >
               <span className="w-8 text-zinc-500 font-mono text-[12px] tabular-nums">{i + 1}</span>

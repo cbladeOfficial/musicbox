@@ -81,7 +81,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="h-11 border-b border-[var(--border-color)] px-4 flex items-center justify-between bg-[var(--sidebar-color)] flex-shrink-0">
           <div className="flex items-center space-x-2">
             <Sliders className="w-4 h-4 text-[var(--accent-color)]" />
-            <h2 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider">
+            <h2 className="text-xs font-medium text-[var(--text-main)]">
               Preferences
             </h2>
           </div>
@@ -99,7 +99,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="w-48 bg-[var(--sidebar-color)] border-r border-[var(--border-color)] p-2.5 space-y-1 flex-shrink-0 text-xs">
             <button
               onClick={() => setActiveTab('general')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-md font-semibold text-[13px] transition-all text-left ${
+              className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-md font-medium text-[13px] transition-all text-left ${
                 activeTab === 'general'
                   ? 'bg-[var(--accent-color)]/15 text-white border-l-2 border-[var(--accent-color)] pl-2.5'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
@@ -111,7 +111,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <button
               onClick={() => setActiveTab('discord')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-md font-semibold text-[13px] transition-all text-left ${
+              className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-md font-medium text-[13px] transition-all text-left ${
                 activeTab === 'discord'
                   ? 'bg-[var(--accent-color)]/15 text-white border-l-2 border-[var(--accent-color)] pl-2.5'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
@@ -123,7 +123,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <button
               onClick={() => setActiveTab('lastfm')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-md font-semibold text-[13px] transition-all text-left ${
+              className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-md font-medium text-[13px] transition-all text-left ${
                 activeTab === 'lastfm'
                   ? 'bg-[var(--accent-color)]/15 text-white border-l-2 border-[var(--accent-color)] pl-2.5'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
@@ -135,7 +135,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <button
               onClick={() => setActiveTab('appearance')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-md font-semibold text-[13px] transition-all text-left ${
+              className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-md font-medium text-[13px] transition-all text-left ${
                 activeTab === 'appearance'
                   ? 'bg-[var(--accent-color)]/15 text-white border-l-2 border-[var(--accent-color)] pl-2.5'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
@@ -147,7 +147,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <button
               onClick={() => setActiveTab('audio')}
-              className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-md font-semibold text-[13px] transition-all text-left ${
+              className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-md font-medium text-[13px] transition-all text-left ${
                 activeTab === 'audio'
                   ? 'bg-[var(--accent-color)]/15 text-white border-l-2 border-[var(--accent-color)] pl-2.5'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
@@ -164,7 +164,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {activeTab === 'general' && (
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-bold text-white mb-1">
+                  <h3 className="text-sm font-medium text-white mb-1">
                     Music Library Folder
                   </h3>
                   <p className="text-[12px] text-zinc-400 leading-relaxed mb-3">
@@ -173,7 +173,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <button
                     onClick={onScanFolder}
                     disabled={isScanning}
-                    className="flex items-center space-x-2 px-4 py-2 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white font-semibold transition-all text-xs disabled:opacity-50 shadow-md"
+                    className="flex items-center space-x-2 px-4 py-2 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white font-medium transition-all text-xs disabled:opacity-50 shadow-md"
                   >
                     <FolderOpen className="w-4 h-4" />
                     <span>{isScanning ? 'Scanning in progress...' : 'Scan Music Folder'}</span>
@@ -181,7 +181,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 <div className="border-t border-[var(--border-color)] pt-3 space-y-2">
-                  <h3 className="text-xs font-semibold text-[var(--text-main)]">
+                  <h3 className="text-xs font-medium text-[var(--text-main)]">
                     Low Memory Profile
                   </h3>
                   <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
@@ -204,7 +204,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {activeTab === 'discord' && (
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-xs font-semibold text-[var(--text-main)] mb-1">
+                  <h3 className="text-xs font-medium text-[var(--text-main)] mb-1">
                     Discord Rich Presence
                   </h3>
                   <p className="text-[11px] text-[var(--text-muted)] leading-relaxed mb-3">
@@ -237,7 +237,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 {/* Editable Discord Client ID */}
                 <div className="border-t border-[var(--border-color)] pt-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-semibold text-[var(--text-main)]">
+                    <label className="text-[11px] font-medium text-[var(--text-main)]">
                       Discord Application Client ID
                     </label>
                     <button
@@ -262,7 +262,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 {/* Cover Art Source Priority Reordering */}
                 <div className="border-t border-[var(--border-color)] pt-3 space-y-2">
-                  <h4 className="text-[11px] font-semibold text-[var(--text-main)]">
+                  <h4 className="text-[11px] font-medium text-[var(--text-main)]">
                     Online Artwork & Metadata Priority
                   </h4>
                   <p className="text-[10px] text-[var(--text-muted)]">
@@ -276,7 +276,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         className="flex items-center justify-between p-2 rounded bg-[var(--surface-active)]/50 border border-[var(--border-color)] text-xs"
                       >
                         <div className="flex items-center space-x-2">
-                          <span className="font-mono text-[10px] text-[var(--accent-color)] font-bold">
+                          <span className="font-mono text-[10px] text-[var(--accent-color)] font-medium">
                             #{idx + 1}
                           </span>
                           <div>
@@ -316,7 +316,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {activeTab === 'lastfm' && (
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-xs font-semibold text-[var(--text-main)] mb-1">
+                  <h3 className="text-xs font-medium text-[var(--text-main)] mb-1">
                     Last.fm Scrobbler & Artist Bios
                   </h3>
                   <p className="text-[11px] text-[var(--text-muted)] leading-relaxed mb-3">
@@ -381,7 +381,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {activeTab === 'appearance' && (
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-xs font-semibold text-[var(--text-main)] mb-1">
+                  <h3 className="text-xs font-medium text-[var(--text-main)] mb-1">
                     Preset Themes
                   </h3>
                   <div className="grid grid-cols-2 gap-2 mt-2">
@@ -391,7 +391,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         onClick={() => onUpdateSettings({ theme: th.id })}
                         className={`flex items-center space-x-2.5 p-2 rounded border text-left transition-colors ${
                           settings.theme === th.id
-                            ? 'border-[var(--accent-color)] bg-[var(--surface-active)] font-semibold'
+                            ? 'border-[var(--accent-color)] bg-[var(--surface-active)] font-medium'
                             : 'border-[var(--border-color)] bg-[var(--surface-color)] hover:bg-[var(--surface-hover)]'
                         }`}
                       >
@@ -405,9 +405,79 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                 </div>
 
+                {/* Typography & Font Family Customization */}
+                <div className="border-t border-[var(--border-color)] pt-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-medium text-[var(--text-main)]">
+                      Interface Font Family
+                    </h3>
+                    <span className="text-[10px] text-[var(--accent-color)] font-mono">
+                      {settings.fontFamily || 'Inter'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-muted)]">
+                    Select an offline bundled high-precision font or enter a custom font installed on your computer.
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    {[
+                      { id: 'Inter', name: 'Inter', desc: 'Feishin default, neutral & balanced', font: "'Inter', sans-serif" },
+                      { id: 'Geist Sans', name: 'Geist Sans', desc: 'Minimalist geometric precision', font: "'Geist Sans', sans-serif" },
+                      { id: 'JetBrains Mono', name: 'JetBrains Mono', desc: 'Technical clean monospace', font: "'JetBrains Mono', monospace" },
+                      { id: 'System Sans', name: 'System UI', desc: 'Native OS interface font', font: 'system-ui, sans-serif' },
+                    ].map((f) => {
+                      const isSelected = (settings.fontFamily || 'Inter') === f.id;
+                      return (
+                        <button
+                          key={f.id}
+                          onClick={() => onUpdateSettings({ fontFamily: f.id })}
+                          className={`flex flex-col p-2.5 rounded border text-left transition-colors ${
+                            isSelected
+                              ? 'border-[var(--accent-color)] bg-[var(--surface-active)] font-medium'
+                              : 'border-[var(--border-color)] bg-[var(--surface-color)] hover:bg-[var(--surface-hover)]'
+                          }`}
+                        >
+                          <span className="text-xs font-medium text-[var(--text-main)]" style={{ fontFamily: f.font }}>
+                            {f.name}
+                          </span>
+                          <span className="text-[10px] text-[var(--text-muted)] truncate mt-0.5">
+                            {f.desc}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom Font Family Input */}
+                  <div className="pt-1.5 flex items-center space-x-2">
+                    <input
+                      type="text"
+                      placeholder="Or type custom font family name (e.g. SF Pro Text, Aptos, Helvetica Neue)..."
+                      value={
+                        ['Inter', 'Geist Sans', 'JetBrains Mono', 'System Sans'].includes(settings.fontFamily || 'Inter')
+                          ? ''
+                          : settings.fontFamily
+                      }
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        onUpdateSettings({ fontFamily: val || 'Inter' });
+                      }}
+                      className="flex-1 bg-[var(--surface-color)] border border-[var(--border-color)] rounded px-2.5 py-1 text-xs outline-none focus:border-[var(--accent-color)] text-[var(--text-main)]"
+                    />
+                    {settings.fontFamily && !['Inter', 'Geist Sans', 'JetBrains Mono', 'System Sans'].includes(settings.fontFamily) && (
+                      <button
+                        onClick={() => onUpdateSettings({ fontFamily: 'Inter' })}
+                        className="text-[10px] text-[var(--accent-color)] hover:underline whitespace-nowrap"
+                      >
+                        Reset to Inter
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 {/* Custom Accent Color Picker */}
                 <div className="border-t border-[var(--border-color)] pt-3 space-y-2">
-                  <h3 className="text-xs font-semibold text-[var(--text-main)]">
+                  <h3 className="text-xs font-medium text-[var(--text-main)]">
                     Custom Accent Color
                   </h3>
                   <p className="text-[10px] text-[var(--text-muted)]">
@@ -453,7 +523,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 {/* Table Density */}
                 <div className="border-t border-[var(--border-color)] pt-3 space-y-2">
-                  <h3 className="text-xs font-semibold text-[var(--text-main)]">
+                  <h3 className="text-xs font-medium text-[var(--text-main)]">
                     Table Row Spacing
                   </h3>
                   <div className="flex space-x-2">
@@ -479,7 +549,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {activeTab === 'audio' && (
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-xs font-semibold text-[var(--text-main)] mb-1">
+                  <h3 className="text-xs font-medium text-[var(--text-main)] mb-1">
                     Audio Visualizer Engine
                   </h3>
                   <p className="text-[11px] text-[var(--text-muted)] leading-relaxed mb-3">
@@ -538,7 +608,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="h-11 border-t border-[var(--border-color)] px-4 flex items-center justify-end bg-[var(--sidebar-color)] flex-shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-1 rounded bg-[var(--accent-color)] hover:brightness-110 text-white text-xs font-semibold transition-all"
+            className="px-4 py-1.5 rounded bg-[var(--accent-color)] hover:brightness-110 text-white text-xs font-medium transition-all shadow-sm"
           >
             Save & Close
           </button>

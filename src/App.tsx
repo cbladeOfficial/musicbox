@@ -22,6 +22,7 @@ import { MetadataService } from './services/metadataService';
 const DEFAULT_SETTINGS: AppSettings = {
   musicFolders: [],
   theme: 'feishin',
+  fontFamily: 'Inter',
   customAccentColor: '#2f81f7',
   tableDensity: 'comfortable',
   visualizerMode: 'bars',
@@ -111,13 +112,29 @@ export function App() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [resolvedCoverArt, setResolvedCoverArt] = useState<string | undefined>(undefined);
 
-  // Apply Theme & Custom Accent Color
+  // Apply Theme, Custom Accent Color, and Font Family
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', settings.theme);
     if (settings.customAccentColor) {
       document.documentElement.style.setProperty('--accent-color', settings.customAccentColor);
     }
-  }, [settings.theme, settings.customAccentColor]);
+    
+    // Resolve font family
+    let resolvedFont = `'Inter', -apple-system, BlinkMacSystemFont, sans-serif`;
+    const f = settings.fontFamily || 'Inter';
+    if (f === 'Geist Sans') {
+      resolvedFont = `'Geist Sans', -apple-system, sans-serif`;
+    } else if (f === 'JetBrains Mono') {
+      resolvedFont = `'JetBrains Mono', monospace`;
+    } else if (f === 'System Sans') {
+      resolvedFont = `system-ui, -apple-system, BlinkMacSystemFont, sans-serif`;
+    } else if (f !== 'Inter') {
+      resolvedFont = `'${f}', 'Inter', -apple-system, sans-serif`;
+    }
+
+    document.documentElement.style.setProperty('--app-font-family', resolvedFont);
+    document.body.style.fontFamily = resolvedFont;
+  }, [settings.theme, settings.customAccentColor, settings.fontFamily]);
 
   // Window state synchronization
   const syncMaximized = useCallback(async () => {

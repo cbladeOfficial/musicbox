@@ -50,7 +50,7 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
       <div className="h-11 border-b border-[var(--border-color)] px-4 flex items-center justify-between sticky top-0 bg-[var(--surface-color)]/95 backdrop-blur-md z-10">
         <div className="flex items-center space-x-2">
           <Info className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-          <span className="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider">
+          <span className="text-[11px] font-medium text-[var(--text-main)]">
             Track Details & Specs
           </span>
         </div>
@@ -81,14 +81,14 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
               </div>
             )}
           </div>
-          <h2 className="text-base font-bold text-white tracking-tight">{currentTrack.title}</h2>
-          <span className="text-xs font-semibold text-zinc-300 mt-0.5">{currentTrack.artist}</span>
-          <span className="text-[11px] text-zinc-400">{currentTrack.album}</span>
+          <h2 className="text-sm font-medium text-white">{currentTrack.title}</h2>
+          <span className="text-xs font-normal text-zinc-400 mt-0.5">{currentTrack.artist}</span>
+          <span className="text-[11px] text-zinc-500">{currentTrack.album}</span>
         </div>
 
         {/* Technical Specs */}
         <div className="space-y-2.5 p-3.5 rounded-lg bg-[var(--surface-color)] border border-[var(--border-color)] text-xs shadow-sm">
-          <div className="flex items-center space-x-1.5 text-[var(--accent-color)] font-bold text-[11px] uppercase tracking-wider mb-1">
+          <div className="flex items-center space-x-1.5 text-[var(--accent-color)] font-medium text-[11px] mb-1">
             <Cpu className="w-3.5 h-3.5" />
             <span>Audio Specifications</span>
           </div>
@@ -137,7 +137,7 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
         {/* Album Description */}
         {albumInfo?.summary && (
           <div className="space-y-1.5 text-xs">
-            <div className="flex items-center space-x-1.5 text-[var(--text-main)] font-semibold text-[11px]">
+            <div className="flex items-center space-x-1.5 text-[var(--text-main)] font-medium text-[11px]">
               <Calendar className="w-3.5 h-3.5 text-[var(--accent-color)]" />
               <span>About the Album ({currentTrack.album})</span>
             </div>
@@ -156,7 +156,7 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
         ) : (
           artistInfo && (
             <div className="space-y-2 text-xs">
-              <div className="flex items-center space-x-1.5 text-[var(--text-main)] font-semibold text-[11px]">
+              <div className="flex items-center space-x-1.5 text-[var(--text-main)] font-medium text-[11px]">
                 <Tag className="w-3.5 h-3.5 text-[var(--accent-color)]" />
                 <span>About {currentTrack.artist}</span>
               </div>

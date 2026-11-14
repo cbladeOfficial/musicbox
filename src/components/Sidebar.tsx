@@ -64,7 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Top Navigation */}
       <div className="p-3.5 space-y-5 overflow-y-auto flex-1">
         <div>
-          <div className="text-[11px] uppercase tracking-wider font-bold text-zinc-400 px-3 mb-1.5">
+          <div className="text-[11px] font-medium text-zinc-400 px-3 mb-1.5">
             Library
           </div>
           <div className="space-y-1">
@@ -77,16 +77,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => onSelectView(item.id)}
                   className={`w-full group relative flex items-center justify-between px-3 py-2 rounded-md font-medium text-[13px] transition-all ${
                     isActive
-                      ? 'bg-[var(--accent-color)]/15 text-white font-semibold border-l-2 border-[var(--accent-color)] pl-2.5'
-                      : 'text-zinc-300 hover:text-white hover:bg-white/5'
+                      ? 'bg-[var(--accent-color)]/15 text-zinc-100 border-l-2 border-[var(--accent-color)] pl-2.5'
+                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
                   }`}
                 >
                   <div className="flex items-center space-x-2.5 truncate">
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-[var(--accent-color)]' : 'text-zinc-400 group-hover:text-white'}`} />
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-[var(--accent-color)]' : 'text-zinc-400 group-hover:text-zinc-200'}`} />
                     <span className="truncate">{item.label}</span>
                   </div>
                   {item.id === 'tracks' && totalTracksCount > 0 && (
-                    <span className={`text-[11px] font-mono tabular-nums px-1.5 py-0.2 rounded ${isActive ? 'text-white bg-[var(--accent-color)]/25' : 'text-zinc-400 bg-white/5'}`}>
+                    <span className={`text-[11px] font-mono tabular-nums px-1.5 py-0.2 rounded ${isActive ? 'text-zinc-200 bg-[var(--accent-color)]/25' : 'text-zinc-400 bg-white/5'}`}>
                       {totalTracksCount}
                     </span>
                   )}
@@ -102,7 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Playlists Section */}
         <div>
           <div className="flex items-center justify-between px-3 mb-1.5">
-            <span className="text-[11px] uppercase tracking-wider font-bold text-zinc-400">
+            <span className="text-[11px] font-medium text-zinc-400">
               Playlists
             </span>
             <button
@@ -146,17 +146,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   key={pl.id}
                   className={`group flex items-center justify-between px-3 py-1.5 rounded-md transition-colors ${
                     isSelected
-                      ? 'bg-[var(--accent-color)]/15 text-white font-semibold border-l-2 border-[var(--accent-color)] pl-2.5'
-                      : 'text-zinc-300 hover:text-white hover:bg-white/5'
+                      ? 'bg-[var(--accent-color)]/15 text-zinc-100 font-medium border-l-2 border-[var(--accent-color)] pl-2.5'
+                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
                   }`}
                 >
                   <button
                     onClick={() => onSelectPlaylist(pl.id)}
                     className="flex items-center space-x-2 text-left truncate flex-1 min-w-0"
                   >
-                    <ListMusic className="w-3.5 h-3.5 flex-shrink-0 text-zinc-400 group-hover:text-white" />
+                    <ListMusic className="w-3.5 h-3.5 flex-shrink-0 text-zinc-400 group-hover:text-zinc-200" />
                     <span className="truncate text-[12px]">{pl.name}</span>
-                    <span className="text-[10px] text-zinc-400 font-mono ml-1">
+                    <span className="text-[10px] text-zinc-500 font-mono ml-1">
                       {pl.track_count}
                     </span>
                   </button>
@@ -184,7 +184,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={onOpenFolderPicker}
           disabled={isScanning}
-          className="w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold transition-colors text-xs disabled:opacity-50 shadow-sm"
+          className="w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 font-medium transition-colors text-xs disabled:opacity-50 shadow-sm"
         >
           {isScanning ? (
             <>
@@ -199,12 +199,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </button>
 
-        <div className="flex justify-between items-center text-[11px] text-zinc-400 px-1 font-medium">
+        <div className="flex justify-between items-center text-[11px] text-zinc-400 px-1 font-normal">
           <div className="flex items-center space-x-1.5">
             <Database className="w-3.5 h-3.5 text-zinc-400" />
             <span>{totalTracksCount} tracks</span>
           </div>
-          <span className="text-emerald-400 font-mono text-[10px] font-semibold uppercase tracking-wider">Ready</span>
+          <span className="text-emerald-400 font-mono text-[10px] font-normal">Ready</span>
         </div>
       </div>
     </aside>

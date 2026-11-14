@@ -137,28 +137,28 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
               <span
                 onClick={onToggleInfo}
                 title={currentTrack.title}
-                className="text-[14px] font-bold text-white truncate hover:underline cursor-pointer tracking-tight"
+                className="text-[13px] font-medium text-zinc-100 truncate hover:underline cursor-pointer"
               >
                 {currentTrack.title}
               </span>
               <span
                 onClick={onToggleInfo}
                 title={currentTrack.artist}
-                className="text-[12px] font-medium text-zinc-300 truncate hover:text-white cursor-pointer mt-0.5"
+                className="text-[11px] font-normal text-zinc-400 truncate hover:text-zinc-200 cursor-pointer mt-0.5"
               >
                 {currentTrack.artist}
               </span>
               <div className="flex items-center space-x-1.5 mt-1">
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/5 text-zinc-300 font-mono border border-white/10 tracking-wider font-semibold">
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/5 text-zinc-400 font-mono border border-white/5">
                   {currentTrack.format}
                 </span>
                 {currentTrack.bitrate && (
-                  <span className="text-[10px] text-zinc-400 font-mono tabular-nums">
+                  <span className="text-[10px] text-zinc-500 font-mono tabular-nums">
                     {Math.round(currentTrack.bitrate / 1000)}k
                   </span>
                 )}
                 {currentTrack.year ? (
-                  <span className="text-[10px] text-zinc-400 font-mono">
+                  <span className="text-[10px] text-zinc-500 font-mono">
                     • {currentTrack.year}
                   </span>
                 ) : null}
@@ -195,25 +195,25 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             <div className="flex flex-col truncate pr-2">
               <span
                 title={radioNowPlaying?.title || currentRadio.name}
-                className="text-[14px] font-bold text-white truncate tracking-tight"
+                className="text-[13px] font-medium text-zinc-100 truncate"
               >
                 {radioNowPlaying?.title || currentRadio.name}
               </span>
               <span
                 title={radioNowPlaying?.artist || currentRadio.name}
-                className="text-[12px] font-medium text-zinc-300 truncate mt-0.5"
+                className="text-[11px] font-normal text-zinc-400 truncate mt-0.5"
               >
                 {radioNowPlaying?.artist && radioNowPlaying.artist !== 'Live Radio'
                   ? `${radioNowPlaying.artist} • ${currentRadio.name}`
                   : (currentRadio.tags ? currentRadio.tags.split(',')[0] : 'Online Radio')}
               </span>
               <div className="flex items-center space-x-1.5 mt-1">
-                <span className="text-[10px] px-2 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 font-mono border border-emerald-500/30 tracking-wider flex items-center space-x-1.5 font-semibold">
+                <span className="text-[10px] px-2 py-0.2 rounded-full bg-emerald-500/15 text-emerald-400 font-mono border border-emerald-500/25 flex items-center space-x-1.5 font-normal">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   <span>LIVE</span>
                 </span>
                 {currentRadio.country && (
-                  <span className="text-[10px] text-zinc-400 font-mono">
+                  <span className="text-[10px] text-zinc-500 font-mono">
                     • {currentRadio.country}
                   </span>
                 )}
@@ -322,11 +322,11 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
               )}
               <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isPlaying ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
             </span>
-            <span className="text-[11px] tracking-wider uppercase font-bold text-white">
+            <span className="text-[11px] font-medium text-zinc-300">
               {isPlaying ? 'LIVE STREAM' : 'STREAM PAUSED'}
             </span>
             <span className="text-zinc-600">•</span>
-            <span className="text-[12px] text-zinc-300 truncate max-w-[280px]">
+            <span className="text-[12px] text-zinc-400 truncate max-w-[280px]">
               {currentRadio.name}
             </span>
           </div>
@@ -384,7 +384,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           title={`Visualizer Style: ${visualizerMode}`}
           className={`p-2 rounded-md transition-colors ${
             visualizerMode !== 'off'
-              ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-semibold'
+              ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-medium'
               : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
         >
@@ -397,7 +397,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           title="Synced Karaoke Lyrics"
           className={`p-2 rounded-md transition-colors ${
             showLyrics
-              ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-semibold'
+              ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-medium'
               : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
         >
@@ -410,7 +410,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           title="Play Queue"
           className={`p-2 rounded-md transition-colors ${
             showQueue
-              ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-semibold'
+              ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-medium'
               : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
         >
@@ -423,7 +423,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           title="Track Specs & Bio"
           className={`p-2 rounded-md transition-colors ${
             showInfo
-              ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-semibold'
+              ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-medium'
               : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
         >

@@ -70,13 +70,13 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
         </div>
 
         <div className="flex-1 space-y-2">
-          <span className="text-[11px] uppercase font-bold text-[var(--accent-color)] tracking-wider">
+          <span className="text-[11px] font-medium text-[var(--accent-color)]">
             Album
           </span>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-2xl font-semibold text-white tracking-tight">
             {album.name}
           </h1>
-          <div className="text-base font-semibold text-zinc-300">
+          <div className="text-sm font-medium text-zinc-300">
             {album.artist}
           </div>
           <div className="flex items-center space-x-2 text-xs text-zinc-400 font-mono tabular-nums">
@@ -90,7 +90,7 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
           <div className="flex items-center space-x-3 pt-3">
             <button
               onClick={() => onPlayAlbum(album, false)}
-              className="flex items-center space-x-2 px-5 py-2.5 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white text-xs font-semibold shadow-md active:scale-95 transition-all"
+              className="flex items-center space-x-2 px-5 py-2.5 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white text-xs font-medium shadow-md active:scale-95 transition-all"
             >
               <Play className="w-4 h-4 fill-current" />
               <span>Play Album</span>
@@ -115,7 +115,7 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
       ) : (
         albumInfo?.summary && (
           <div className="p-4 rounded-lg bg-[var(--surface-color)] border border-[var(--border-color)] text-xs text-zinc-300 leading-relaxed select-text">
-            <span className="text-[11px] font-bold text-white block mb-1 uppercase tracking-wider">
+            <span className="text-[11px] font-medium text-zinc-300 block mb-1">
               About this Album
             </span>
             <p>{albumInfo.summary}</p>
@@ -125,7 +125,7 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
 
       {/* Tracks Table */}
       <div className="rounded-lg bg-[var(--surface-color)] border border-[var(--border-color)] divide-y divide-white/[0.04] overflow-hidden">
-        <div className="h-9 px-4 flex items-center text-[11px] font-bold text-zinc-400 uppercase tracking-wider bg-[var(--sidebar-color)] border-b border-[var(--border-color)]">
+        <div className="h-9 px-4 flex items-center text-[11px] font-medium text-zinc-400 bg-[var(--sidebar-color)] border-b border-[var(--border-color)]">
           <div className="w-8">#</div>
           <div className="flex-1">Title</div>
           <div className="w-16 text-right pr-2">
@@ -137,7 +137,7 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
             key={t.id}
             onDoubleClick={() => onPlayTrack(t)}
             className={`flex items-center px-4 py-2.5 text-[13px] hover:bg-white/[0.04] cursor-pointer transition-colors ${
-              currentTrackId === t.id ? 'text-[var(--accent-color)] font-semibold bg-[var(--accent-color)]/10' : 'text-zinc-200'
+              currentTrackId === t.id ? 'text-[var(--accent-color)] font-medium bg-[var(--accent-color)]/10' : 'text-zinc-200'
             }`}
           >
             <div className="w-8 text-zinc-500 font-mono text-[12px] tabular-nums">

@@ -96,6 +96,7 @@ export type ArtSource = 'itunes' | 'lastfm' | 'jiosaavn';
 export interface AppSettings {
   musicFolders: string[];
   theme: ThemeId;
+  fontFamily: string;
   customAccentColor: string;
   tableDensity: TableDensity;
   visualizerMode: VisualizerMode;

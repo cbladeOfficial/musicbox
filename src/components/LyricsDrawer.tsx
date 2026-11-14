@@ -67,11 +67,11 @@ export const LyricsDrawer: React.FC<LyricsDrawerProps> = ({
       <div className="h-11 border-b border-[var(--border-color)] px-4 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Mic2 className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-          <span className="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider">
+          <span className="text-[11px] font-medium text-[var(--text-main)]">
             Lyrics
           </span>
           {lyrics?.synced && !preferPlain && (
-            <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--accent-color)]/15 text-[var(--accent-color)] font-semibold border border-[var(--accent-color)]/20">
+            <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--accent-color)]/15 text-[var(--accent-color)] font-medium border border-[var(--accent-color)]/20">
               Synced
             </span>
           )}
@@ -146,7 +146,7 @@ export const LyricsDrawer: React.FC<LyricsDrawerProps> = ({
                 onClick={() => onSeek(line.time)}
                 className={`py-2 px-3.5 rounded-lg transition-all duration-200 cursor-pointer text-sm leading-relaxed ${
                   isActive
-                    ? 'text-white font-bold text-base scale-105 bg-[var(--accent-color)]/20 shadow-md ring-1 ring-[var(--accent-color)]/30'
+                    ? 'text-white font-medium text-base bg-[var(--accent-color)]/15 ring-1 ring-[var(--accent-color)]/25'
                     : 'text-zinc-400 hover:text-white hover:bg-white/5'
                 }`}
               >
