@@ -96,86 +96,86 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Modal Layout: Left Tabs + Right Content */}
         <div className="flex-1 flex overflow-hidden">
           {/* Left Tab Navigation */}
-          <div className="w-44 bg-[var(--sidebar-color)] border-r border-[var(--border-color)] p-2 space-y-0.5 flex-shrink-0 text-xs">
+          <div className="w-48 bg-[var(--sidebar-color)] border-r border-[var(--border-color)] p-2.5 space-y-1 flex-shrink-0 text-xs">
             <button
               onClick={() => setActiveTab('general')}
-              className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded transition-colors text-left ${
+              className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-md font-semibold text-[13px] transition-all text-left ${
                 activeTab === 'general'
-                  ? 'bg-[var(--surface-color)] text-[var(--text-main)] font-semibold border-l-2 border-[var(--accent-color)] pl-2'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)]'
+                  ? 'bg-[var(--accent-color)]/15 text-white border-l-2 border-[var(--accent-color)] pl-2.5'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <FolderOpen className="w-3.5 h-3.5" />
+              <FolderOpen className="w-4 h-4" />
               <span>Library</span>
             </button>
 
             <button
               onClick={() => setActiveTab('discord')}
-              className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded transition-colors text-left ${
+              className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-md font-semibold text-[13px] transition-all text-left ${
                 activeTab === 'discord'
-                  ? 'bg-[var(--surface-color)] text-[var(--text-main)] font-semibold border-l-2 border-[var(--accent-color)] pl-2'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)]'
+                  ? 'bg-[var(--accent-color)]/15 text-white border-l-2 border-[var(--accent-color)] pl-2.5'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Radio className="w-3.5 h-3.5" />
+              <Radio className="w-4 h-4" />
               <span>Discord RPC</span>
             </button>
 
             <button
               onClick={() => setActiveTab('lastfm')}
-              className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded transition-colors text-left ${
+              className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-md font-semibold text-[13px] transition-all text-left ${
                 activeTab === 'lastfm'
-                  ? 'bg-[var(--surface-color)] text-[var(--text-main)] font-semibold border-l-2 border-[var(--accent-color)] pl-2'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)]'
+                  ? 'bg-[var(--accent-color)]/15 text-white border-l-2 border-[var(--accent-color)] pl-2.5'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Globe className="w-3.5 h-3.5" />
+              <Globe className="w-4 h-4" />
               <span>Last.fm</span>
             </button>
 
             <button
               onClick={() => setActiveTab('appearance')}
-              className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded transition-colors text-left ${
+              className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-md font-semibold text-[13px] transition-all text-left ${
                 activeTab === 'appearance'
-                  ? 'bg-[var(--surface-color)] text-[var(--text-main)] font-semibold border-l-2 border-[var(--accent-color)] pl-2'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)]'
+                  ? 'bg-[var(--accent-color)]/15 text-white border-l-2 border-[var(--accent-color)] pl-2.5'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Palette className="w-3.5 h-3.5" />
+              <Palette className="w-4 h-4" />
               <span>Themes & UI</span>
             </button>
 
             <button
               onClick={() => setActiveTab('audio')}
-              className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded transition-colors text-left ${
+              className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-md font-semibold text-[13px] transition-all text-left ${
                 activeTab === 'audio'
-                  ? 'bg-[var(--surface-color)] text-[var(--text-main)] font-semibold border-l-2 border-[var(--accent-color)] pl-2'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)]'
+                  ? 'bg-[var(--accent-color)]/15 text-white border-l-2 border-[var(--accent-color)] pl-2.5'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Activity className="w-3.5 h-3.5" />
+              <Activity className="w-4 h-4" />
               <span>Audio & Visuals</span>
             </button>
           </div>
 
           {/* Right Content Area */}
-          <div className="flex-1 overflow-y-auto p-5 text-xs text-[var(--text-main)] space-y-5">
+          <div className="flex-1 overflow-y-auto p-6 text-xs text-zinc-200 space-y-6 bg-[var(--surface-color)]">
             {/* 1. General & Library Tab */}
             {activeTab === 'general' && (
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-xs font-semibold text-[var(--text-main)] mb-1">
+                  <h3 className="text-sm font-bold text-white mb-1">
                     Music Library Folder
                   </h3>
-                  <p className="text-[11px] text-[var(--text-muted)] leading-relaxed mb-3">
+                  <p className="text-[12px] text-zinc-400 leading-relaxed mb-3">
                     MusicBox indexes local audio files directly with native Rust and stores tags in an embedded SQLite database. Files are streamed on-demand.
                   </p>
                   <button
                     onClick={onScanFolder}
                     disabled={isScanning}
-                    className="flex items-center space-x-2 px-3 py-1.5 rounded bg-[var(--accent-color)] hover:brightness-110 text-white font-medium transition-all text-xs disabled:opacity-50"
+                    className="flex items-center space-x-2 px-4 py-2 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white font-semibold transition-all text-xs disabled:opacity-50 shadow-md"
                   >
-                    <FolderOpen className="w-3.5 h-3.5" />
+                    <FolderOpen className="w-4 h-4" />
                     <span>{isScanning ? 'Scanning in progress...' : 'Scan Music Folder'}</span>
                   </button>
                 </div>

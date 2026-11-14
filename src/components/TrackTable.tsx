@@ -101,50 +101,51 @@ export const TrackTable: React.FC<TrackTableProps> = ({
     return list;
   }, [tracks, sortField, sortAsc]);
 
-  const rowPadding = density === 'compact' ? 'py-1' : 'py-2';
-  const thumbnailSize = density === 'compact' ? 'w-6 h-6' : 'w-8 h-8';
+  const rowPadding = density === 'compact' ? 'py-1.5' : 'py-2.5';
+  const thumbnailSize = density === 'compact' ? 'w-7 h-7' : 'w-9 h-9';
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden select-none bg-[var(--bg-color)]">
       {/* Table Header */}
-      <div className="h-9 border-b border-[var(--border-color)] bg-[var(--surface-color)]/70 px-4 flex items-center text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider sticky top-0 z-10 backdrop-blur-sm">
-        <div className="w-10 text-center">#</div>
+      <div className="h-10 border-b border-[var(--border-color)] bg-[var(--sidebar-color)] px-4 flex items-center text-[11px] font-bold text-zinc-400 uppercase tracking-wider sticky top-0 z-10 backdrop-blur-md">
+        <div className="w-10 text-center font-mono text-zinc-500">#</div>
         <div
           onClick={() => handleSort('title')}
-          className="flex-1 flex items-center space-x-1 cursor-pointer hover:text-[var(--text-main)]"
+          className="flex-1 flex items-center space-x-1.5 cursor-pointer hover:text-white transition-colors"
         >
           <span>Title</span>
-          {sortField === 'title' && <ArrowUpDown className="w-3 h-3 text-[var(--accent-color)]" />}
+          {sortField === 'title' && <ArrowUpDown className="w-3.5 h-3.5 text-[var(--accent-color)]" />}
         </div>
         <div
           onClick={() => handleSort('artist')}
-          className="w-48 hidden md:flex items-center space-x-1 cursor-pointer hover:text-[var(--text-main)]"
+          className="w-48 hidden md:flex items-center space-x-1.5 cursor-pointer hover:text-white transition-colors"
         >
           <span>Artist</span>
-          {sortField === 'artist' && <ArrowUpDown className="w-3 h-3 text-[var(--accent-color)]" />}
+          {sortField === 'artist' && <ArrowUpDown className="w-3.5 h-3.5 text-[var(--accent-color)]" />}
         </div>
         <div
           onClick={() => handleSort('album')}
-          className="w-48 hidden lg:flex items-center space-x-1 cursor-pointer hover:text-[var(--text-main)]"
+          className="w-48 hidden lg:flex items-center space-x-1.5 cursor-pointer hover:text-white transition-colors"
         >
           <span>Album</span>
-          {sortField === 'album' && <ArrowUpDown className="w-3 h-3 text-[var(--accent-color)]" />}
+          {sortField === 'album' && <ArrowUpDown className="w-3.5 h-3.5 text-[var(--accent-color)]" />}
         </div>
         <div
           onClick={() => handleSort('duration')}
-          className="w-16 flex items-center justify-end space-x-1 cursor-pointer hover:text-[var(--text-main)] pr-4"
+          className="w-16 flex items-center justify-end space-x-1 cursor-pointer hover:text-white pr-4 transition-colors"
         >
-          <Clock className="w-3 h-3" />
+          <Clock className="w-3.5 h-3.5" />
         </div>
-        <div className="w-12 text-center">Actions</div>
+        <div className="w-14 text-center"></div>
       </div>
 
       {/* Table Body */}
-      <div className="flex-1 overflow-y-auto divide-y divide-[var(--border-color)]/30">
+      <div className="flex-1 overflow-y-auto divide-y divide-white/[0.03]">
         {sortedTracks.length === 0 ? (
-          <div className="p-12 flex flex-col items-center justify-center text-center text-xs text-[var(--text-muted)] space-y-3">
-            <Music2 className="w-8 h-8 opacity-30 stroke-1" />
-            <p>No tracks in this view. Scan a music folder to index your library.</p>
+          <div className="p-16 flex flex-col items-center justify-center text-center text-xs text-zinc-400 space-y-3">
+            <Music2 className="w-10 h-10 opacity-40 stroke-1" />
+            <p className="text-sm font-medium text-zinc-300">No tracks in this view</p>
+            <p className="text-zinc-500">Scan a music folder in the sidebar to index your library.</p>
           </div>
         ) : (
           sortedTracks.map((track, idx) => {
@@ -163,34 +164,34 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                     track,
                   });
                 }}
-                className={`group flex items-center px-4 ${rowPadding} text-xs transition-colors cursor-pointer ${
+                className={`group flex items-center px-4 ${rowPadding} text-[13px] transition-colors cursor-pointer ${
                   isCurrent
-                    ? 'bg-[var(--surface-active)] text-[var(--accent-color)] font-medium'
-                    : 'hover:bg-[var(--surface-hover)] text-[var(--text-main)]'
+                    ? 'bg-[var(--accent-color)]/15 text-white font-medium border-l-2 border-[var(--accent-color)] pl-3.5'
+                    : 'hover:bg-white/[0.04] text-zinc-200'
                 }`}
               >
                 {/* Track number / Animated play indicator */}
-                <div className="w-10 text-center text-[var(--text-muted)] flex-shrink-0 flex items-center justify-center">
+                <div className="w-10 text-center text-zinc-400 flex-shrink-0 flex items-center justify-center font-mono text-[12px] tabular-nums">
                   {isCurrent ? (
-                    <Volume2 className={`w-3.5 h-3.5 text-[var(--accent-color)] ${isPlaying ? 'animate-pulse' : ''}`} />
+                    <Volume2 className={`w-4 h-4 text-[var(--accent-color)] ${isPlaying ? 'animate-pulse' : ''}`} />
                   ) : (
                     <>
-                      <span className="group-hover:hidden font-mono text-[11px] tabular-nums">
+                      <span className="group-hover:hidden">
                         {track.track_number || idx + 1}
                       </span>
                       <button
                         onClick={() => onPlayTrack(track)}
-                        className="hidden group-hover:block text-[var(--text-main)] hover:text-[var(--accent-color)]"
+                        className="hidden group-hover:block text-white hover:text-[var(--accent-color)] transition-transform hover:scale-110"
                       >
-                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <Play className="w-4 h-4 fill-current" />
                       </button>
                     </>
                   )}
                 </div>
 
                 {/* Title + Thumbnail + Format badge */}
-                <div className="flex-1 flex items-center space-x-2.5 truncate pr-3">
-                  <div className={`${thumbnailSize} rounded overflow-hidden bg-[var(--surface-active)] border border-[var(--border-color)] flex-shrink-0 flex items-center justify-center`}>
+                <div className="flex-1 flex items-center space-x-3 truncate pr-3">
+                  <div className={`${thumbnailSize} rounded-md overflow-hidden bg-zinc-900 border border-white/10 flex-shrink-0 flex items-center justify-center shadow-sm`}>
                     {coverSrc ? (
                       <img
                         src={coverSrc}
@@ -202,18 +203,20 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                         }}
                       />
                     ) : (
-                      <Disc3 className="w-3.5 h-3.5 text-[var(--text-muted)] opacity-50" />
+                      <Disc3 className="w-4 h-4 text-zinc-500" />
                     )}
                   </div>
 
-                  <div className="flex flex-col truncate min-w-0">
-                    <span className="truncate font-medium">{track.title}</span>
-                    <span className="text-[10px] text-[var(--text-muted)] md:hidden truncate">
+                  <div className="flex flex-col truncate min-w-0 pr-1">
+                    <span className={`truncate text-[13px] ${isCurrent ? 'text-[var(--accent-color)] font-semibold' : 'text-white font-medium'}`}>
+                      {track.title}
+                    </span>
+                    <span className="text-[11px] text-zinc-400 md:hidden truncate">
                       {track.artist}
                     </span>
                   </div>
 
-                  <span className="text-[9px] px-1 py-0.2 rounded bg-[var(--surface-color)] text-[var(--text-muted)] font-mono border border-[var(--border-color)] flex-shrink-0 tracking-wider">
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/5 text-zinc-300 font-mono border border-white/10 flex-shrink-0 font-semibold tracking-wider">
                     {track.format}
                   </span>
                 </div>
@@ -226,7 +229,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                       onViewArtist(track.artist);
                     }
                   }}
-                  className="w-48 hidden md:block text-[var(--text-muted)] truncate pr-2 hover:underline hover:text-[var(--text-main)]"
+                  className="w-48 hidden md:block text-zinc-300 truncate pr-2 hover:underline hover:text-white text-[12px] font-medium transition-colors"
                 >
                   {track.artist}
                 </div>
@@ -239,30 +242,30 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                       onViewAlbum(track.album, track.artist);
                     }
                   }}
-                  className="w-48 hidden lg:block text-[var(--text-muted)] truncate pr-2 hover:underline hover:text-[var(--text-main)]"
+                  className="w-48 hidden lg:block text-zinc-400 truncate pr-2 hover:underline hover:text-white text-[12px] transition-colors"
                 >
                   {track.album}
                 </div>
 
                 {/* Duration */}
-                <div className="w-16 text-right text-[var(--text-muted)] font-mono text-[11px] tabular-nums pr-4">
+                <div className="w-16 text-right text-zinc-400 font-mono text-[12px] tabular-nums pr-4">
                   {formatDuration(track.duration)}
                 </div>
 
                 {/* Favorite & More button */}
-                <div className="w-12 flex items-center justify-center space-x-1">
+                <div className="w-14 flex items-center justify-center space-x-1">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onToggleFavorite(track.id);
                     }}
-                    className={`p-1 rounded hover:bg-[var(--surface-hover)] ${
+                    className={`p-1.5 rounded-full hover:bg-white/10 transition-colors ${
                       track.is_favorite
                         ? 'text-rose-500'
-                        : 'text-transparent group-hover:text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                        : 'opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-white'
                     }`}
                   >
-                    <Heart className={`w-3.5 h-3.5 ${track.is_favorite ? 'fill-rose-500' : ''}`} />
+                    <Heart className={`w-3.5 h-3.5 ${track.is_favorite ? 'fill-rose-500 stroke-rose-500' : ''}`} />
                   </button>
 
                   <button
@@ -275,7 +278,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                         track,
                       });
                     }}
-                    className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <MoreVertical className="w-3.5 h-3.5" />
                   </button>
@@ -291,16 +294,16 @@ export const TrackTable: React.FC<TrackTableProps> = ({
         <div
           ref={menuRef}
           style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
-          className="fixed w-52 bg-[var(--surface-color)]/95 backdrop-blur-md border border-[var(--border-color)] rounded-lg shadow-2xl py-1 z-50 text-xs select-none"
+          className="fixed w-56 bg-[#13151b] border border-white/15 rounded-lg shadow-2xl py-1.5 z-50 text-[12px] select-none text-zinc-200 backdrop-blur-xl"
         >
           <button
             onClick={() => {
               onPlayTrack(contextMenu.track);
               setContextMenu(null);
             }}
-            className="w-full flex items-center space-x-2.5 px-3 py-1.5 hover:bg-[var(--surface-hover)] text-left"
+            className="w-full flex items-center space-x-2.5 px-3.5 py-2 hover:bg-white/10 hover:text-white text-left font-medium transition-colors"
           >
-            <Play className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+            <Play className="w-4 h-4 text-[var(--accent-color)]" />
             <span>Play Now</span>
           </button>
 
@@ -309,9 +312,9 @@ export const TrackTable: React.FC<TrackTableProps> = ({
               onAddToQueue(contextMenu.track);
               setContextMenu(null);
             }}
-            className="w-full flex items-center space-x-2.5 px-3 py-1.5 hover:bg-[var(--surface-hover)] text-left"
+            className="w-full flex items-center space-x-2.5 px-3.5 py-2 hover:bg-white/10 hover:text-white text-left font-medium transition-colors"
           >
-            <ListPlus className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+            <ListPlus className="w-4 h-4 text-zinc-400" />
             <span>Add to Queue</span>
           </button>
 
@@ -320,9 +323,9 @@ export const TrackTable: React.FC<TrackTableProps> = ({
               onToggleFavorite(contextMenu.track.id);
               setContextMenu(null);
             }}
-            className="w-full flex items-center space-x-2.5 px-3 py-1.5 hover:bg-[var(--surface-hover)] text-left"
+            className="w-full flex items-center space-x-2.5 px-3.5 py-2 hover:bg-white/10 hover:text-white text-left font-medium transition-colors"
           >
-            <Heart className={`w-3.5 h-3.5 ${contextMenu.track.is_favorite ? 'text-rose-500 fill-rose-500' : 'text-[var(--text-muted)]'}`} />
+            <Heart className={`w-4 h-4 ${contextMenu.track.is_favorite ? 'text-rose-500 fill-rose-500' : 'text-zinc-400'}`} />
             <span>{contextMenu.track.is_favorite ? 'Remove Favorite' : 'Favorite'}</span>
           </button>
 
@@ -332,9 +335,9 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                 onViewAlbum(contextMenu.track.album, contextMenu.track.artist);
                 setContextMenu(null);
               }}
-              className="w-full flex items-center space-x-2.5 px-3 py-1.5 hover:bg-[var(--surface-hover)] text-left"
+              className="w-full flex items-center space-x-2.5 px-3.5 py-2 hover:bg-white/10 hover:text-white text-left font-medium transition-colors"
             >
-              <Disc3 className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+              <Disc3 className="w-4 h-4 text-zinc-400" />
               <span>Go to Album</span>
             </button>
           )}
@@ -345,17 +348,17 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                 onViewArtist(contextMenu.track.artist);
                 setContextMenu(null);
               }}
-              className="w-full flex items-center space-x-2.5 px-3 py-1.5 hover:bg-[var(--surface-hover)] text-left"
+              className="w-full flex items-center space-x-2.5 px-3.5 py-2 hover:bg-white/10 hover:text-white text-left font-medium transition-colors"
             >
-              <Mic2 className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+              <Mic2 className="w-4 h-4 text-zinc-400" />
               <span>Go to Artist</span>
             </button>
           )}
 
           {/* Submenu: Add to Playlist */}
           {playlists.length > 0 && (
-            <div className="border-t border-[var(--border-color)] my-1 pt-1">
-              <div className="text-[10px] uppercase font-semibold text-[var(--text-muted)] px-3 py-1">
+            <div className="border-t border-white/10 my-1 pt-1">
+              <div className="text-[10px] uppercase font-bold text-zinc-400 px-3.5 py-1">
                 Add to Playlist
               </div>
               <div className="max-h-28 overflow-y-auto">
@@ -366,9 +369,9 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                       onAddToPlaylist(pl.id, contextMenu.track.id);
                       setContextMenu(null);
                     }}
-                    className="w-full flex items-center space-x-2 px-3 py-1 hover:bg-[var(--surface-hover)] text-left text-[11px] truncate"
+                    className="w-full flex items-center space-x-2 px-3.5 py-1.5 hover:bg-white/10 hover:text-white text-left text-[11px] truncate"
                   >
-                    <Plus className="w-3 h-3 text-[var(--text-muted)]" />
+                    <Plus className="w-3.5 h-3.5 text-zinc-400" />
                     <span className="truncate">{pl.name}</span>
                   </button>
                 ))}

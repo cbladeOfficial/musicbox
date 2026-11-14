@@ -179,14 +179,14 @@ export const RadioView: React.FC<RadioViewProps> = ({
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden select-none bg-[var(--bg-color)]">
       {/* 1. Header Toolbar */}
-      <div className="h-14 border-b border-[var(--border-color)] px-5 flex items-center justify-between bg-[var(--surface-color)]/60 backdrop-blur-sm flex-shrink-0">
+      <div className="h-12 border-b border-[var(--border-color)] px-5 flex items-center justify-between bg-[var(--sidebar-color)] flex-shrink-0">
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
             <Radio className="w-4 h-4 text-[var(--accent-color)]" />
-            <h1 className="text-sm font-bold text-[var(--text-main)] tracking-tight">
+            <h1 className="text-sm font-bold text-white tracking-tight">
               Online Radio
             </h1>
-            <span className="text-[10px] px-1.5 py-0.2 rounded bg-[var(--surface-active)] text-[var(--text-muted)] font-mono">
+            <span className="text-[11px] px-2 py-0.2 rounded-md bg-white/5 text-zinc-300 font-mono font-semibold border border-white/10">
               {stations.length}
             </span>
           </div>
@@ -195,33 +195,33 @@ export const RadioView: React.FC<RadioViewProps> = ({
           <div className="flex items-center space-x-1 pl-4">
             <button
               onClick={() => setActiveTab('my_stations')}
-              className={`px-3 py-1 rounded text-xs transition-colors ${
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
                 activeTab === 'my_stations'
-                  ? 'bg-[var(--surface-active)] text-[var(--accent-color)] font-medium border border-[var(--border-color)]'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                  ? 'bg-white/10 text-white border border-white/15'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
             >
               My Stations
             </button>
             <button
               onClick={() => setActiveTab('favorites')}
-              className={`px-3 py-1 rounded text-xs transition-colors ${
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
                 activeTab === 'favorites'
-                  ? 'bg-[var(--surface-active)] text-[var(--accent-color)] font-medium border border-[var(--border-color)]'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                  ? 'bg-white/10 text-white border border-white/15'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
             >
               Favorites
             </button>
             <button
               onClick={() => setActiveTab('directory')}
-              className={`px-3 py-1 rounded text-xs flex items-center space-x-1.5 transition-colors ${
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center space-x-1.5 transition-colors ${
                 activeTab === 'directory'
-                  ? 'bg-[var(--surface-active)] text-[var(--accent-color)] font-medium border border-[var(--border-color)]'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                  ? 'bg-white/10 text-white border border-white/15'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Globe className="w-3 h-3" />
+              <Globe className="w-3.5 h-3.5" />
               <span>Explore Radio Directory</span>
             </button>
           </div>
@@ -387,22 +387,22 @@ export const RadioView: React.FC<RadioViewProps> = ({
               <p>No radio stations found. Click "Add Station" or explore the Online Directory.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {displayedStations.map((station) => {
                 const isCurrent = activeStationId === station.id;
 
                 return (
                   <div
                     key={station.id}
-                    className={`group relative flex flex-col justify-between p-3.5 rounded bg-[var(--surface-color)]/60 hover:bg-[var(--surface-color)] border transition-all duration-150 shadow-sm ${
+                    className={`group relative flex flex-col justify-between p-4 rounded-lg bg-[var(--surface-color)] hover:bg-[var(--surface-hover)] border transition-all duration-200 shadow-sm hover:shadow-xl ${
                       isCurrent
-                        ? 'border-[var(--accent-color)] bg-[var(--surface-active)]/80 ring-1 ring-[var(--accent-color)]/30'
-                        : 'border-[var(--border-color)]/60 hover:border-[var(--border-color)]'
+                        ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/10 ring-1 ring-[var(--accent-color)]/30'
+                        : 'border-[var(--border-color)] hover:border-white/20'
                     }`}
                   >
-                    <div className="flex items-start space-x-3 mb-2.5">
+                    <div className="flex items-start space-x-3 mb-3">
                       {/* Station Icon with Live indicator */}
-                      <div className="relative w-14 h-14 rounded bg-[var(--surface-active)] border border-[var(--border-color)]/50 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-sm">
+                      <div className="relative w-14 h-14 rounded-md bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-md">
                         {station.favicon ? (
                           <img
                             src={station.favicon}
@@ -413,18 +413,18 @@ export const RadioView: React.FC<RadioViewProps> = ({
                             }}
                           />
                         ) : (
-                          <Radio className="w-6 h-6 text-[var(--text-muted)] opacity-40" />
+                          <Radio className="w-7 h-7 text-[var(--accent-color)]" />
                         )}
 
                         {isCurrent && (
-                          <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                          <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
                         )}
                       </div>
 
                       <div className="flex-1 min-w-0 pr-1">
                         <div className="flex items-center space-x-1.5">
                           <span
-                            className="font-semibold text-xs text-[var(--text-main)] truncate cursor-pointer hover:underline"
+                            className="font-bold text-[13px] text-white truncate cursor-pointer hover:underline tracking-tight"
                             onClick={() => onPlayStation(station)}
                             title={station.name}
                           >
@@ -432,9 +432,9 @@ export const RadioView: React.FC<RadioViewProps> = ({
                           </span>
                         </div>
 
-                        <div className="flex items-center space-x-1.5 mt-0.5 text-[10px] text-[var(--text-muted)]">
+                        <div className="flex items-center space-x-1.5 mt-1 text-[11px] text-zinc-400">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                          <span className="uppercase font-mono font-bold tracking-wider text-emerald-400 text-[9px]">
+                          <span className="uppercase font-mono font-bold tracking-wider text-emerald-400 text-[10px]">
                             Live
                           </span>
                           {station.country && (

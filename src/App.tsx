@@ -60,11 +60,44 @@ export function App() {
 
   // Navigation & Views
   const [currentView, setCurrentView] = useState<ViewMode>('tracks');
+  const [navHistory, setNavHistory] = useState<ViewMode[]>(['tracks']);
+  const [navHistoryIndex, setNavHistoryIndex] = useState(0);
   const [selectedAlbum, setSelectedAlbum] = useState<AlbumItem | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<ArtistGroup | null>(null);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<number | null>(null);
   const [playlistTracks, setPlaylistTracks] = useState<TrackRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const navigateToView = useCallback((v: ViewMode) => {
+    setCurrentView(v);
+    setSelectedPlaylistId(null);
+    setSelectedAlbum(null);
+    setSelectedArtist(null);
+    setNavHistory((prev) => [...prev.slice(0, navHistoryIndex + 1), v]);
+    setNavHistoryIndex((prev) => prev + 1);
+  }, [navHistoryIndex]);
+
+  const handleNavigateBack = useCallback(() => {
+    if (navHistoryIndex > 0) {
+      const nextIdx = navHistoryIndex - 1;
+      setNavHistoryIndex(nextIdx);
+      setCurrentView(navHistory[nextIdx]);
+      setSelectedPlaylistId(null);
+      setSelectedAlbum(null);
+      setSelectedArtist(null);
+    }
+  }, [navHistory, navHistoryIndex]);
+
+  const handleNavigateForward = useCallback(() => {
+    if (navHistoryIndex < navHistory.length - 1) {
+      const nextIdx = navHistoryIndex + 1;
+      setNavHistoryIndex(nextIdx);
+      setCurrentView(navHistory[nextIdx]);
+      setSelectedPlaylistId(null);
+      setSelectedAlbum(null);
+      setSelectedArtist(null);
+    }
+  }, [navHistory, navHistoryIndex]);
 
   // UI Drawers & Modals
   const [showLyrics, setShowLyrics] = useState(false);
@@ -683,6 +716,10 @@ export function App() {
           const next = settings.tableDensity === 'compact' ? 'comfortable' : 'compact';
           handleUpdateSettings({ tableDensity: next });
         }}
+        onNavigateBack={handleNavigateBack}
+        onNavigateForward={handleNavigateForward}
+        canNavigateBack={navHistoryIndex > 0}
+        canNavigateForward={navHistoryIndex < navHistory.length - 1}
       />
 
       {/* 2. Main Center Body */}
@@ -690,12 +727,7 @@ export function App() {
         {/* Left Sidebar */}
         <Sidebar
           currentView={currentView}
-          onSelectView={(v) => {
-            setCurrentView(v);
-            setSelectedPlaylistId(null);
-            setSelectedAlbum(null);
-            setSelectedArtist(null);
-          }}
+          onSelectView={navigateToView}
           playlists={playlists}
           selectedPlaylistId={selectedPlaylistId}
           onSelectPlaylist={handleSelectPlaylist}

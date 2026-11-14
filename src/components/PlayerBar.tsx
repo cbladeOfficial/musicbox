@@ -111,12 +111,12 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   };
 
   return (
-    <footer className="h-[76px] w-full bg-[var(--surface-color)]/95 backdrop-blur-md border-t border-[var(--border-color)] flex items-center justify-between px-4 select-none z-40 transition-colors">
+    <footer className="h-20 w-full bg-[var(--sidebar-color)] border-t border-[var(--border-color)] flex items-center justify-between px-5 select-none z-40 transition-colors">
       {/* Left: Track Information */}
-      <div className="flex items-center space-x-3 w-[28%] min-w-[210px]">
+      <div className="flex items-center space-x-3.5 w-[28%] min-w-[220px]">
         {currentTrack ? (
           <>
-            <div className="relative w-12 h-12 rounded bg-[var(--surface-active)] border border-[var(--border-color)] flex-shrink-0 overflow-hidden shadow-sm">
+            <div className="relative w-13 h-13 rounded-md bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden shadow-md">
               {resolvedCover ? (
                 <img
                   src={resolvedCover}
@@ -127,8 +127,8 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
                   }}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)] bg-[var(--surface-active)]">
-                  <Disc3 className="w-6 h-6 opacity-40 text-[var(--text-muted)]" />
+                <div className="w-full h-full flex items-center justify-center text-zinc-500">
+                  <Disc3 className="w-7 h-7 stroke-1" />
                 </div>
               )}
             </div>
@@ -137,28 +137,28 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
               <span
                 onClick={onToggleInfo}
                 title={currentTrack.title}
-                className="text-[13px] font-medium text-[var(--text-main)] truncate hover:underline cursor-pointer tracking-tight"
+                className="text-[14px] font-bold text-white truncate hover:underline cursor-pointer tracking-tight"
               >
                 {currentTrack.title}
               </span>
               <span
                 onClick={onToggleInfo}
                 title={currentTrack.artist}
-                className="text-[11px] text-[var(--text-muted)] truncate hover:text-[var(--text-main)] cursor-pointer"
+                className="text-[12px] font-medium text-zinc-300 truncate hover:text-white cursor-pointer mt-0.5"
               >
                 {currentTrack.artist}
               </span>
-              <div className="flex items-center space-x-1.5 mt-0.5">
-                <span className="text-[9px] px-1 py-0.2 rounded bg-[var(--surface-hover)] text-[var(--text-muted)] font-mono border border-[var(--border-color)] tracking-wider">
+              <div className="flex items-center space-x-1.5 mt-1">
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/5 text-zinc-300 font-mono border border-white/10 tracking-wider font-semibold">
                   {currentTrack.format}
                 </span>
                 {currentTrack.bitrate && (
-                  <span className="text-[9px] text-[var(--text-muted)] font-mono tabular-nums opacity-80">
+                  <span className="text-[10px] text-zinc-400 font-mono tabular-nums">
                     {Math.round(currentTrack.bitrate / 1000)}k
                   </span>
                 )}
                 {currentTrack.year ? (
-                  <span className="text-[9px] text-[var(--text-muted)] font-mono opacity-80">
+                  <span className="text-[10px] text-zinc-400 font-mono">
                     • {currentTrack.year}
                   </span>
                 ) : null}
@@ -168,8 +168,8 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             <button
               onClick={() => onToggleFavorite(currentTrack.id)}
               title={currentTrack.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
-              className={`p-1.5 rounded-full hover:bg-[var(--surface-hover)] transition-all ${
-                currentTrack.is_favorite ? 'text-rose-500 scale-105' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+              className={`p-2 rounded-full hover:bg-white/10 transition-all ${
+                currentTrack.is_favorite ? 'text-rose-500 scale-105' : 'text-zinc-400 hover:text-white'
               }`}
             >
               <Heart className={`w-4 h-4 ${currentTrack.is_favorite ? 'fill-rose-500 stroke-rose-500' : ''}`} />
@@ -177,7 +177,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           </>
         ) : currentRadio ? (
           <>
-            <div className="relative w-12 h-12 rounded bg-[var(--surface-active)] border border-[var(--border-color)] flex-shrink-0 overflow-hidden shadow-sm flex items-center justify-center">
+            <div className="relative w-13 h-13 rounded-md bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden shadow-md flex items-center justify-center">
               {currentRadio.favicon ? (
                 <img
                   src={currentRadio.favicon}
@@ -188,32 +188,32 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
                   }}
                 />
               ) : (
-                <Radio className="w-5 h-5 text-[var(--accent-color)]" />
+                <Radio className="w-6 h-6 text-[var(--accent-color)]" />
               )}
             </div>
 
             <div className="flex flex-col truncate pr-2">
               <span
                 title={radioNowPlaying?.title || currentRadio.name}
-                className="text-[13px] font-medium text-[var(--text-main)] truncate tracking-tight"
+                className="text-[14px] font-bold text-white truncate tracking-tight"
               >
                 {radioNowPlaying?.title || currentRadio.name}
               </span>
               <span
                 title={radioNowPlaying?.artist || currentRadio.name}
-                className="text-[11px] text-[var(--text-muted)] truncate"
+                className="text-[12px] font-medium text-zinc-300 truncate mt-0.5"
               >
                 {radioNowPlaying?.artist && radioNowPlaying.artist !== 'Live Radio'
                   ? `${radioNowPlaying.artist} • ${currentRadio.name}`
                   : (currentRadio.tags ? currentRadio.tags.split(',')[0] : 'Online Radio')}
               </span>
-              <div className="flex items-center space-x-1.5 mt-0.5">
-                <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 font-mono border border-emerald-500/30 tracking-wider flex items-center space-x-1">
+              <div className="flex items-center space-x-1.5 mt-1">
+                <span className="text-[10px] px-2 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 font-mono border border-emerald-500/30 tracking-wider flex items-center space-x-1.5 font-semibold">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   <span>LIVE</span>
                 </span>
                 {currentRadio.country && (
-                  <span className="text-[9px] text-[var(--text-muted)] font-mono opacity-80">
+                  <span className="text-[10px] text-zinc-400 font-mono">
                     • {currentRadio.country}
                   </span>
                 )}
@@ -224,8 +224,8 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
               <button
                 onClick={() => onToggleRadioFavorite(currentRadio.id)}
                 title={currentRadio.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
-                className={`p-1.5 rounded-full hover:bg-[var(--surface-hover)] transition-all ${
-                  currentRadio.is_favorite ? 'text-rose-500 scale-105' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                className={`p-2 rounded-full hover:bg-white/10 transition-all ${
+                  currentRadio.is_favorite ? 'text-rose-500 scale-105' : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 <Heart className={`w-4 h-4 ${currentRadio.is_favorite ? 'fill-rose-500 stroke-rose-500' : ''}`} />
@@ -233,54 +233,54 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             )}
           </>
         ) : (
-          <div className="flex items-center space-x-2 text-xs text-[var(--text-muted)]">
-            <Disc3 className="w-4 h-4 opacity-40" />
-            <span>Ready for playback</span>
+          <div className="flex items-center space-x-2.5 text-xs text-zinc-400">
+            <Disc3 className="w-5 h-5 text-zinc-500" />
+            <span className="font-medium text-zinc-400">Ready for playback</span>
           </div>
         )}
       </div>
 
       {/* Center: Playback Controls & Timeline */}
       <div className="flex flex-col items-center max-w-xl w-[44%] px-4">
-        <div className="flex items-center space-x-3 mb-1">
+        <div className="flex items-center space-x-4 mb-1.5">
           <button
             onClick={onToggleShuffle}
             disabled={!!currentRadio}
             title={currentRadio ? 'Shuffle not available for live radio' : (isShuffle ? 'Shuffle: On' : 'Shuffle: Off')}
-            className={`p-1.5 rounded transition-colors ${
+            className={`p-1.5 rounded-md transition-colors ${
               currentRadio
-                ? 'opacity-20 cursor-not-allowed text-[var(--text-muted)]'
+                ? 'opacity-20 cursor-not-allowed text-zinc-500'
                 : isShuffle
-                ? 'text-[var(--accent-color)] font-bold'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                ? 'text-[var(--accent-color)] font-bold bg-[var(--accent-color)]/10'
+                : 'text-zinc-400 hover:text-white hover:bg-white/10'
             }`}
           >
-            <Shuffle className="w-3.5 h-3.5" />
+            <Shuffle className="w-4 h-4" />
           </button>
 
           <button
             onClick={onPrevious}
             disabled={!!currentRadio}
             title={currentRadio ? 'Previous disabled for live stream' : 'Previous (Skip / Restart)'}
-            className={`p-1.5 rounded transition-colors active:scale-95 ${
+            className={`p-1.5 rounded-md transition-all active:scale-95 ${
               currentRadio
-                ? 'opacity-20 cursor-not-allowed text-[var(--text-muted)]'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                ? 'opacity-20 cursor-not-allowed text-zinc-500'
+                : 'text-zinc-300 hover:text-white hover:bg-white/10'
             }`}
           >
-            <SkipBack className="w-4 h-4 fill-current" />
+            <SkipBack className="w-4.5 h-4.5 fill-current" />
           </button>
 
           <button
             onClick={onPlayPause}
             disabled={!currentTrack && !currentRadio}
             title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
-            className="w-8 h-8 rounded-full bg-[var(--accent-color)] hover:brightness-110 text-white flex items-center justify-center transition-all active:scale-95 shadow-sm shadow-[var(--accent-color)]/30 disabled:opacity-40"
+            className="w-9 h-9 rounded-full bg-[var(--accent-color)] hover:brightness-110 text-white flex items-center justify-center transition-all active:scale-95 shadow-md shadow-[var(--accent-color)]/30 disabled:opacity-40"
           >
             {isPlaying ? (
-              <Pause className="w-4 h-4 fill-current" />
+              <Pause className="w-4.5 h-4.5 fill-current" />
             ) : (
-              <Play className="w-4 h-4 fill-current translate-x-0.5" />
+              <Play className="w-4.5 h-4.5 fill-current translate-x-0.5" />
             )}
           </button>
 
@@ -288,51 +288,51 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             onClick={onNext}
             disabled={!!currentRadio}
             title={currentRadio ? 'Next disabled for live stream' : 'Next Track'}
-            className={`p-1.5 rounded transition-colors active:scale-95 ${
+            className={`p-1.5 rounded-md transition-all active:scale-95 ${
               currentRadio
-                ? 'opacity-20 cursor-not-allowed text-[var(--text-muted)]'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                ? 'opacity-20 cursor-not-allowed text-zinc-500'
+                : 'text-zinc-300 hover:text-white hover:bg-white/10'
             }`}
           >
-            <SkipForward className="w-4 h-4 fill-current" />
+            <SkipForward className="w-4.5 h-4.5 fill-current" />
           </button>
 
           <button
             onClick={onToggleRepeat}
             disabled={!!currentRadio}
             title={currentRadio ? 'Repeat not available for live radio' : `Repeat mode: ${repeatMode}`}
-            className={`p-1.5 rounded transition-colors ${
+            className={`p-1.5 rounded-md transition-colors ${
               currentRadio
-                ? 'opacity-20 cursor-not-allowed text-[var(--text-muted)]'
+                ? 'opacity-20 cursor-not-allowed text-zinc-500'
                 : repeatMode !== 'off'
-                ? 'text-[var(--accent-color)]'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/10 font-bold'
+                : 'text-zinc-400 hover:text-white hover:bg-white/10'
             }`}
           >
-            {repeatMode === 'one' ? <Repeat1 className="w-3.5 h-3.5" /> : <Repeat className="w-3.5 h-3.5" />}
+            {repeatMode === 'one' ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
           </button>
         </div>
 
         {/* Timeline Slider with Tooltip or Live Radio Banner */}
         {currentRadio ? (
-          <div className="w-full flex items-center justify-center space-x-2 py-0.5 text-[11px] text-[var(--text-muted)] font-mono">
-            <span className="relative flex h-2 w-2">
+          <div className="w-full flex items-center justify-center space-x-2.5 py-1 text-[12px] text-zinc-300 font-mono">
+            <span className="relative flex h-2.5 w-2.5">
               {isPlaying && (
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               )}
-              <span className={`relative inline-flex rounded-full h-2 w-2 ${isPlaying ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isPlaying ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
             </span>
-            <span className="text-[10px] tracking-wider uppercase font-semibold text-[var(--text-main)]">
-              {isPlaying ? 'LIVE STREAM' : 'PAUSED'}
+            <span className="text-[11px] tracking-wider uppercase font-bold text-white">
+              {isPlaying ? 'LIVE STREAM' : 'STREAM PAUSED'}
             </span>
-            <span className="opacity-40">•</span>
-            <span className="text-[10px] text-[var(--text-muted)] truncate max-w-[260px]">
+            <span className="text-zinc-600">•</span>
+            <span className="text-[12px] text-zinc-300 truncate max-w-[280px]">
               {currentRadio.name}
             </span>
           </div>
         ) : (
-          <div className="w-full flex items-center space-x-2 text-[11px] text-[var(--text-muted)] font-mono tabular-nums">
-            <span className="w-9 text-right">{formatTime(displayTime)}</span>
+          <div className="w-full flex items-center space-x-2.5 text-[12px] text-zinc-400 font-mono tabular-nums">
+            <span className="w-10 text-right">{formatTime(displayTime)}</span>
             <div
               ref={progressTrackRef}
               onMouseMove={handleMouseMoveProgress}
@@ -342,14 +342,14 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
               {/* Hover timestamp tooltip */}
               {hoverTime !== null && (
                 <div
-                  className="absolute -top-6 px-1.5 py-0.5 rounded bg-[var(--sidebar-color)] border border-[var(--border-color)] text-[10px] text-[var(--text-main)] font-mono pointer-events-none transform -translate-x-1/2 shadow-lg"
+                  className="absolute -top-7 px-2 py-0.5 rounded bg-zinc-900 border border-white/20 text-[11px] text-white font-mono pointer-events-none transform -translate-x-1/2 shadow-xl"
                   style={{ left: `${hoverPos}px` }}
                 >
                   {formatTime(hoverTime)}
                 </div>
               )}
 
-              <div className="w-full h-1 bg-[var(--border-color)] rounded-full overflow-hidden group-hover:h-1.5 transition-all">
+              <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden group-hover:h-2 transition-all">
                 <div
                   className="h-full bg-[var(--accent-color)] rounded-full relative"
                   style={{ width: `${progressPercent}%` }}
@@ -371,21 +371,21 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
             </div>
-            <span className="w-9">{formatTime(duration)}</span>
+            <span className="w-10">{formatTime(duration)}</span>
           </div>
         )}
       </div>
 
       {/* Right: Drawer Toggles, Visualizer & Volume */}
-      <div className="flex items-center justify-end space-x-1.5 w-[28%] min-w-[210px]">
+      <div className="flex items-center justify-end space-x-2 w-[28%] min-w-[220px]">
         {/* Visualizer Toggle */}
         <button
           onClick={onToggleVisualizer}
           title={`Visualizer Style: ${visualizerMode}`}
-          className={`p-1.5 rounded transition-colors ${
+          className={`p-2 rounded-md transition-colors ${
             visualizerMode !== 'off'
-              ? 'text-[var(--accent-color)] bg-[var(--surface-active)]'
-              : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)]'
+              ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-semibold'
+              : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
         >
           <Activity className="w-4 h-4" />
@@ -395,10 +395,10 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         <button
           onClick={onToggleLyrics}
           title="Synced Karaoke Lyrics"
-          className={`p-1.5 rounded transition-colors ${
+          className={`p-2 rounded-md transition-colors ${
             showLyrics
-              ? 'text-[var(--accent-color)] bg-[var(--surface-active)]'
-              : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)]'
+              ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-semibold'
+              : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
         >
           <Mic2 className="w-4 h-4" />
@@ -408,10 +408,10 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         <button
           onClick={onToggleQueue}
           title="Play Queue"
-          className={`p-1.5 rounded transition-colors ${
+          className={`p-2 rounded-md transition-colors ${
             showQueue
-              ? 'text-[var(--accent-color)] bg-[var(--surface-active)]'
-              : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)]'
+              ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-semibold'
+              : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
         >
           <ListMusic className="w-4 h-4" />
@@ -421,23 +421,23 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         <button
           onClick={onToggleInfo}
           title="Track Specs & Bio"
-          className={`p-1.5 rounded transition-colors ${
+          className={`p-2 rounded-md transition-colors ${
             showInfo
-              ? 'text-[var(--accent-color)] bg-[var(--surface-active)]'
-              : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)]'
+              ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-semibold'
+              : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
         >
           <Info className="w-4 h-4" />
         </button>
 
-        <div className="h-4 w-[1px] bg-[var(--border-color)] mx-1" />
+        <div className="h-4 w-[1px] bg-white/10 mx-1" />
 
         {/* Volume Slider */}
-        <div className="flex items-center space-x-1.5">
+        <div className="flex items-center space-x-2">
           <button
             onClick={onToggleMute}
             title={isMuted ? 'Unmute' : 'Mute'}
-            className="text-[var(--text-muted)] hover:text-[var(--text-main)] p-1 rounded"
+            className="text-zinc-400 hover:text-white p-1 rounded-md transition-colors"
           >
             {isMuted || volume === 0 ? (
               <VolumeX className="w-4 h-4 text-rose-400" />
@@ -452,7 +452,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             step={0.01}
             value={isMuted ? 0 : volume}
             onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
-            className="w-18 h-1 bg-[var(--border-color)] accent-[var(--accent-color)] rounded-full appearance-none cursor-pointer"
+            className="w-20 h-1.5 bg-zinc-800 accent-[var(--accent-color)] rounded-full appearance-none cursor-pointer"
           />
         </div>
       </div>

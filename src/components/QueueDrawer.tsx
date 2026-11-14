@@ -58,15 +58,15 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
         {/* Now Playing section */}
         {currentTrack && (
           <div className="space-y-1">
-            <span className="text-[10px] uppercase font-bold text-[var(--accent-color)] px-2">
+            <span className="text-[11px] uppercase font-bold text-[var(--accent-color)] px-2 tracking-wider">
               Now Playing
             </span>
-            <div className="flex items-center px-2 py-2 rounded bg-[var(--surface-active)] text-xs border border-[var(--border-color)]">
+            <div className="flex items-center px-3 py-2.5 rounded-lg bg-[var(--accent-color)]/15 text-xs border border-[var(--accent-color)]/30 shadow-sm">
               <div className="flex-1 truncate">
-                <div className="font-semibold text-[var(--text-main)] truncate">
+                <div className="font-bold text-white text-[13px] truncate">
                   {currentTrack.title}
                 </div>
-                <div className="text-[11px] text-[var(--text-muted)] truncate">
+                <div className="text-[12px] text-zinc-300 font-medium truncate mt-0.5">
                   {currentTrack.artist}
                 </div>
               </div>
@@ -76,11 +76,11 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
 
         {/* Up Next List */}
         <div className="space-y-1">
-          <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] px-2">
+          <span className="text-[11px] uppercase font-bold text-zinc-400 px-2 tracking-wider">
             Up Next
           </span>
           {queue.length === 0 ? (
-            <div className="p-6 text-center text-xs text-[var(--text-muted)] italic opacity-60">
+            <div className="p-8 text-center text-xs text-zinc-400 italic">
               Queue is empty. Right click any track to add it to queue.
             </div>
           ) : (
@@ -88,20 +88,20 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
               {queue.map((track, i) => (
                 <div
                   key={`${track.id}_${i}`}
-                  className="group flex items-center justify-between px-2 py-1.5 rounded hover:bg-[var(--surface-hover)] text-xs transition-colors"
+                  className="group flex items-center justify-between px-3 py-2 rounded-md hover:bg-white/5 text-xs transition-colors"
                 >
                   <button
                     onClick={() => onPlayFromQueue(i)}
-                    className="flex-1 text-left truncate pr-2 flex items-center space-x-2"
+                    className="flex-1 text-left truncate pr-2 flex items-center space-x-2.5"
                   >
-                    <span className="w-4 text-[10px] text-[var(--text-muted)] font-mono tabular-nums">
+                    <span className="w-4 text-[11px] text-zinc-500 font-mono tabular-nums">
                       {i + 1}
                     </span>
                     <div className="truncate">
-                      <div className="text-[var(--text-main)] font-medium truncate">
+                      <div className="text-white font-medium text-[13px] truncate">
                         {track.title}
                       </div>
-                      <div className="text-[10px] text-[var(--text-muted)] truncate">
+                      <div className="text-[11px] text-zinc-400 truncate">
                         {track.artist}
                       </div>
                     </div>
@@ -110,17 +110,17 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
                   <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => onPlayFromQueue(i)}
-                      className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                      className="p-1 rounded text-zinc-400 hover:text-white"
                       title="Play now"
                     >
-                      <Play className="w-3 h-3 fill-current" />
+                      <Play className="w-3.5 h-3.5 fill-current" />
                     </button>
                     <button
                       onClick={() => onRemoveFromQueue(i)}
-                      className="p-1 rounded text-[var(--text-muted)] hover:text-rose-400"
+                      className="p-1 rounded text-zinc-400 hover:text-rose-400"
                       title="Remove from queue"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>

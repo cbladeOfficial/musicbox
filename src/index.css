@@ -1,64 +1,75 @@
 @import "tailwindcss";
 
 :root {
-  --bg-color: #0f1115;
-  --sidebar-color: #14171d;
-  --surface-color: #181b22;
-  --surface-hover: #20252e;
-  --surface-active: #262c37;
-  --border-color: #242933;
-  --text-main: #e6edf3;
-  --text-muted: #8b949e;
-  --accent-color: #2f81f7;
-  --accent-rgb: 47, 129, 247;
+  --bg-color: #08090c;
+  --sidebar-color: #0d0e13;
+  --surface-color: #13151b;
+  --surface-hover: #1c1f28;
+  --surface-active: #242936;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.15);
+  --text-main: #ffffff;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+  --accent-color: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-rgb: 59, 130, 246;
 }
 
 [data-theme="amoled"] {
   --bg-color: #000000;
-  --sidebar-color: #080808;
-  --surface-color: #101010;
-  --surface-hover: #181818;
-  --surface-active: #222222;
-  --border-color: #1c1c1c;
+  --sidebar-color: #050507;
+  --surface-color: #0b0c0e;
+  --surface-hover: #14151a;
+  --surface-active: #1d1f26;
+  --border-color: rgba(255, 255, 255, 0.09);
+  --border-light: rgba(255, 255, 255, 0.18);
   --text-main: #ffffff;
-  --text-muted: #737373;
+  --text-secondary: #e4e4e7;
+  --text-muted: #a1a1aa;
 }
 
 [data-theme="nord"] {
-  --bg-color: #242933;
-  --sidebar-color: #2e3440;
-  --surface-color: #3b4252;
-  --surface-hover: #434c5e;
-  --surface-active: #4c566a;
-  --border-color: #434c5e;
-  --text-main: #eceff4;
+  --bg-color: #1e222a;
+  --sidebar-color: #242933;
+  --surface-color: #2e3440;
+  --surface-hover: #3b4252;
+  --surface-active: #434c5e;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-light: rgba(255, 255, 255, 0.2);
+  --text-main: #ffffff;
+  --text-secondary: #e5e9f0;
   --text-muted: #d8dee9;
   --accent-color: #88c0d0;
   --accent-rgb: 136, 192, 208;
 }
 
 [data-theme="catppuccin"] {
-  --bg-color: #1e1e2e;
-  --sidebar-color: #181825;
-  --surface-color: #313244;
-  --surface-hover: #45475a;
-  --surface-active: #585b70;
-  --border-color: #313244;
-  --text-main: #cdd6f4;
-  --text-muted: #a6adc8;
+  --bg-color: #181825;
+  --sidebar-color: #1e1e2e;
+  --surface-color: #262638;
+  --surface-hover: #313244;
+  --surface-active: #45475a;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-light: rgba(255, 255, 255, 0.2);
+  --text-main: #ffffff;
+  --text-secondary: #cdd6f4;
+  --text-muted: #bac2de;
   --accent-color: #cba6f7;
   --accent-rgb: 203, 166, 247;
 }
 
 [data-theme="cyberpunk"] {
-  --bg-color: #0d0e15;
-  --sidebar-color: #12131c;
-  --surface-color: #1a1c29;
-  --surface-hover: #24273a;
-  --surface-active: #2f334d;
-  --border-color: #2e324a;
-  --text-main: #f0f6fc;
-  --text-muted: #8b949e;
+  --bg-color: #07080e;
+  --sidebar-color: #0d0f1a;
+  --surface-color: #141726;
+  --surface-hover: #1f233a;
+  --surface-active: #2b3152;
+  --border-color: rgba(0, 240, 255, 0.15);
+  --border-light: rgba(0, 240, 255, 0.3);
+  --text-main: #ffffff;
+  --text-secondary: #e0e7ff;
+  --text-muted: #94a3b8;
   --accent-color: #00f0ff;
   --accent-rgb: 0, 240, 255;
 }
@@ -69,15 +80,18 @@ body {
   user-select: none;
   background-color: var(--bg-color);
   color: var(--text-main);
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'San Francisco', 'Segoe UI', Roboto, sans-serif;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'cv02' 1, 'cv03' 1, 'cv04' 1, 'cv11' 1, 'tnum' 1;
 }
 
-/* Custom Sleek Scrollbar */
+/* Custom Sleek Feishin Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
 
 ::-webkit-scrollbar-track {
@@ -85,17 +99,26 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 /* Drag region for custom Feishin frameless titlebar */
 .drag-region {
   -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Range input styling for sleek Feishin sliders */
+input[type="range"] {
+  accent-color: var(--accent-color);
 }
 
 .no-drag {

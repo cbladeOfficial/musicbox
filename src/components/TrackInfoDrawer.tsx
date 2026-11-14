@@ -81,56 +81,56 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
               </div>
             )}
           </div>
-          <h2 className="text-sm font-bold text-[var(--text-main)] tracking-tight">{currentTrack.title}</h2>
-          <span className="text-xs text-[var(--text-muted)] mt-0.5">{currentTrack.artist}</span>
-          <span className="text-[11px] text-[var(--text-muted)] opacity-80">{currentTrack.album}</span>
+          <h2 className="text-base font-bold text-white tracking-tight">{currentTrack.title}</h2>
+          <span className="text-xs font-semibold text-zinc-300 mt-0.5">{currentTrack.artist}</span>
+          <span className="text-[11px] text-zinc-400">{currentTrack.album}</span>
         </div>
 
         {/* Technical Specs */}
-        <div className="space-y-2 p-3 rounded bg-[var(--surface-active)]/50 border border-[var(--border-color)] text-xs">
-          <div className="flex items-center space-x-1.5 text-[var(--accent-color)] font-semibold text-[11px] mb-1">
+        <div className="space-y-2.5 p-3.5 rounded-lg bg-[var(--surface-color)] border border-[var(--border-color)] text-xs shadow-sm">
+          <div className="flex items-center space-x-1.5 text-[var(--accent-color)] font-bold text-[11px] uppercase tracking-wider mb-1">
             <Cpu className="w-3.5 h-3.5" />
             <span>Audio Specifications</span>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-[11px]">
             <div>
-              <span className="text-[var(--text-muted)]">Codec: </span>
-              <span className="font-mono text-[var(--text-main)]">{currentTrack.format}</span>
+              <span className="text-zinc-400">Codec: </span>
+              <span className="font-mono text-white font-medium">{currentTrack.format}</span>
             </div>
             {currentTrack.bitrate && (
               <div>
-                <span className="text-[var(--text-muted)]">Bitrate: </span>
-                <span className="font-mono text-[var(--text-main)] tabular-nums">{Math.round(currentTrack.bitrate / 1000)} kbps</span>
+                <span className="text-zinc-400">Bitrate: </span>
+                <span className="font-mono text-white tabular-nums font-medium">{Math.round(currentTrack.bitrate / 1000)} kbps</span>
               </div>
             )}
             {currentTrack.sample_rate && (
               <div>
-                <span className="text-[var(--text-muted)]">Sample Rate: </span>
-                <span className="font-mono text-[var(--text-main)] tabular-nums">{currentTrack.sample_rate} Hz</span>
+                <span className="text-zinc-400">Sample Rate: </span>
+                <span className="font-mono text-white tabular-nums font-medium">{currentTrack.sample_rate} Hz</span>
               </div>
             )}
             {currentTrack.year ? (
               <div>
-                <span className="text-[var(--text-muted)]">Year: </span>
-                <span className="font-mono text-[var(--text-main)] tabular-nums">{currentTrack.year}</span>
+                <span className="text-zinc-400">Year: </span>
+                <span className="font-mono text-white tabular-nums font-medium">{currentTrack.year}</span>
               </div>
             ) : null}
             <div>
-              <span className="text-[var(--text-muted)]">File Size: </span>
-              <span className="font-mono text-[var(--text-main)] tabular-nums">{fileSizeMb} MB</span>
+              <span className="text-zinc-400">File Size: </span>
+              <span className="font-mono text-white tabular-nums font-medium">{fileSizeMb} MB</span>
             </div>
             {currentTrack.genre ? (
               <div>
-                <span className="text-[var(--text-muted)]">Genre: </span>
-                <span className="text-[var(--text-main)]">{currentTrack.genre}</span>
+                <span className="text-zinc-400">Genre: </span>
+                <span className="text-white font-medium">{currentTrack.genre}</span>
               </div>
             ) : null}
           </div>
 
-          <div className="pt-2 border-t border-[var(--border-color)]/60 text-[10px] text-[var(--text-muted)] flex items-start space-x-1.5 break-all">
-            <Folder className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 opacity-60" />
-            <span className="select-text font-mono opacity-80">{currentTrack.path}</span>
+          <div className="pt-2 border-t border-white/10 text-[10px] text-zinc-400 flex items-start space-x-1.5 break-all">
+            <Folder className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-zinc-500" />
+            <span className="select-text font-mono text-zinc-400">{currentTrack.path}</span>
           </div>
         </div>
 

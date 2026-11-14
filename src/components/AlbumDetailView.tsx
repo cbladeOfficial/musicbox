@@ -44,15 +44,15 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
       {/* Back Button */}
       <button
         onClick={onBack}
-        className="text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center space-x-1.5 transition-colors"
+        className="text-xs text-zinc-400 hover:text-white flex items-center space-x-1.5 transition-colors"
       >
-        <ArrowLeft className="w-3.5 h-3.5" />
+        <ArrowLeft className="w-4 h-4" />
         <span>Back to Albums</span>
       </button>
 
       {/* Album Header */}
       <div className="flex flex-col md:flex-row items-start md:items-end gap-6">
-        <div className="w-48 h-48 rounded bg-[var(--surface-active)] border border-[var(--border-color)] shadow-xl flex-shrink-0 overflow-hidden">
+        <div className="w-52 h-52 rounded-lg bg-zinc-900 border border-white/10 shadow-2xl flex-shrink-0 overflow-hidden">
           {coverSrc ? (
             <img
               src={coverSrc}
@@ -63,23 +63,23 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
               }}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
-              <Disc3 className="w-16 h-16 opacity-30" />
+            <div className="w-full h-full flex items-center justify-center text-zinc-600">
+              <Disc3 className="w-16 h-16 stroke-1" />
             </div>
           )}
         </div>
 
         <div className="flex-1 space-y-2">
-          <span className="text-[10px] uppercase font-bold text-[var(--accent-color)] tracking-wider">
+          <span className="text-[11px] uppercase font-bold text-[var(--accent-color)] tracking-wider">
             Album
           </span>
-          <h1 className="text-3xl font-extrabold text-[var(--text-main)] tracking-tight">
+          <h1 className="text-3xl font-extrabold text-white tracking-tight">
             {album.name}
           </h1>
-          <div className="text-sm font-medium text-[var(--text-muted)]">
+          <div className="text-base font-semibold text-zinc-300">
             {album.artist}
           </div>
-          <div className="flex items-center space-x-2 text-xs text-[var(--text-muted)] font-mono tabular-nums opacity-85">
+          <div className="flex items-center space-x-2 text-xs text-zinc-400 font-mono tabular-nums">
             {album.year ? <span>{album.year}</span> : null}
             {album.year ? <span>•</span> : null}
             <span>{album.trackCount} tracks</span>
@@ -90,14 +90,14 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
           <div className="flex items-center space-x-3 pt-3">
             <button
               onClick={() => onPlayAlbum(album, false)}
-              className="flex items-center space-x-2 px-5 py-2.5 rounded bg-[var(--accent-color)] hover:brightness-110 text-white text-xs font-semibold shadow-md active:scale-95 transition-all"
+              className="flex items-center space-x-2 px-5 py-2.5 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white text-xs font-semibold shadow-md active:scale-95 transition-all"
             >
               <Play className="w-4 h-4 fill-current" />
               <span>Play Album</span>
             </button>
             <button
               onClick={() => onPlayAlbum(album, true)}
-              className="flex items-center space-x-2 px-4 py-2.5 rounded bg-[var(--surface-color)] hover:bg-[var(--surface-hover)] border border-[var(--border-color)] text-[var(--text-main)] text-xs font-medium transition-all"
+              className="flex items-center space-x-2 px-4 py-2.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-medium transition-all"
             >
               <Shuffle className="w-4 h-4" />
               <span>Shuffle</span>
@@ -108,14 +108,14 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
 
       {/* Album Wiki Summary */}
       {loading ? (
-        <div className="flex items-center space-x-2 text-xs text-[var(--text-muted)]">
-          <Sparkles className="w-3.5 h-3.5 animate-spin text-[var(--accent-color)]" />
+        <div className="flex items-center space-x-2 text-xs text-zinc-400">
+          <Sparkles className="w-4 h-4 animate-spin text-[var(--accent-color)]" />
           <span>Fetching album description from Last.fm / iTunes...</span>
         </div>
       ) : (
         albumInfo?.summary && (
-          <div className="p-4 rounded bg-[var(--surface-color)]/50 border border-[var(--border-color)] text-xs text-[var(--text-muted)] leading-relaxed select-text">
-            <span className="text-[11px] font-semibold text-[var(--text-main)] block mb-1">
+          <div className="p-4 rounded-lg bg-[var(--surface-color)] border border-[var(--border-color)] text-xs text-zinc-300 leading-relaxed select-text">
+            <span className="text-[11px] font-bold text-white block mb-1 uppercase tracking-wider">
               About this Album
             </span>
             <p>{albumInfo.summary}</p>
@@ -124,27 +124,27 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
       )}
 
       {/* Tracks Table */}
-      <div className="rounded bg-[var(--surface-color)]/30 border border-[var(--border-color)] divide-y divide-[var(--border-color)]/30 overflow-hidden">
-        <div className="h-8 px-4 flex items-center text-[10px] font-semibold text-[var(--text-muted)] uppercase bg-[var(--surface-color)]/60">
+      <div className="rounded-lg bg-[var(--surface-color)] border border-[var(--border-color)] divide-y divide-white/[0.04] overflow-hidden">
+        <div className="h-9 px-4 flex items-center text-[11px] font-bold text-zinc-400 uppercase tracking-wider bg-[var(--sidebar-color)] border-b border-[var(--border-color)]">
           <div className="w-8">#</div>
           <div className="flex-1">Title</div>
           <div className="w-16 text-right pr-2">
-            <Clock className="w-3 h-3 inline" />
+            <Clock className="w-3.5 h-3.5 inline" />
           </div>
         </div>
         {album.tracks.map((t, idx) => (
           <div
             key={t.id}
             onDoubleClick={() => onPlayTrack(t)}
-            className={`flex items-center px-4 py-2 text-xs hover:bg-[var(--surface-hover)] cursor-pointer transition-colors ${
-              currentTrackId === t.id ? 'text-[var(--accent-color)] font-semibold' : 'text-[var(--text-main)]'
+            className={`flex items-center px-4 py-2.5 text-[13px] hover:bg-white/[0.04] cursor-pointer transition-colors ${
+              currentTrackId === t.id ? 'text-[var(--accent-color)] font-semibold bg-[var(--accent-color)]/10' : 'text-zinc-200'
             }`}
           >
-            <div className="w-8 text-[var(--text-muted)] font-mono text-[11px] tabular-nums">
+            <div className="w-8 text-zinc-500 font-mono text-[12px] tabular-nums">
               {t.track_number || idx + 1}
             </div>
-            <div className="flex-1 truncate font-medium">{t.title}</div>
-            <div className="w-16 text-right text-[var(--text-muted)] font-mono text-[11px] tabular-nums pr-2">
+            <div className="flex-1 truncate font-medium text-white">{t.title}</div>
+            <div className="w-16 text-right text-zinc-400 font-mono text-[12px] tabular-nums pr-2">
               {Math.floor(t.duration / 60)}:{(Math.floor(t.duration % 60)).toString().padStart(2, '0')}
             </div>
           </div>
