@@ -24,15 +24,15 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="w-80 h-full bg-[var(--surface-color)] border-l border-[var(--border-color)] flex flex-col z-30 select-none shadow-xl">
+    <aside className="w-80 h-full bg-[var(--surface-color)]/95 backdrop-blur-md border-l border-[var(--border-color)] flex flex-col z-30 select-none shadow-xl flex-shrink-0">
       {/* Header */}
-      <div className="h-12 border-b border-[var(--border-color)] px-4 flex items-center justify-between">
+      <div className="h-11 border-b border-[var(--border-color)] px-4 flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <ListMusic className="w-4 h-4 text-[var(--accent-color)]" />
-          <span className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider">
+          <ListMusic className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+          <span className="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider">
             Play Queue
           </span>
-          <span className="text-[10px] text-[var(--text-muted)]">({queue.length})</span>
+          <span className="text-[10px] text-[var(--text-muted)] font-mono">({queue.length})</span>
         </div>
 
         <div className="flex items-center space-x-1">
@@ -40,16 +40,16 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
             <button
               onClick={onClearQueue}
               title="Clear queue"
-              className="p-1 rounded text-[var(--text-muted)] hover:text-rose-400"
+              className="p-1 rounded text-[var(--text-muted)] hover:text-rose-400 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
           <button
             onClick={onClose}
-            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)]"
+            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)] transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -61,7 +61,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
             <span className="text-[10px] uppercase font-bold text-[var(--accent-color)] px-2">
               Now Playing
             </span>
-            <div className="flex items-center px-2 py-2 rounded-md bg-[var(--surface-active)] text-xs">
+            <div className="flex items-center px-2 py-2 rounded bg-[var(--surface-active)] text-xs border border-[var(--border-color)]">
               <div className="flex-1 truncate">
                 <div className="font-semibold text-[var(--text-main)] truncate">
                   {currentTrack.title}
@@ -80,21 +80,21 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
             Up Next
           </span>
           {queue.length === 0 ? (
-            <div className="p-4 text-center text-xs text-[var(--text-muted)] italic">
-              Queue is empty. Right-click or use action menu on any song to add it to the queue.
+            <div className="p-6 text-center text-xs text-[var(--text-muted)] italic opacity-60">
+              Queue is empty. Right click any track to add it to queue.
             </div>
           ) : (
             <div className="space-y-0.5">
               {queue.map((track, i) => (
                 <div
                   key={`${track.id}_${i}`}
-                  className="group flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[var(--surface-hover)] text-xs transition-colors"
+                  className="group flex items-center justify-between px-2 py-1.5 rounded hover:bg-[var(--surface-hover)] text-xs transition-colors"
                 >
                   <button
                     onClick={() => onPlayFromQueue(i)}
                     className="flex-1 text-left truncate pr-2 flex items-center space-x-2"
                   >
-                    <span className="w-4 text-[10px] text-[var(--text-muted)] font-mono">
+                    <span className="w-4 text-[10px] text-[var(--text-muted)] font-mono tabular-nums">
                       {i + 1}
                     </span>
                     <div className="truncate">
@@ -117,7 +117,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
                     </button>
                     <button
                       onClick={() => onRemoveFromQueue(i)}
-                      className="p-1 rounded text-[var(--text-muted)] hover:text-red-400"
+                      className="p-1 rounded text-[var(--text-muted)] hover:text-rose-400"
                       title="Remove from queue"
                     >
                       <X className="w-3 h-3" />
@@ -129,6 +129,6 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </aside>
   );
 };

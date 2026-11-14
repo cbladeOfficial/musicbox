@@ -21,9 +21,12 @@ import { MetadataService } from './services/metadataService';
 const DEFAULT_SETTINGS: AppSettings = {
   musicFolders: [],
   theme: 'feishin',
+  customAccentColor: '#2f81f7',
+  tableDensity: 'comfortable',
   visualizerMode: 'bars',
   visualizerHeight: 48,
   discordRpcEnabled: true,
+  discordClientId: '1306646875971485777',
   discordShowYear: true,
   artSourcePriority: ['itunes', 'jiosaavn', 'lastfm'],
   lastfmEnabled: true,
@@ -70,10 +73,13 @@ export function App() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [resolvedCoverArt, setResolvedCoverArt] = useState<string | undefined>(undefined);
 
-  // Apply Theme to root element
+  // Apply Theme & Custom Accent Color
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', settings.theme);
-  }, [settings.theme]);
+    if (settings.customAccentColor) {
+      document.documentElement.style.setProperty('--accent-color', settings.customAccentColor);
+    }
+  }, [settings.theme, settings.customAccentColor]);
 
   // Load stream port and initial data
   useEffect(() => {
@@ -81,16 +87,15 @@ export function App() {
     loadLibrary();
     loadPlaylists();
 
-    // Check window maximized state
     if (isTauri()) {
       TauriBridge.isMaximized().then(setIsMaximized).catch(() => {});
     }
 
-    // Load persisted settings
     TauriBridge.loadSetting('user_settings').then((saved) => {
       if (saved) {
         try {
-          setSettings((prev) => ({ ...prev, ...JSON.parse(saved) }));
+          const parsed = JSON.parse(saved);
+          setSettings((prev) => ({ ...prev, ...parsed }));
         } catch { /* ignore */ }
       }
     });
@@ -121,6 +126,9 @@ export function App() {
 
     if (newPartial.discordRpcEnabled !== undefined) {
       TauriBridge.toggleDiscordRpc(newPartial.discordRpcEnabled).catch(() => {});
+    }
+    if (newPartial.discordClientId !== undefined) {
+      TauriBridge.setDiscordClientId(newPartial.discordClientId).catch(() => {});
     }
   };
 
@@ -162,6 +170,7 @@ export function App() {
             position: 0,
             coverUrl: onlineCover || undefined,
             isPlaying: true,
+            clientId: settings.discordClientId,
           }).catch(() => {});
         }
       });
@@ -213,7 +222,6 @@ export function App() {
       setCurrentTime(curr);
       if (dur > 0) setDuration(dur);
 
-      // Check Last.fm scrobble eligibility (50% or 240s)
       if (settings.lastfmEnabled) {
         lastFmScrobbler.checkScrobbleEligibility(curr, settings.lastfmApiKey, settings.lastfmSecret);
       }
@@ -231,6 +239,7 @@ export function App() {
           position: audioEngine.getCurrentTime(),
           coverUrl: resolvedCoverArt,
           isPlaying: playing,
+          clientId: settings.discordClientId,
         }).catch(() => {});
       }
     };
@@ -244,6 +253,42 @@ export function App() {
       }
     };
   }, [currentTrack, settings, repeatMode, resolvedCoverArt, handleNext]);
+
+  // Keyboard navigation shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is currently typing in an input or textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        handlePlayPause();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        audioEngine.seek(audioEngine.getCurrentTime() + 5);
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        audioEngine.seek(Math.max(0, audioEngine.getCurrentTime() - 5));
+      } else if (e.code === 'ArrowUp') {
+        e.preventDefault();
+        const newVol = Math.min(1, volume + 0.05);
+        handleVolumeChange(newVol);
+      } else if (e.code === 'ArrowDown') {
+        e.preventDefault();
+        const newVol = Math.max(0, volume - 0.05);
+        handleVolumeChange(newVol);
+      } else if (e.code === 'Escape') {
+        setShowLyrics(false);
+        setShowQueue(false);
+        setShowInfo(false);
+        setIsSettingsOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentTrack, isPlaying, volume]);
 
   // Volume & Mute handling
   const handleVolumeChange = (vol: number) => {
@@ -412,6 +457,29 @@ export function App() {
     setQueue(artistTracks.slice(1));
   };
 
+  const handleNavigateToAlbum = (albumName: string, artistName: string) => {
+    const found = albumGroups.find(
+      (a) =>
+        a.name.toLowerCase() === albumName.toLowerCase() &&
+        a.artist.toLowerCase() === artistName.toLowerCase()
+    ) || albumGroups.find((a) => a.name.toLowerCase() === albumName.toLowerCase());
+
+    if (found) {
+      setSelectedAlbum(found);
+      setCurrentView('albums');
+    }
+  };
+
+  const handleNavigateToArtist = (artistName: string) => {
+    const found = artistGroups.find(
+      (a) => a.name.toLowerCase() === artistName.toLowerCase()
+    );
+    if (found) {
+      setSelectedArtist(found);
+      setCurrentView('artists');
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[var(--bg-color)] text-[var(--text-main)] font-sans antialiased">
       {/* 1. Feishin Top Bar */}
@@ -425,6 +493,11 @@ export function App() {
           setIsMaximized(!isMaximized);
         }}
         discordActive={settings.discordRpcEnabled}
+        density={settings.tableDensity}
+        onToggleDensity={() => {
+          const next = settings.tableDensity === 'compact' ? 'comfortable' : 'compact';
+          handleUpdateSettings({ tableDensity: next });
+        }}
       />
 
       {/* 2. Main Center Body */}
@@ -449,22 +522,27 @@ export function App() {
         />
 
         {/* Center Content Views */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-[var(--bg-color)]">
+        <main className="flex-1 flex flex-col overflow-hidden bg-[var(--bg-color)]">
           {currentView === 'tracks' || currentView === 'favorites' || currentView === 'playlist' ? (
             <TrackTable
               tracks={displayTracks}
               currentTrackId={currentTrack?.id}
               isPlaying={isPlaying}
+              density={settings.tableDensity}
+              streamPort={streamPort}
               onPlayTrack={handlePlayTrack}
               onToggleFavorite={handleToggleFavorite}
               onAddToQueue={(t) => setQueue((prev) => [...prev, t])}
               playlists={playlists}
               onAddToPlaylist={handleAddToPlaylist}
+              onViewAlbum={handleNavigateToAlbum}
+              onViewArtist={handleNavigateToArtist}
             />
           ) : currentView === 'albums' ? (
             selectedAlbum ? (
               <AlbumDetailView
                 album={selectedAlbum}
+                streamPort={streamPort}
                 onBack={() => setSelectedAlbum(null)}
                 onPlayTrack={handlePlayTrack}
                 onPlayAlbum={handlePlayAlbum}
@@ -474,6 +552,7 @@ export function App() {
             ) : (
               <AlbumGrid
                 albums={albumGroups}
+                streamPort={streamPort}
                 onSelectAlbum={(alb) => setSelectedAlbum(alb)}
                 onPlayAlbum={handlePlayAlbum}
               />
@@ -490,7 +569,7 @@ export function App() {
               lastfmApiKey={settings.lastfmApiKey}
             />
           ) : null}
-        </div>
+        </main>
 
         {/* Right Lyrics Drawer */}
         <LyricsDrawer
@@ -508,6 +587,7 @@ export function App() {
           onClose={() => setShowInfo(false)}
           lastfmApiKey={settings.lastfmApiKey}
           coverArtUrl={resolvedCoverArt}
+          streamPort={streamPort}
         />
 
         {/* Right Queue Drawer */}
@@ -548,6 +628,7 @@ export function App() {
         showLyrics={showLyrics}
         showQueue={showQueue}
         showInfo={showInfo}
+        streamPort={streamPort}
         onPlayPause={handlePlayPause}
         onPrevious={handlePrevious}
         onNext={handleNext}

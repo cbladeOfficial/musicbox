@@ -133,6 +133,7 @@ pub fn update_presence(
     position: f64,
     cover_url: Option<String>,
     is_playing: bool,
+    client_id: Option<String>,
     state: State<'_, AppState>,
 ) {
     state.discord.update_presence(
@@ -144,7 +145,13 @@ pub fn update_presence(
         position,
         cover_url.as_deref(),
         is_playing,
+        client_id.as_deref(),
     );
+}
+
+#[tauri::command]
+pub fn set_discord_client_id(client_id: String, state: State<'_, AppState>) {
+    state.discord.set_client_id(&client_id);
 }
 
 #[tauri::command]

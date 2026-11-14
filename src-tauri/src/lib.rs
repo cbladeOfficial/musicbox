@@ -51,6 +51,7 @@ pub fn run() {
             save_setting,
             load_setting,
             update_presence,
+            set_discord_client_id,
             clear_presence,
             toggle_discord_rpc,
             minimize_app,

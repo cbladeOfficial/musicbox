@@ -1,10 +1,10 @@
-# 🎵 MusicBox
+# MusicBox
 
 > A modern, ultra-low-memory local desktop music player inspired by **Feishin**, built with **Tauri v2 (Rust Core)**, **React 19**, **TypeScript**, and **Tailwind CSS**.
 
 ---
 
-## ⚡ Highlights & Architecture
+## Highlights & Architecture
 
 - **Ultra-Low Memory Footprint (~35MB–65MB RAM)**: 
   - Uses **Tauri v2** with a native Rust backend instead of heavy Electron (~250MB–350MB).
@@ -22,17 +22,17 @@
   - Shows current song title, artist, album, and **release year** (e.g. `1989 (2014)`).
   - Live elapsed / remaining time progress bar inside Discord profiles.
   - Automatic online album artwork resolution from **iTunes (1000x1000 HD)**, **JioSaavn**, and **Last.fm**.
-  - Customizable source priority and toggles in Settings.
+  - Customizable application ID, source priority, and toggles in Settings.
 - **Last.fm Scrobbler & Metadata Enrichment**:
   - Automatically updates "Now Playing" and scrobbles at 50% or 240s playback.
   - Enriches missing artist biographies, album summaries, tags, and similar artists.
 - **Custom Themes & Audio Visualizers**:
-  - Themes: **Feishin Dark**, **AMOLED Pure Black** (ultra-low GPU RAM), **Nord Frost**, **Catppuccin Mocha**, and **Cyberpunk Neon**.
+  - Themes: **Feishin Dark**, **AMOLED Pure Black** (ultra-low GPU RAM), **Nord Frost**, **Catppuccin Mocha**, and **Cyberpunk Neon**, plus custom hex accent color picker.
   - Real-time 60 FPS Canvas Audio Visualizers: **Frequency Spectrum Bars**, **Oscilloscope Waveform**, and **Circular Spectrum** (automatically halts animation and frees CPU when paused or hidden).
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Development Mode
 To run the desktop application in live development mode with hot-reloading:
@@ -52,7 +52,7 @@ The compiled binary will be placed in `src-tauri/target/release/`.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 MusicBox/
@@ -76,6 +76,8 @@ MusicBox/
 │   │   ├── lyricsService.ts      # LRCLIB synced lyrics fetcher
 │   │   ├── metadataService.ts    # Multi-source metadata (iTunes, JioSaavn, Last.fm)
 │   │   └── lastfmScrobbler.ts    # Last.fm scrobbler & Now Playing updates
+│   ├── utils/
+│   │   └── cover.ts              # Safe cover art URL resolver
 │   ├── types/music.ts            # TypeScript interfaces
 │   └── App.tsx                   # Main state & view controller
 │

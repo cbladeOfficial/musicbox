@@ -112,6 +112,7 @@ export const TauriBridge = {
     position: number;
     coverUrl?: string;
     isPlaying: boolean;
+    clientId?: string;
   }): Promise<void> {
     if (!isTauri()) return;
     return safeInvoke<void>('update_presence', {
@@ -123,7 +124,13 @@ export const TauriBridge = {
       position: params.position,
       coverUrl: params.coverUrl ?? null,
       isPlaying: params.isPlaying,
+      clientId: params.clientId ?? null,
     });
+  },
+
+  async setDiscordClientId(clientId: string): Promise<void> {
+    if (!isTauri()) return;
+    return safeInvoke<void>('set_discord_client_id', { clientId });
   },
 
   async clearDiscordPresence(): Promise<void> {

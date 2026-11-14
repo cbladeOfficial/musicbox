@@ -58,6 +58,8 @@ export interface AlbumInfo {
 
 export type ViewMode = 'tracks' | 'albums' | 'artists' | 'album_detail' | 'artist_detail' | 'playlist' | 'favorites';
 
+export type TableDensity = 'comfortable' | 'compact';
+
 export type VisualizerMode = 'bars' | 'wave' | 'circle' | 'off';
 
 export type ThemeId = 'feishin' | 'amoled' | 'nord' | 'catppuccin' | 'cyberpunk';
@@ -67,9 +69,12 @@ export type ArtSource = 'itunes' | 'lastfm' | 'jiosaavn';
 export interface AppSettings {
   musicFolders: string[];
   theme: ThemeId;
+  customAccentColor: string;
+  tableDensity: TableDensity;
   visualizerMode: VisualizerMode;
   visualizerHeight: number;
   discordRpcEnabled: boolean;
+  discordClientId: string;
   discordShowYear: boolean;
   artSourcePriority: ArtSource[];
   lastfmEnabled: boolean;

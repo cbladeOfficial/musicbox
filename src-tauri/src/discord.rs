@@ -2,9 +2,12 @@ use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+const DEFAULT_DISCORD_APP_ID: &str = "1306646875971485777";
+
 pub struct DiscordManager {
     client: Mutex<Option<DiscordIpcClient>>,
     enabled: Mutex<bool>,
+    current_app_id: Mutex<String>,
 }
 
 impl DiscordManager {
@@ -12,6 +15,7 @@ impl DiscordManager {
         Self {
             client: Mutex::new(None),
             enabled: Mutex::new(true),
+            current_app_id: Mutex::new(DEFAULT_DISCORD_APP_ID.to_string()),
         }
     }
 
@@ -23,15 +27,33 @@ impl DiscordManager {
         }
     }
 
+    pub fn set_client_id(&self, app_id: &str) {
+        let trimmed = app_id.trim();
+        let target_id = if trimmed.is_empty() {
+            DEFAULT_DISCORD_APP_ID
+        } else {
+            trimmed
+        };
+
+        let mut current = self.current_app_id.lock().unwrap();
+        if *current != target_id {
+            *current = target_id.to_string();
+            // Disconnect old client so next update connects to the new app id
+            let mut client_lock = self.client.lock().unwrap();
+            if let Some(mut old_client) = client_lock.take() {
+                let _ = old_client.close();
+            }
+        }
+    }
+
     fn ensure_connected(&self) -> bool {
         let mut client_lock = self.client.lock().unwrap();
         if client_lock.is_some() {
             return true;
         }
 
-        // MusicBox Discord Client ID
-        let app_id = "1306646875971485777";
-        let mut client = DiscordIpcClient::new(app_id);
+        let app_id = self.current_app_id.lock().unwrap().clone();
+        let mut client = DiscordIpcClient::new(&app_id);
         if client.connect().is_ok() {
             *client_lock = Some(client);
             return true;
@@ -49,10 +71,17 @@ impl DiscordManager {
         position_secs: f64,
         cover_url: Option<&str>,
         is_playing: bool,
+        custom_app_id: Option<&str>,
     ) {
         let en = *self.enabled.lock().unwrap();
         if !en {
             return;
+        }
+
+        if let Some(id) = custom_app_id {
+            if !id.trim().is_empty() {
+                self.set_client_id(id);
+            }
         }
 
         if !self.ensure_connected() {
@@ -106,7 +135,7 @@ impl DiscordManager {
             act = act.assets(assets);
 
             if client.set_activity(act).is_err() {
-                // If set_activity fails, disconnect to retry on next cycle
+                // If set_activity fails (e.g. Discord restarted), clear client to reconnect next turn
                 *client_lock = None;
             }
         }
