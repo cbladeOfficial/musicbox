@@ -34,10 +34,8 @@ interface RadioViewProps {
     tags?: string;
     country?: string;
   }) => void;
-  onUpdateStation: (
-    id: number,
-    station: { name: string; url: string; favicon?: string; tags?: string }
-  ) => void;
+  onOpenAddStation: () => void;
+  onOpenEditStation: (station: RadioStation) => void;
   onDeleteStation: (id: number) => void;
 }
 
@@ -72,7 +70,8 @@ export const RadioView: React.FC<RadioViewProps> = ({
   onPlayStation,
   onToggleFavorite,
   onAddStation,
-  onUpdateStation,
+  onOpenAddStation,
+  onOpenEditStation,
   onDeleteStation,
 }) => {
   const [activeTab, setActiveTab] = useState<RadioTab>('my_stations');
@@ -82,15 +81,6 @@ export const RadioView: React.FC<RadioViewProps> = ({
   // Online Radio Directory state
   const [onlineStations, setOnlineStations] = useState<OnlineStationResult[]>([]);
   const [loadingOnline, setLoadingOnline] = useState(false);
-
-  // Modal State (Create & Edit)
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingStation, setEditingStation] = useState<RadioStation | null>(null);
-  const [formName, setFormName] = useState('');
-  const [formUrl, setFormUrl] = useState('');
-  const [formFavicon, setFormFavicon] = useState('');
-  const [formTags, setFormTags] = useState('');
-  const [formCountry, setFormCountry] = useState('');
 
   // Fetch online directory when tab is active
   useEffect(() => {
@@ -118,49 +108,6 @@ export const RadioView: React.FC<RadioViewProps> = ({
       setOnlineStations(data);
       setLoadingOnline(false);
     });
-  };
-
-  const openCreateModal = () => {
-    setEditingStation(null);
-    setFormName('');
-    setFormUrl('');
-    setFormFavicon('');
-    setFormTags('');
-    setFormCountry('');
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (station: RadioStation) => {
-    setEditingStation(station);
-    setFormName(station.name);
-    setFormUrl(station.url);
-    setFormFavicon(station.favicon || '');
-    setFormTags(station.tags || '');
-    setFormCountry(station.country || '');
-    setIsModalOpen(true);
-  };
-
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formName.trim() || !formUrl.trim()) return;
-
-    if (editingStation) {
-      onUpdateStation(editingStation.id, {
-        name: formName.trim(),
-        url: formUrl.trim(),
-        favicon: formFavicon.trim() || undefined,
-        tags: formTags.trim() || undefined,
-      });
-    } else {
-      onAddStation({
-        name: formName.trim(),
-        url: formUrl.trim(),
-        favicon: formFavicon.trim() || undefined,
-        tags: formTags.trim() || undefined,
-        country: formCountry.trim() || undefined,
-      });
-    }
-    setIsModalOpen(false);
   };
 
   // Favorite count
@@ -259,7 +206,7 @@ export const RadioView: React.FC<RadioViewProps> = ({
           )}
 
           <button
-            onClick={openCreateModal}
+            onClick={onOpenAddStation}
             className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white text-xs font-medium transition-all shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -490,7 +437,7 @@ export const RadioView: React.FC<RadioViewProps> = ({
                         </button>
 
                         <button
-                          onClick={() => openEditModal(station)}
+                          onClick={() => onOpenEditStation(station)}
                           title="Edit Station"
                           className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)] transition-colors opacity-0 group-hover:opacity-100"
                         >
@@ -517,138 +464,6 @@ export const RadioView: React.FC<RadioViewProps> = ({
           )
         )}
       </div>
-
-      {/* 4. Create / Edit Station Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[var(--surface-color)] border border-[var(--border-color)] rounded-lg shadow-2xl overflow-hidden select-none">
-            <div className="h-11 border-b border-[var(--border-color)] px-4 flex items-center justify-between bg-[var(--sidebar-color)]">
-              <div className="flex items-center space-x-2">
-                <Radio className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-                <h3 className="text-xs font-medium text-[var(--text-main)]">
-                  {editingStation ? 'Edit Radio Station' : 'Create Custom Radio Station'}
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)]"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleFormSubmit} className="p-5 space-y-3.5 text-xs">
-              <div>
-                <label className="text-[11px] font-medium text-[var(--text-muted)] block mb-1">
-                  Station Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="e.g. Lofi Hip Hop Radio"
-                  className="w-full bg-[var(--surface-color)] border border-[var(--border-color)] rounded px-2.5 py-1.5 text-xs text-[var(--text-main)] outline-none focus:border-[var(--accent-color)]"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-medium text-[var(--text-muted)] block mb-1">
-                  Stream URL * (MP3, AAC, OGG, or M3U8)
-                </label>
-                <input
-                  type="url"
-                  required
-                  value={formUrl}
-                  onChange={(e) => setFormUrl(e.target.value)}
-                  placeholder="https://stream.example.com/radio.mp3"
-                  className="w-full bg-[var(--surface-color)] border border-[var(--border-color)] rounded px-2.5 py-1.5 text-xs font-mono text-[var(--text-main)] outline-none focus:border-[var(--accent-color)]"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-medium text-[var(--text-muted)] block mb-1">
-                  Custom Icon / Favicon URL (Optional)
-                </label>
-                <div className="flex items-center space-x-2">
-                  <div className="w-9 h-9 rounded bg-[var(--surface-active)] border border-[var(--border-color)] flex-shrink-0 overflow-hidden flex items-center justify-center">
-                    <RadioStationIcon
-                      favicon={formFavicon}
-                      name="Preview"
-                      iconClassName="text-[var(--accent-color)] text-sm"
-                    />
-                  </div>
-                  <input
-                    type="url"
-                    value={formFavicon}
-                    onChange={(e) => setFormFavicon(e.target.value)}
-                    placeholder="https://example.com/station-icon.png"
-                    className="flex-1 bg-[var(--surface-color)] border border-[var(--border-color)] rounded px-2.5 py-1.5 text-xs text-[var(--text-main)] outline-none focus:border-[var(--accent-color)] font-mono"
-                  />
-                </div>
-
-                {/* Preset Icons Selection */}
-                <div className="mt-2 flex items-center space-x-1.5">
-                  <span className="text-[10px] text-[var(--text-muted)]">Presets:</span>
-                  {PRESET_ICONS.map((pIcon, idx) => (
-                    <button
-                      type="button"
-                      key={idx}
-                      onClick={() => setFormFavicon(pIcon)}
-                      className="w-5 h-5 rounded border border-[var(--border-color)] overflow-hidden hover:scale-110 transition-transform"
-                    >
-                      <img src={pIcon} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[11px] font-medium text-[var(--text-muted)] block mb-1">
-                    Genres / Tags
-                  </label>
-                  <input
-                    type="text"
-                    value={formTags}
-                    onChange={(e) => setFormTags(e.target.value)}
-                    placeholder="Lofi, Beats, Jazz"
-                    className="w-full bg-[var(--surface-color)] border border-[var(--border-color)] rounded px-2 py-1.5 text-xs text-[var(--text-main)] outline-none focus:border-[var(--accent-color)]"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] font-medium text-[var(--text-muted)] block mb-1">
-                    Country
-                  </label>
-                  <input
-                    type="text"
-                    value={formCountry}
-                    onChange={(e) => setFormCountry(e.target.value)}
-                    placeholder="e.g. United States"
-                    className="w-full bg-[var(--surface-color)] border border-[var(--border-color)] rounded px-2 py-1.5 text-xs text-[var(--text-main)] outline-none focus:border-[var(--accent-color)]"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-[var(--border-color)] flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-3 py-1.5 rounded text-xs text-[var(--text-muted)] hover:text-[var(--text-main)]"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 rounded bg-[var(--accent-color)] hover:brightness-110 text-white font-medium text-xs shadow-sm transition-all"
-                >
-                  {editingStation ? 'Save Changes' : 'Create Station'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

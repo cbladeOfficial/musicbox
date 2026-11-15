@@ -72,7 +72,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = currentView === item.id && selectedPlaylistId === null;
+              const isActive =
+                (currentView === item.id || (item.id === 'radio' && currentView === 'radio_form')) &&
+                selectedPlaylistId === null;
               return (
                 <button
                   key={item.id}

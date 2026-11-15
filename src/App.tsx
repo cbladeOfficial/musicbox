@@ -12,6 +12,7 @@ import { TrackInfoDrawer } from './components/TrackInfoDrawer';
 import { QueueDrawer } from './components/QueueDrawer';
 import { SettingsView } from './components/SettingsView';
 import { RadioView } from './components/RadioView';
+import { RadioStationFormView } from './components/RadioStationFormView';
 
 import { TrackRecord, PlaylistRecord, RadioStation, RadioMetadata, ViewMode, AppSettings } from './types/music';
 import { TauriBridge, isTauri } from './services/tauriBridge';
@@ -69,6 +70,7 @@ export function App() {
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<number | null>(null);
   const [playlistTracks, setPlaylistTracks] = useState<TrackRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [stationToEdit, setStationToEdit] = useState<RadioStation | null>(null);
 
   const navigateToView = useCallback((v: ViewMode) => {
     setCurrentView(v);
@@ -87,6 +89,7 @@ export function App() {
       setSelectedPlaylistId(null);
       setSelectedAlbum(null);
       setSelectedArtist(null);
+      setStationToEdit(null);
     }
   }, [navHistory, navHistoryIndex]);
 
@@ -100,6 +103,16 @@ export function App() {
       setSelectedArtist(null);
     }
   }, [navHistory, navHistoryIndex]);
+
+  const handleOpenAddRadioStation = useCallback(() => {
+    setStationToEdit(null);
+    navigateToView('radio_form');
+  }, [navigateToView]);
+
+  const handleOpenEditRadioStation = useCallback((station: RadioStation) => {
+    setStationToEdit(station);
+    navigateToView('radio_form');
+  }, [navigateToView]);
 
   // UI Drawers & Modals
   const [showLyrics, setShowLyrics] = useState(false);
@@ -849,8 +862,22 @@ export function App() {
               onPlayStation={handlePlayRadio}
               onToggleFavorite={handleToggleRadioFavorite}
               onAddStation={handleAddRadioStation}
-              onUpdateStation={handleUpdateRadioStation}
+              onOpenAddStation={handleOpenAddRadioStation}
+              onOpenEditStation={handleOpenEditRadioStation}
               onDeleteStation={handleDeleteRadioStation}
+            />
+          ) : currentView === 'radio_form' ? (
+            <RadioStationFormView
+              stationToEdit={stationToEdit}
+              onSave={(stationData) => {
+                if (stationToEdit) {
+                  handleUpdateRadioStation(stationToEdit.id, stationData);
+                } else {
+                  handleAddRadioStation(stationData);
+                }
+                handleNavigateBack();
+              }}
+              onBack={handleNavigateBack}
             />
           ) : currentView === 'albums' ? (
             selectedAlbum ? (

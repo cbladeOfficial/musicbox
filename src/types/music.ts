@@ -84,6 +84,7 @@ export type ViewMode =
   | 'playlist'
   | 'favorites'
   | 'radio'
+  | 'radio_form'
   | 'settings';
 
 export type TableDensity = 'comfortable' | 'compact';
