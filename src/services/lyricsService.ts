@@ -1,26 +1,36 @@
 import { LyricsData, LyricsLine, TrackRecord } from '../types/music';
 
-// Parse LRC formatted string into timestamped lines
+// Parse LRC formatted string into timestamped lines (supports multi-timestamp lines & flexible formats)
 export function parseLrc(lrcText: string): LyricsLine[] {
-  const lines = lrcText.split('\n');
+  const lines = lrcText.split(/\r?\n/);
   const result: LyricsLine[] = [];
-  const timeRegex = /\[(\d{2}):(\d{2})\.?(\d{2,3})?\]/g;
+  const singleTagRegex = /\[(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?\]/g;
 
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
-    timeRegex.lastIndex = 0;
-    const match = timeRegex.exec(trimmed);
-    if (match) {
-      const minutes = parseInt(match[1], 10);
-      const seconds = parseInt(match[2], 10);
-      const ms = match[3] ? parseInt(match[3].padEnd(3, '0').slice(0, 3), 10) : 0;
-      const totalSeconds = minutes * 60 + seconds + ms / 1000;
-      const text = trimmed.replace(timeRegex, '').trim();
+    // Find all timestamp tags in this line
+    const matches = [...trimmed.matchAll(singleTagRegex)];
+    if (matches.length > 0) {
+      // The lyric text is whatever remains after removing all [mm:ss.xx] tags
+      const lyricText = trimmed.replace(singleTagRegex, '').trim();
 
-      if (text) {
-        result.push({ time: totalSeconds, text });
+      for (const match of matches) {
+        const minutes = parseInt(match[1], 10);
+        const seconds = parseInt(match[2], 10);
+        let ms = 0;
+        if (match[3]) {
+          const rawMs = match[3];
+          if (rawMs.length === 1) ms = parseInt(rawMs, 10) * 100;
+          else if (rawMs.length === 2) ms = parseInt(rawMs, 10) * 10;
+          else ms = parseInt(rawMs.slice(0, 3), 10);
+        }
+        const totalSeconds = minutes * 60 + seconds + ms / 1000;
+        result.push({
+          time: totalSeconds,
+          text: lyricText || '•••',
+        });
       }
     }
   }

@@ -16,6 +16,7 @@ import {
   Activity,
   Disc3,
   Radio,
+  Maximize2,
 } from 'lucide-react';
 import { TrackRecord, RadioStation, RadioMetadata, VisualizerMode } from '../types/music';
 import { getCoverUrl, formatBitrate } from '../utils/cover';
@@ -36,6 +37,7 @@ interface PlayerBarProps {
   showLyrics: boolean;
   showQueue: boolean;
   showInfo: boolean;
+  isFullVisualizer?: boolean;
   streamPort: number;
   coverArtUrl?: string;
   onPlayPause: () => void;
@@ -47,6 +49,7 @@ interface PlayerBarProps {
   onToggleShuffle: () => void;
   onToggleRepeat: () => void;
   onToggleVisualizer: () => void;
+  onToggleFullVisualizer?: () => void;
   onToggleLyrics: () => void;
   onToggleQueue: () => void;
   onToggleInfo: () => void;
@@ -86,6 +89,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   showLyrics,
   showQueue,
   showInfo,
+  isFullVisualizer = false,
   streamPort,
   coverArtUrl,
   onPlayPause,
@@ -97,6 +101,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   onToggleShuffle,
   onToggleRepeat,
   onToggleVisualizer,
+  onToggleFullVisualizer,
   onToggleLyrics,
   onToggleQueue,
   onToggleInfo,
@@ -392,6 +397,21 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         >
           <Activity className="w-4 h-4" />
         </button>
+
+        {/* Full-space Visualizer View Toggle */}
+        {onToggleFullVisualizer && (
+          <button
+            onClick={onToggleFullVisualizer}
+            title={isFullVisualizer ? 'Exit Full-space Visualizer' : 'Enter Full-space Visualizer'}
+            className={`p-2 rounded-md transition-colors ${
+              isFullVisualizer
+                ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-medium'
+                : 'text-zinc-400 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <Maximize2 className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Synced Lyrics Toggle */}
         <button

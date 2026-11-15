@@ -50,7 +50,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         if ((e.target as HTMLElement).closest('.no-drag')) return;
         onToggleMaximize();
       }}
-      className="h-11 w-full bg-[var(--sidebar-color)] border-b border-[var(--border-color)] flex items-center justify-between px-3.5 select-none drag-region z-50 transition-colors"
+      className="h-11 w-full bg-[var(--sidebar-color)] border-b border-[var(--border-color)] flex items-center justify-between pl-3.5 pr-0 select-none drag-region z-50 transition-colors"
     >
       {/* Left: Brand & Navigation History Controls */}
       <div className="flex items-center space-x-3 text-sm font-medium">
@@ -121,12 +121,12 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       </div>
 
       {/* Right: Window & UI Controls */}
-      <div className="flex items-center space-x-1 no-drag">
+      <div className="flex items-center h-full no-drag">
         {/* Table Density Switcher */}
         <button
           onClick={onToggleDensity}
           title={`View mode: ${density === 'compact' ? 'Compact' : 'Comfortable'}`}
-          className="p-1.5 text-zinc-300 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+          className="p-1.5 text-zinc-300 hover:text-white hover:bg-white/10 rounded-md transition-colors mr-1"
         >
           <SlidersHorizontal className="w-4 h-4" />
         </button>
@@ -135,25 +135,23 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         <button
           onClick={onOpenSettings}
           title="Settings"
-          className="p-1.5 text-zinc-300 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+          className="p-1.5 text-zinc-300 hover:text-white hover:bg-white/10 rounded-md transition-colors mr-2"
         >
           <SettingsIcon className="w-4 h-4" />
         </button>
 
-        <div className="h-4 w-[1px] bg-white/10 mx-1.5" />
-
-        {/* Frameless window controls */}
+        {/* Native Windows Caption Controls - flush to top-right corner */}
         <button
           onClick={() => TauriBridge.minimize()}
           title="Minimize"
-          className="p-1.5 text-zinc-300 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+          className="h-full w-11 flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/10 transition-colors"
         >
           <Minus className="w-4 h-4" />
         </button>
         <button
           onClick={onToggleMaximize}
           title={isMaximized ? 'Restore Down' : 'Maximize'}
-          className="p-1.5 text-zinc-300 hover:text-white hover:bg-white/10 rounded-md transition-colors flex items-center justify-center"
+          className="h-full w-11 flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/10 transition-colors"
         >
           {isMaximized ? (
             /* Restore Down icon: two overlapping boxes */
@@ -171,7 +169,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         <button
           onClick={() => TauriBridge.close()}
           title="Close"
-          className="p-1.5 text-zinc-300 hover:text-white hover:bg-rose-600 rounded-md transition-colors"
+          className="h-full w-12 flex items-center justify-center text-zinc-300 hover:text-white hover:bg-[#e81123] active:bg-[#bf0f1d] transition-colors"
         >
           <X className="w-4 h-4" />
         </button>

@@ -139,15 +139,18 @@ export const LyricsDrawer: React.FC<LyricsDrawerProps> = ({
         ) : (
           lyrics.lines.map((line, idx) => {
             const isActive = idx === activeIndex;
+            const isPast = idx < activeIndex;
             return (
               <div
                 key={idx}
                 ref={isActive ? activeLineRef : null}
                 onClick={() => onSeek(line.time)}
-                className={`py-2 px-3.5 rounded-lg transition-all duration-200 cursor-pointer leading-relaxed ${
+                className={`py-2 px-3.5 rounded-lg transition-all duration-300 cursor-pointer leading-relaxed text-center select-none ${
                   isActive
-                    ? 'text-white font-medium text-lg bg-[var(--accent-color)]/15 ring-1 ring-[var(--accent-color)]/25'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/5 text-[15px]'
+                    ? 'text-white font-bold text-lg bg-[var(--accent-color)]/20 ring-1 ring-[var(--accent-color)]/30 shadow-md scale-[1.02]'
+                    : isPast
+                    ? 'text-zinc-400 opacity-75 hover:opacity-100 hover:text-white text-sm'
+                    : 'text-zinc-500 opacity-50 hover:opacity-100 hover:text-white text-sm'
                 }`}
               >
                 {line.text}

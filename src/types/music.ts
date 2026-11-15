@@ -76,17 +76,23 @@ export interface AlbumInfo {
 }
 
 export type ViewMode =
+  | 'home'
   | 'tracks'
   | 'albums'
   | 'artists'
+  | 'album_artists'
+  | 'genres'
+  | 'folders'
   | 'album_detail'
   | 'artist_detail'
+  | 'genre_detail'
   | 'playlist'
   | 'playlist_form'
   | 'track_edit_form'
   | 'favorites'
   | 'radio'
   | 'radio_form'
+  | 'visualizer'
   | 'settings';
 
 export type TableDensity = 'comfortable' | 'compact';

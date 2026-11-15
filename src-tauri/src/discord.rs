@@ -61,6 +61,10 @@ impl DiscordManager {
         false
     }
 
+    fn is_default_app(&self) -> bool {
+        self.current_app_id.lock().unwrap().as_str() == DEFAULT_DISCORD_APP_ID
+    }
+
     pub fn update_presence(
         &self,
         title: &str,
@@ -92,12 +96,14 @@ impl DiscordManager {
         if let Some(client) = client_lock.as_mut() {
             let state_str = if let Some(y) = year {
                 if y > 0 {
-                    format!("{} • {} ({})", artist, album, y)
+                    format!("{} - {} ({})", title, artist, y)
                 } else {
-                    format!("{} • {}", artist, album)
+                    format!("{} - {}", title, artist)
                 }
+            } else if !album.is_empty() {
+                format!("{} - {} • {}", title, artist, album)
             } else {
-                format!("{} • {}", artist, album)
+                format!("{} - {}", title, artist)
             };
 
             let now = SystemTime::now()
@@ -105,11 +111,11 @@ impl DiscordManager {
                 .unwrap_or_default()
                 .as_secs() as i64;
 
+            // In Discord IPC, ActivityType::Listening and status_display_type cause
+            // Discord to reject/close the IPC pipe for 3rd-party client IDs.
+            // We set details to "Listening to MusicBox" so Discord shows it prominently.
             let mut act = activity::Activity::new()
-                .name("MusicBox")
-                .activity_type(activity::ActivityType::Listening)
-                .status_display_type(activity::StatusDisplayType::Name)
-                .details(title)
+                .details("Listening to MusicBox")
                 .state(&state_str);
 
             if is_playing && duration_secs > 0.0 {
@@ -118,27 +124,28 @@ impl DiscordManager {
                 act = act.timestamps(activity::Timestamps::new().start(start_time).end(end_time));
             }
 
+            let default_icon_url =
+                "https://raw.githubusercontent.com/cbladeOfficial/MusicBox/main/public/app-icon.png";
             let mut assets = activity::Assets::new();
-            if let Some(url) = cover_url {
-                if !url.is_empty() {
-                    assets = assets.large_image(url).large_text(album);
-                } else {
-                    assets = assets.large_image("app_icon").large_text(album);
-                }
-            } else {
-                assets = assets.large_image("app_icon").large_text(album);
-            }
 
-            if is_playing {
-                assets = assets.small_image("play").small_text("Playing");
+            if let Some(url) = cover_url {
+                if url.starts_with("http://") || url.starts_with("https://") {
+                    assets = assets.large_image(url).large_text(album);
+                } else if self.is_default_app() {
+                    assets = assets.large_image("spotube-logo-foreground").large_text(album);
+                } else {
+                    assets = assets.large_image(default_icon_url).large_text(album);
+                }
+            } else if self.is_default_app() {
+                assets = assets.large_image("spotube-logo-foreground").large_text(album);
             } else {
-                assets = assets.small_image("pause").small_text("Paused");
+                assets = assets.large_image(default_icon_url).large_text(album);
             }
 
             act = act.assets(assets);
 
             if client.set_activity(act).is_err() {
-                // If set_activity fails (e.g. Discord restarted), clear client to reconnect next turn
+                // If set_activity fails, reset connection so it reconnects on next update
                 *client_lock = None;
             }
         }
@@ -170,16 +177,16 @@ impl DiscordManager {
 
         let mut client_lock = self.client.lock().unwrap();
         if let Some(client) = client_lock.as_mut() {
-            let details_str = match song_title {
-                Some(t) if !t.trim().is_empty() => t.trim().to_string(),
-                _ => station_name.to_string(),
+            let song = match song_title {
+                Some(t) if !t.trim().is_empty() => t.trim(),
+                _ => station_name,
             };
 
             let state_str = match artist {
                 Some(a) if !a.trim().is_empty() && a != "Live Radio" => {
-                    format!("by {} • Radio: {}", a.trim(), station_name)
+                    format!("{} - {} • Radio: {}", song, a.trim(), station_name)
                 }
-                _ => format!("Radio: {}", station_name),
+                _ => format!("{} • Radio: {}", song, station_name),
             };
 
             let now = SystemTime::now()
@@ -188,31 +195,33 @@ impl DiscordManager {
                 .as_secs() as i64;
 
             let mut act = activity::Activity::new()
-                .name("MusicBox")
-                .activity_type(activity::ActivityType::Listening)
-                .status_display_type(activity::StatusDisplayType::Name)
-                .details(&details_str)
+                .details("Listening to MusicBox (Radio)")
                 .state(&state_str);
 
             if is_playing {
                 act = act.timestamps(activity::Timestamps::new().start(now));
             }
 
+            let default_icon_url =
+                "https://raw.githubusercontent.com/cbladeOfficial/MusicBox/main/public/app-icon.png";
             let mut assets = activity::Assets::new();
-            if let Some(url) = icon_url {
-                if !url.is_empty() {
-                    assets = assets.large_image(url).large_text(station_name);
-                } else {
-                    assets = assets.large_image("app_icon").large_text(station_name);
-                }
-            } else {
-                assets = assets.large_image("app_icon").large_text(station_name);
-            }
 
-            if is_playing {
-                assets = assets.small_image("play").small_text("Live Radio");
+            if let Some(url) = icon_url {
+                if url.starts_with("http://") || url.starts_with("https://") {
+                    assets = assets.large_image(url).large_text(station_name);
+                } else if self.is_default_app() {
+                    assets = assets
+                        .large_image("spotube-logo-foreground")
+                        .large_text(station_name);
+                } else {
+                    assets = assets.large_image(default_icon_url).large_text(station_name);
+                }
+            } else if self.is_default_app() {
+                assets = assets
+                    .large_image("spotube-logo-foreground")
+                    .large_text(station_name);
             } else {
-                assets = assets.small_image("pause").small_text("Radio Paused");
+                assets = assets.large_image(default_icon_url).large_text(station_name);
             }
 
             act = act.assets(assets);

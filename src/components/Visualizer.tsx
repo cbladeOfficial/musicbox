@@ -7,6 +7,7 @@ interface VisualizerProps {
   isPlaying: boolean;
   accentColor?: string;
   height?: number;
+  isFullSpace?: boolean;
 }
 
 interface Particle {
@@ -57,6 +58,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({
   isPlaying,
   accentColor = '#3b82f6',
   height = 54,
+  isFullSpace = false,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -71,8 +73,9 @@ export const Visualizer: React.FC<VisualizerProps> = ({
   // Particles pool
   const particlesRef = useRef<Particle[]>([]);
 
-  // Track dynamic width
+  // Track dynamic dimensions
   const [containerWidth, setContainerWidth] = useState<number>(800);
+  const [containerHeight, setContainerHeight] = useState<number>(height);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -81,20 +84,25 @@ export const Visualizer: React.FC<VisualizerProps> = ({
         if (entry.contentRect.width > 0) {
           setContainerWidth(Math.floor(entry.contentRect.width));
         }
+        if (isFullSpace && entry.contentRect.height > 0) {
+          setContainerHeight(Math.floor(entry.contentRect.height));
+        }
       }
     });
     observer.observe(containerRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [isFullSpace]);
+
+  const effectiveHeight = isFullSpace ? containerHeight : height;
 
   // Initialize particles once
   useEffect(() => {
-    const count = 55;
+    const count = isFullSpace ? 110 : 55;
     const pts: Particle[] = [];
     for (let i = 0; i < count; i++) {
       pts.push({
-        x: Math.random() * 800,
-        y: Math.random() * height,
+        x: Math.random() * containerWidth,
+        y: Math.random() * effectiveHeight,
         vx: (Math.random() - 0.5) * 1.2,
         vy: (Math.random() - 0.5) * 0.8,
         size: Math.random() * 2.5 + 1.2,
@@ -102,7 +110,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({
       });
     }
     particlesRef.current = pts;
-  }, [height]);
+  }, [effectiveHeight, isFullSpace, containerWidth]);
 
   useEffect(() => {
     if (mode === 'off' || !canvasRef.current) {
@@ -116,7 +124,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({
 
     const dpr = window.devicePixelRatio || 1;
     canvas.width = containerWidth * dpr;
-    canvas.height = height * dpr;
+    canvas.height = effectiveHeight * dpr;
     ctx.scale(dpr, dpr);
 
     const bufferLength = 64;
@@ -425,24 +433,28 @@ export const Visualizer: React.FC<VisualizerProps> = ({
     if (isPlaying) {
       animFrameRef.current = requestAnimationFrame(render);
     } else {
-      ctx.clearRect(0, 0, containerWidth, height);
+      ctx.clearRect(0, 0, containerWidth, effectiveHeight);
     }
 
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [mode, isPlaying, accentColor, height, containerWidth]);
+  }, [mode, isPlaying, accentColor, effectiveHeight, containerWidth]);
 
   if (mode === 'off') return null;
 
   return (
     <div
       ref={containerRef}
-      className="w-full flex items-center justify-center bg-[var(--surface-color)]/60 border-t border-[var(--border-color)] px-4 py-1.5 transition-colors overflow-hidden"
+      className={`w-full flex items-center justify-center transition-colors overflow-hidden ${
+        isFullSpace
+          ? 'h-full flex-1 relative bg-black/95'
+          : 'bg-[var(--surface-color)]/60 border-t border-[var(--border-color)] px-4 py-1.5'
+      }`}
     >
       <canvas
         ref={canvasRef}
-        style={{ width: '100%', height: `${height}px` }}
+        style={{ width: '100%', height: isFullSpace ? '100%' : `${height}px` }}
         className="w-full block"
       />
     </div>

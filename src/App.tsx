@@ -16,6 +16,11 @@ import { RadioView } from './components/RadioView';
 import { RadioStationFormView } from './components/RadioStationFormView';
 import { PlaylistFormView } from './components/PlaylistFormView';
 import { TrackEditFormView } from './components/TrackEditFormView';
+import { HomeView } from './components/HomeView';
+import { GenresView } from './components/GenresView';
+import { FoldersView } from './components/FoldersView';
+import { AlbumArtistsView } from './components/AlbumArtistsView';
+import { FullVisualizerView } from './components/FullVisualizerView';
 import { ConfirmModal } from './components/ConfirmModal';
 import { Toast, ToastMessage } from './components/Toast';
 
@@ -69,11 +74,12 @@ export function App() {
   const [queue, setQueue] = useState<TrackRecord[]>([]);
 
   // Navigation & Views
-  const [currentView, setCurrentView] = useState<ViewMode>('tracks');
-  const [navHistory, setNavHistory] = useState<ViewMode[]>(['tracks']);
+  const [currentView, setCurrentView] = useState<ViewMode>('home');
+  const [navHistory, setNavHistory] = useState<ViewMode[]>(['home']);
   const [navHistoryIndex, setNavHistoryIndex] = useState(0);
   const [selectedAlbum, setSelectedAlbum] = useState<AlbumItem | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<ArtistGroup | null>(null);
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<number | null>(null);
   const [playlistTracks, setPlaylistTracks] = useState<TrackRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -963,11 +969,11 @@ export function App() {
     setQueue(artistTracks.slice(1));
   };
 
-  const handleNavigateToAlbum = (albumName: string, artistName: string) => {
+  const handleNavigateToAlbum = (albumName: string, artistName?: string) => {
     const found = albumGroups.find(
       (a) =>
         a.name.toLowerCase() === albumName.toLowerCase() &&
-        a.artist.toLowerCase() === artistName.toLowerCase()
+        (!artistName || a.artist.toLowerCase() === artistName.toLowerCase())
     ) || albumGroups.find((a) => a.name.toLowerCase() === albumName.toLowerCase());
 
     if (found) {
@@ -1027,7 +1033,76 @@ export function App() {
 
         {/* Center Content Views */}
         <main className="flex-1 flex flex-col overflow-hidden bg-[var(--bg-color)]">
-          {currentView === 'tracks' || currentView === 'favorites' || currentView === 'playlist' ? (
+          {currentView === 'home' ? (
+            <HomeView
+              tracks={tracks}
+              streamPort={streamPort}
+              onPlayTrack={handlePlayTrack}
+              onSelectAlbum={(albName) => handleNavigateToAlbum(albName)}
+              onSelectArtist={(artName) => handleNavigateToArtist(artName)}
+              onSelectGenre={(genreName) => {
+                setSelectedGenre(genreName);
+                navigateToView('genres');
+              }}
+            />
+          ) : currentView === 'genres' ? (
+            <GenresView
+              tracks={tracks}
+              selectedGenre={selectedGenre}
+              onSelectGenre={(g) => setSelectedGenre(g)}
+              onPlayTrack={handlePlayTrack}
+              onPlayTracks={(gTracks) => {
+                if (gTracks.length > 0) {
+                  setQueue(gTracks);
+                  handlePlayTrack(gTracks[0]);
+                }
+              }}
+              streamPort={streamPort}
+            />
+          ) : currentView === 'folders' ? (
+            <FoldersView
+              tracks={tracks}
+              onPlayTrack={handlePlayTrack}
+              onPlayTracks={(fTracks) => {
+                if (fTracks.length > 0) {
+                  setQueue(fTracks);
+                  handlePlayTrack(fTracks[0]);
+                }
+              }}
+            />
+          ) : currentView === 'album_artists' ? (
+            <AlbumArtistsView
+              tracks={tracks}
+              onSelectArtist={(artName) => handleNavigateToArtist(artName)}
+              onPlayTracks={(artTracks) => {
+                if (artTracks.length > 0) {
+                  setQueue(artTracks);
+                  handlePlayTrack(artTracks[0]);
+                }
+              }}
+              streamPort={streamPort}
+            />
+          ) : currentView === 'visualizer' ? (
+            <FullVisualizerView
+              currentTrack={currentTrack}
+              currentRadio={currentRadio}
+              radioNowPlaying={radioNowPlaying}
+              isPlaying={isPlaying}
+              accentColor={settings.customAccentColor}
+              coverUrl={
+                resolvedCoverArt ||
+                (currentTrack?.cover_path
+                  ? `http://127.0.0.1:${streamPort}/cover/${currentTrack.id}`
+                  : undefined)
+              }
+              visualizerMode={settings.visualizerMode}
+              onChangeVisualizerMode={(m) => handleUpdateSettings({ visualizerMode: m })}
+              onClose={() => handleNavigateBack()}
+              onTogglePlay={handlePlayPause}
+              currentTime={currentTime}
+              duration={duration}
+            />
+          ) : currentView === 'tracks' || currentView === 'favorites' || currentView === 'playlist' ? (
             <div className="flex-1 flex flex-col h-full overflow-hidden">
               {currentView === 'playlist' && selectedPlaylistId !== null && (
                 <div className="h-14 border-b border-[var(--border-color)] px-5 flex items-center justify-between bg-[var(--surface-color)]/60 backdrop-blur-md flex-shrink-0">
@@ -1236,12 +1311,14 @@ export function App() {
       </div>
 
       {/* 3. Audio Visualizer Canvas */}
-      <Visualizer
-        mode={settings.visualizerMode}
-        isPlaying={isPlaying}
-        accentColor="var(--accent-color)"
-        height={settings.visualizerHeight}
-      />
+      {currentView !== 'visualizer' && (
+        <Visualizer
+          mode={settings.visualizerMode}
+          isPlaying={isPlaying}
+          accentColor="var(--accent-color)"
+          height={settings.visualizerHeight}
+        />
+      )}
 
       {/* 4. Feishin Bottom Player Bar */}
       <PlayerBar
@@ -1256,6 +1333,7 @@ export function App() {
         isShuffle={isShuffle}
         repeatMode={repeatMode}
         visualizerMode={settings.visualizerMode}
+        isFullVisualizer={currentView === 'visualizer'}
         showLyrics={showLyrics}
         showQueue={showQueue}
         showInfo={showInfo}
@@ -1284,6 +1362,13 @@ export function App() {
           ];
           const next = modes[(modes.indexOf(settings.visualizerMode) + 1) % modes.length];
           handleUpdateSettings({ visualizerMode: next });
+        }}
+        onToggleFullVisualizer={() => {
+          if (currentView === 'visualizer') {
+            handleNavigateBack();
+          } else {
+            navigateToView('visualizer');
+          }
         }}
         onToggleLyrics={() => {
           setShowLyrics(!showLyrics);
