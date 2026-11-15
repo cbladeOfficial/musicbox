@@ -38,7 +38,12 @@ pub fn run() {
                 .and_then(|val| val.get("startMaximized").and_then(|b| b.as_bool()))
                 .unwrap_or(true);
 
+            let app_icon = tauri::image::Image::from_bytes(include_bytes!("../icons/icon.png")).ok();
+
             if let Some(window) = app.get_webview_window("main") {
+                if let Some(ref icon) = app_icon {
+                    let _ = window.set_icon(icon.clone());
+                }
                 let _ = window.center();
                 if start_maximized {
                     let _ = window.maximize();
