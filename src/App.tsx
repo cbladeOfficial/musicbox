@@ -29,6 +29,7 @@ import { TauriBridge, isTauri } from './services/tauriBridge';
 import { audioEngine } from './services/audioEngine';
 import { lastFmScrobbler } from './services/lastfmScrobbler';
 import { MetadataService } from './services/metadataService';
+import { getCoverUrl } from './utils/cover';
 
 const DEFAULT_SETTINGS: AppSettings = {
   musicFolders: [],
@@ -1154,9 +1155,7 @@ export function App() {
               accentColor={settings.customAccentColor}
               coverUrl={
                 resolvedCoverArt ||
-                (currentTrack?.cover_path
-                  ? `http://127.0.0.1:${streamPort}/cover/${currentTrack.id}`
-                  : undefined)
+                getCoverUrl(currentTrack?.cover_path, streamPort)
               }
               visualizerMode={settings.visualizerMode}
               onChangeVisualizerMode={(m) => handleUpdateSettings({ visualizerMode: m })}

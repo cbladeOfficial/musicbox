@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Users, Disc3, Play } from 'lucide-react';
 import { TrackRecord } from '../types/music';
+import { getCoverUrl } from '../utils/cover';
 
 interface AlbumArtistsViewProps {
   tracks: TrackRecord[];
@@ -32,17 +33,13 @@ export const AlbumArtistsView: React.FC<AlbumArtistsViewProps> = ({
       const entry = map.get(art)!;
       entry.tracks.push(t);
       if (t.album) entry.albumSet.add(t.album);
+      if (!entry.sampleTrack.cover_path && t.cover_path) {
+        entry.sampleTrack = t;
+      }
     });
 
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [tracks]);
-
-  const getCoverUrl = (track: TrackRecord) => {
-    if (track.cover_path && streamPort) {
-      return `http://127.0.0.1:${streamPort}/cover/${track.id}`;
-    }
-    return null;
-  };
 
   return (
     <div className="flex-1 h-full overflow-y-auto bg-[var(--bg-color)] p-6 space-y-6 select-none animate-fadeIn">
@@ -54,7 +51,7 @@ export const AlbumArtistsView: React.FC<AlbumArtistsViewProps> = ({
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
         {albumArtists.map((aa) => {
-          const cover = getCoverUrl(aa.sampleTrack);
+          const cover = getCoverUrl(aa.sampleTrack.cover_path, streamPort);
           return (
             <div
               key={aa.name}
@@ -62,10 +59,16 @@ export const AlbumArtistsView: React.FC<AlbumArtistsViewProps> = ({
               className="group bg-white/[0.02] hover:bg-white/[0.06] p-3 rounded-lg border border-white/5 cursor-pointer transition-colors flex flex-col justify-between"
             >
               <div className="aspect-square w-full rounded-md bg-zinc-800 relative overflow-hidden shadow-md mb-2.5 flex items-center justify-center">
-                {cover ? (
-                  <img src={cover} alt={aa.name} className="w-full h-full object-cover" />
-                ) : (
-                  <Users className="w-10 h-10 text-zinc-500" />
+                <Users className="w-10 h-10 text-zinc-500" />
+                {cover && (
+                  <img
+                    src={cover}
+                    alt=""
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = 'none';
+                    }}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
                 )}
 
                 <button

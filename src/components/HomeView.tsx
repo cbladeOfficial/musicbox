@@ -10,6 +10,7 @@ import {
   Heart,
 } from 'lucide-react';
 import { TrackRecord } from '../types/music';
+import { getCoverUrl } from '../utils/cover';
 
 interface HomeViewProps {
   tracks: TrackRecord[];
@@ -69,6 +70,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
       const existing = map.get(art) || { name: art, count: 0, plays: 0, sampleTrack: t };
       existing.count += 1;
       existing.plays += t.play_count;
+      if (!existing.sampleTrack.cover_path && t.cover_path) {
+        existing.sampleTrack = t;
+      }
       map.set(art, existing);
     });
     return Array.from(map.values())
@@ -106,7 +110,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
           count: 1,
         });
       } else {
-        albumMap.get(alb)!.count += 1;
+        const entry = albumMap.get(alb)!;
+        entry.count += 1;
+        if (!entry.sampleTrack.cover_path && t.cover_path) {
+          entry.sampleTrack = t;
+        }
       }
     });
 
@@ -130,11 +138,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
   }, [tracks, topArtists, topGenres]);
 
   // Helper for cover image URL
-  const getCoverUrl = (track: TrackRecord) => {
-    if (track.cover_path && streamPort) {
-      return `http://127.0.0.1:${streamPort}/cover/${track.id}`;
-    }
-    return null;
+  const resolveCover = (track?: TrackRecord) => {
+    if (!track?.cover_path) return undefined;
+    return getCoverUrl(track.cover_path, streamPort);
   };
 
   // Genre gradient colors
@@ -169,7 +175,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       {quickCards.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {quickCards.map((track) => {
-            const cover = getCoverUrl(track);
+            const cover = resolveCover(track);
             return (
               <div
                 key={track.id}
@@ -178,10 +184,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
               >
                 {/* Album Cover Thumbnail */}
                 <div className="w-14 h-14 bg-zinc-800 flex-shrink-0 flex items-center justify-center relative overflow-hidden">
-                  {cover ? (
-                    <img src={cover} alt={track.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <Disc3 className="w-6 h-6 text-zinc-500" />
+                  <Disc3 className="w-6 h-6 text-zinc-500" />
+                  {cover && (
+                    <img
+                      src={cover}
+                      alt=""
+                      onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = 'none';
+                      }}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
                   )}
                 </div>
 
@@ -220,7 +232,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
             {recommendedAlbums.map((album) => {
-              const cover = getCoverUrl(album.sampleTrack);
+              const cover = resolveCover(album.sampleTrack);
               return (
                 <div
                   key={album.name}
@@ -228,10 +240,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   className="group bg-white/[0.02] hover:bg-white/[0.06] p-3 rounded-lg border border-white/5 cursor-pointer transition-colors flex flex-col justify-between"
                 >
                   <div className="aspect-square w-full rounded-md bg-zinc-800 relative overflow-hidden shadow-md mb-2.5 flex items-center justify-center">
-                    {cover ? (
-                      <img src={cover} alt={album.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <Disc3 className="w-10 h-10 text-zinc-500" />
+                    <Disc3 className="w-10 h-10 text-zinc-500" />
+                    {cover && (
+                      <img
+                        src={cover}
+                        alt=""
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = 'none';
+                        }}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
                     )}
 
                     <button
@@ -274,7 +292,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
             {mostPlayed.map((track, idx) => {
-              const cover = getCoverUrl(track);
+              const cover = resolveCover(track);
               return (
                 <div
                   key={track.id}
@@ -282,10 +300,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   className="group bg-white/[0.02] hover:bg-white/[0.06] p-3 rounded-lg border border-white/5 cursor-pointer transition-colors flex flex-col justify-between"
                 >
                   <div className="aspect-square w-full rounded-md bg-zinc-800 relative overflow-hidden shadow-md mb-2.5 flex items-center justify-center">
-                    {cover ? (
-                      <img src={cover} alt={track.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <Disc3 className="w-10 h-10 text-zinc-500" />
+                    <Disc3 className="w-10 h-10 text-zinc-500" />
+                    {cover && (
+                      <img
+                        src={cover}
+                        alt=""
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = 'none';
+                        }}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
                     )}
 
                     <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/70 backdrop-blur rounded text-[10px] font-mono text-zinc-300">
@@ -332,7 +356,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
             {recentlyPlayed.map((track) => {
-              const cover = getCoverUrl(track);
+              const cover = resolveCover(track);
               return (
                 <div
                   key={track.id}
@@ -340,10 +364,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   className="group bg-white/[0.02] hover:bg-white/[0.06] p-3 rounded-lg border border-white/5 cursor-pointer transition-colors flex flex-col justify-between"
                 >
                   <div className="aspect-square w-full rounded-md bg-zinc-800 relative overflow-hidden shadow-md mb-2.5 flex items-center justify-center">
-                    {cover ? (
-                      <img src={cover} alt={track.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <Disc3 className="w-10 h-10 text-zinc-500" />
+                    <Disc3 className="w-10 h-10 text-zinc-500" />
+                    {cover && (
+                      <img
+                        src={cover}
+                        alt=""
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = 'none';
+                        }}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
                     )}
 
                     <button
@@ -383,7 +413,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
             {topArtists.map((artist) => {
-              const cover = getCoverUrl(artist.sampleTrack);
+              const cover = resolveCover(artist.sampleTrack);
               return (
                 <div
                   key={artist.name}
@@ -391,10 +421,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   className="group flex flex-col items-center p-3 rounded-lg bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 cursor-pointer transition-colors text-center"
                 >
                   <div className="w-20 h-20 rounded-full bg-zinc-800 relative overflow-hidden shadow-md mb-2 flex items-center justify-center">
-                    {cover ? (
-                      <img src={cover} alt={artist.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <Mic2 className="w-8 h-8 text-zinc-500" />
+                    <Mic2 className="w-8 h-8 text-zinc-500" />
+                    {cover && (
+                      <img
+                        src={cover}
+                        alt=""
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = 'none';
+                        }}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
                     )}
                   </div>
                   <div className="text-xs font-semibold text-white truncate w-full" title={artist.name}>
