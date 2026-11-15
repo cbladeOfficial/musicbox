@@ -23,7 +23,7 @@ export const TauriBridge = {
 
   async pickDirectory(): Promise<string | null> {
     if (!isTauri()) {
-      alert("Folder picking is only available in the MusicBox desktop app.");
+      console.warn("Folder picking is only available in the MusicBox desktop app.");
       return null;
     }
     const { open } = await import('@tauri-apps/plugin-dialog');
@@ -85,6 +85,32 @@ export const TauriBridge = {
   async deletePlaylist(playlistId: number): Promise<void> {
     if (!isTauri()) return;
     return safeInvoke<void>('delete_selected_playlist', { playlistId });
+  },
+
+  async renamePlaylist(playlistId: number, newName: string): Promise<void> {
+    if (!isTauri()) return;
+    return safeInvoke<void>('rename_selected_playlist', { playlistId, newName });
+  },
+
+  async updateTrackMetadata(params: {
+    trackId: number;
+    title: string;
+    artist: string;
+    album: string;
+    genre?: string;
+    year?: number;
+    trackNumber?: number;
+  }): Promise<void> {
+    if (!isTauri()) return;
+    return safeInvoke<void>('update_track_info', {
+      trackId: params.trackId,
+      title: params.title,
+      artist: params.artist,
+      album: params.album,
+      genre: params.genre || null,
+      year: params.year ?? null,
+      trackNumber: params.trackNumber ?? null,
+    });
   },
 
   async saveSetting(key: string, value: string): Promise<void> {

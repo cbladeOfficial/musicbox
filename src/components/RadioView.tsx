@@ -36,7 +36,8 @@ interface RadioViewProps {
   }) => void;
   onOpenAddStation: () => void;
   onOpenEditStation: (station: RadioStation) => void;
-  onDeleteStation: (id: number) => void;
+  onRequestDeleteStation: (station: RadioStation) => void;
+  onNotify?: (text: string) => void;
 }
 
 type RadioTab = 'my_stations' | 'favorites' | 'directory';
@@ -72,7 +73,8 @@ export const RadioView: React.FC<RadioViewProps> = ({
   onAddStation,
   onOpenAddStation,
   onOpenEditStation,
-  onDeleteStation,
+  onRequestDeleteStation,
+  onNotify,
 }) => {
   const [activeTab, setActiveTab] = useState<RadioTab>('my_stations');
   const [searchQuery, setSearchQuery] = useState('');
@@ -310,7 +312,9 @@ export const RadioView: React.FC<RadioViewProps> = ({
                           tags: st.tags || undefined,
                           country: st.country || undefined,
                         });
-                        alert(`Added "${st.name}" to My Stations!`);
+                        if (onNotify) {
+                          onNotify(`Added "${st.name}" to My Stations`);
+                        }
                       }}
                       title="Add to My Stations"
                       className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)] transition-colors flex items-center space-x-1 text-[11px]"
@@ -445,11 +449,7 @@ export const RadioView: React.FC<RadioViewProps> = ({
                         </button>
 
                         <button
-                          onClick={() => {
-                            if (confirm(`Delete radio station "${station.name}"?`)) {
-                              onDeleteStation(station.id);
-                            }
-                          }}
+                          onClick={() => onRequestDeleteStation(station)}
                           title="Delete Station"
                           className="p-1 rounded text-[var(--text-muted)] hover:text-rose-400 hover:bg-[var(--surface-hover)] transition-colors opacity-0 group-hover:opacity-100"
                         >

@@ -66,6 +66,8 @@ pub fn run() {
             remove_track_from_playlist,
             get_tracks_in_playlist,
             delete_selected_playlist,
+            rename_selected_playlist,
+            update_track_info,
             save_setting,
             load_setting,
             update_presence,

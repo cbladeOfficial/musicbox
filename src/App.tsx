@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { ListMusic, Play, Pencil, Trash2 } from 'lucide-react';
 import { TitleBar } from './components/TitleBar';
 import { Sidebar } from './components/Sidebar';
 import { PlayerBar } from './components/PlayerBar';
@@ -13,6 +14,10 @@ import { QueueDrawer } from './components/QueueDrawer';
 import { SettingsView } from './components/SettingsView';
 import { RadioView } from './components/RadioView';
 import { RadioStationFormView } from './components/RadioStationFormView';
+import { PlaylistFormView } from './components/PlaylistFormView';
+import { TrackEditFormView } from './components/TrackEditFormView';
+import { ConfirmModal } from './components/ConfirmModal';
+import { Toast, ToastMessage } from './components/Toast';
 
 import { TrackRecord, PlaylistRecord, RadioStation, RadioMetadata, ViewMode, AppSettings } from './types/music';
 import { TauriBridge, isTauri } from './services/tauriBridge';
@@ -71,6 +76,24 @@ export function App() {
   const [playlistTracks, setPlaylistTracks] = useState<TrackRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [stationToEdit, setStationToEdit] = useState<RadioStation | null>(null);
+  const [playlistToEdit, setPlaylistToEdit] = useState<PlaylistRecord | null>(null);
+  const [trackToEdit, setTrackToEdit] = useState<TrackRecord | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    isDanger?: boolean;
+  } | null>(null);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const showToast = useCallback((text: string, type: 'success' | 'info' = 'success') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, text, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3500);
+  }, []);
 
   const navigateToView = useCallback((v: ViewMode) => {
     setCurrentView(v);
@@ -90,6 +113,8 @@ export function App() {
       setSelectedAlbum(null);
       setSelectedArtist(null);
       setStationToEdit(null);
+      setPlaylistToEdit(null);
+      setTrackToEdit(null);
     }
   }, [navHistory, navHistoryIndex]);
 
@@ -101,6 +126,9 @@ export function App() {
       setSelectedPlaylistId(null);
       setSelectedAlbum(null);
       setSelectedArtist(null);
+      setStationToEdit(null);
+      setPlaylistToEdit(null);
+      setTrackToEdit(null);
     }
   }, [navHistory, navHistoryIndex]);
 
@@ -112,6 +140,21 @@ export function App() {
   const handleOpenEditRadioStation = useCallback((station: RadioStation) => {
     setStationToEdit(station);
     navigateToView('radio_form');
+  }, [navigateToView]);
+
+  const handleOpenCreatePlaylist = useCallback(() => {
+    setPlaylistToEdit(null);
+    navigateToView('playlist_form');
+  }, [navigateToView]);
+
+  const handleOpenEditPlaylist = useCallback((pl: PlaylistRecord) => {
+    setPlaylistToEdit(pl);
+    navigateToView('playlist_form');
+  }, [navigateToView]);
+
+  const handleOpenEditTrack = useCallback((track: TrackRecord) => {
+    setTrackToEdit(track);
+    navigateToView('track_edit_form');
   }, [navigateToView]);
 
   // UI Drawers & Modals
@@ -752,6 +795,131 @@ export function App() {
     await loadPlaylists();
   };
 
+  const handleSavePlaylistForm = async (data: {
+    name: string;
+    description: string;
+    trackIds: number[];
+  }) => {
+    if (playlistToEdit) {
+      if (data.name !== playlistToEdit.name) {
+        await TauriBridge.renamePlaylist(playlistToEdit.id, data.name);
+      }
+      const existingTracks = await TauriBridge.getPlaylistTracks(playlistToEdit.id);
+      const existingIds = new Set(existingTracks.map((t) => t.id));
+      const targetIds = new Set(data.trackIds);
+
+      for (const id of data.trackIds) {
+        if (!existingIds.has(id)) {
+          await TauriBridge.addToPlaylist(playlistToEdit.id, id);
+        }
+      }
+      for (const t of existingTracks) {
+        if (!targetIds.has(t.id)) {
+          await TauriBridge.removeFromPlaylist(playlistToEdit.id, t.id);
+        }
+      }
+
+      await loadPlaylists();
+      const updatedTracks = await TauriBridge.getPlaylistTracks(playlistToEdit.id);
+      setPlaylistTracks(updatedTracks);
+      showToast(`Updated playlist "${data.name}"`);
+      handleNavigateBack();
+    } else {
+      const newId = await TauriBridge.createPlaylist(data.name);
+      for (const trackId of data.trackIds) {
+        await TauriBridge.addToPlaylist(newId, trackId);
+      }
+      await loadPlaylists();
+      showToast(`Created playlist "${data.name}"`);
+      setSelectedPlaylistId(newId);
+      const plTracks = await TauriBridge.getPlaylistTracks(newId);
+      setPlaylistTracks(plTracks);
+      setCurrentView('playlist');
+    }
+  };
+
+  const handleRequestDeletePlaylist = (pl: PlaylistRecord) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Playlist?',
+      message: `Are you sure you want to delete "${pl.name}"? This action cannot be undone.`,
+      isDanger: true,
+      onConfirm: async () => {
+        await handleDeletePlaylist(pl.id);
+        setConfirmModal(null);
+        showToast(`Deleted playlist "${pl.name}"`);
+      },
+    });
+  };
+
+  const handleRequestDeleteRadioStation = (station: RadioStation) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Radio Station?',
+      message: `Are you sure you want to delete "${station.name}"? The stream will be removed from your stations.`,
+      isDanger: true,
+      onConfirm: async () => {
+        await handleDeleteRadioStation(station.id);
+        setConfirmModal(null);
+        showToast(`Deleted radio station "${station.name}"`);
+      },
+    });
+  };
+
+  const handleSaveTrackEdit = async (data: {
+    title: string;
+    artist: string;
+    album: string;
+    genre?: string;
+    year?: number;
+    trackNumber?: number;
+  }) => {
+    if (!trackToEdit) return;
+    await TauriBridge.updateTrackMetadata({
+      trackId: trackToEdit.id,
+      title: data.title,
+      artist: data.artist,
+      album: data.album,
+      genre: data.genre,
+      year: data.year,
+      trackNumber: data.trackNumber,
+    });
+
+    setTracks((prev) =>
+      prev.map((t) =>
+        t.id === trackToEdit.id
+          ? {
+              ...t,
+              title: data.title,
+              artist: data.artist,
+              album: data.album,
+              genre: data.genre,
+              year: data.year,
+              track_number: data.trackNumber,
+            }
+          : t
+      )
+    );
+
+    if (currentTrack && currentTrack.id === trackToEdit.id) {
+      setCurrentTrack((prev) =>
+        prev
+          ? {
+              ...prev,
+              title: data.title,
+              artist: data.artist,
+              album: data.album,
+              genre: data.genre,
+              year: data.year,
+              track_number: data.trackNumber,
+            }
+          : null
+      );
+    }
+
+    showToast(`Updated tags for "${data.title}"`);
+  };
+
   const handleAddToPlaylist = async (playlistId: number, trackId: number) => {
     await TauriBridge.addToPlaylist(playlistId, trackId);
     await loadPlaylists();
@@ -830,8 +998,8 @@ export function App() {
           playlists={playlists}
           selectedPlaylistId={selectedPlaylistId}
           onSelectPlaylist={handleSelectPlaylist}
-          onCreatePlaylist={handleCreatePlaylist}
-          onDeletePlaylist={handleDeletePlaylist}
+          onOpenCreatePlaylist={handleOpenCreatePlaylist}
+          onRequestDeletePlaylist={handleRequestDeletePlaylist}
           onOpenFolderPicker={handleScanFolder}
           totalTracksCount={tracks.length}
           isScanning={isScanning}
@@ -840,20 +1008,102 @@ export function App() {
         {/* Center Content Views */}
         <main className="flex-1 flex flex-col overflow-hidden bg-[var(--bg-color)]">
           {currentView === 'tracks' || currentView === 'favorites' || currentView === 'playlist' ? (
-            <TrackTable
-              tracks={displayTracks}
-              currentTrackId={currentTrack?.id}
-              isPlaying={isPlaying}
-              density={settings.tableDensity}
-              streamPort={streamPort}
-              onPlayTrack={handlePlayTrack}
-              onToggleFavorite={handleToggleFavorite}
-              onAddToQueue={(t) => setQueue((prev) => [...prev, t])}
-              playlists={playlists}
-              onAddToPlaylist={handleAddToPlaylist}
-              onViewAlbum={handleNavigateToAlbum}
-              onViewArtist={handleNavigateToArtist}
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              {currentView === 'playlist' && selectedPlaylistId !== null && (
+                <div className="h-14 border-b border-[var(--border-color)] px-5 flex items-center justify-between bg-[var(--surface-color)]/60 backdrop-blur-md flex-shrink-0">
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-[var(--accent-color)]/20 border border-[var(--accent-color)]/30 flex items-center justify-center text-[var(--accent-color)] flex-shrink-0 shadow-sm">
+                      <ListMusic className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center space-x-2">
+                        <h2 className="text-sm font-semibold text-white truncate">
+                          {playlists.find((p) => p.id === selectedPlaylistId)?.name || 'Playlist'}
+                        </h2>
+                        <span className="text-xs text-zinc-400 font-mono">
+                          ({playlistTracks.length} tracks)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    {playlistTracks.length > 0 && (
+                      <button
+                        onClick={() => {
+                          if (playlistTracks.length > 0) {
+                            setQueue(playlistTracks);
+                            handlePlayTrack(playlistTracks[0]);
+                          }
+                        }}
+                        className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-[var(--accent-color)] text-white hover:brightness-110 active:scale-98 transition-all shadow-sm"
+                      >
+                        <Play className="w-3 h-3 fill-current" />
+                        <span>Play All</span>
+                      </button>
+                    )}
+
+                    {(() => {
+                      const curPl = playlists.find((p) => p.id === selectedPlaylistId);
+                      if (!curPl) return null;
+                      return (
+                        <>
+                          <button
+                            onClick={() => handleOpenEditPlaylist(curPl)}
+                            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/10 border border-white/10 transition-colors"
+                            title="Edit Playlist parameters and tracks"
+                          >
+                            <Pencil className="w-3.5 h-3.5 text-zinc-400" />
+                            <span>Edit Playlist</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleRequestDeletePlaylist(curPl)}
+                            className="p-1.5 rounded-md text-zinc-400 hover:text-rose-400 hover:bg-white/10 transition-colors"
+                            title="Delete Playlist"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              <TrackTable
+                tracks={displayTracks}
+                currentTrackId={currentTrack?.id}
+                isPlaying={isPlaying}
+                density={settings.tableDensity}
+                streamPort={streamPort}
+                onPlayTrack={handlePlayTrack}
+                onToggleFavorite={handleToggleFavorite}
+                onAddToQueue={(t) => setQueue((prev) => [...prev, t])}
+                playlists={playlists}
+                onAddToPlaylist={handleAddToPlaylist}
+                onViewAlbum={handleNavigateToAlbum}
+                onViewArtist={handleNavigateToArtist}
+                onEditTrackMetadata={handleOpenEditTrack}
+              />
+            </div>
+          ) : currentView === 'playlist_form' ? (
+            <PlaylistFormView
+              playlistToEdit={playlistToEdit}
+              existingPlaylistTrackIds={playlistToEdit ? playlistTracks.map((t) => t.id) : []}
+              allTracks={tracks}
+              onSave={handleSavePlaylistForm}
+              onBack={handleNavigateBack}
             />
+          ) : currentView === 'track_edit_form' ? (
+            trackToEdit ? (
+              <TrackEditFormView
+                track={trackToEdit}
+                streamPort={streamPort}
+                onSave={handleSaveTrackEdit}
+                onBack={handleNavigateBack}
+              />
+            ) : null
           ) : currentView === 'radio' ? (
             <RadioView
               stations={radioStations}
@@ -864,7 +1114,8 @@ export function App() {
               onAddStation={handleAddRadioStation}
               onOpenAddStation={handleOpenAddRadioStation}
               onOpenEditStation={handleOpenEditRadioStation}
-              onDeleteStation={handleDeleteRadioStation}
+              onRequestDeleteStation={handleRequestDeleteRadioStation}
+              onNotify={(msg) => showToast(msg, 'success')}
             />
           ) : currentView === 'radio_form' ? (
             <RadioStationFormView
@@ -872,8 +1123,10 @@ export function App() {
               onSave={(stationData) => {
                 if (stationToEdit) {
                   handleUpdateRadioStation(stationToEdit.id, stationData);
+                  showToast(`Updated station "${stationData.name}"`);
                 } else {
                   handleAddRadioStation(stationData);
+                  showToast(`Added station "${stationData.name}"`);
                 }
                 handleNavigateBack();
               }}
@@ -1024,6 +1277,21 @@ export function App() {
         onToggleRadioFavorite={handleToggleRadioFavorite}
         coverArtUrl={resolvedCoverArt}
       />
+
+      {/* Non-blocking Toast Alerts */}
+      <Toast toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
+
+      {/* In-App Feishin Modal Confirmation */}
+      {confirmModal && (
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          isDanger={confirmModal.isDanger}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
     </div>
   );
 }

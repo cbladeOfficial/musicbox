@@ -82,6 +82,8 @@ export type ViewMode =
   | 'album_detail'
   | 'artist_detail'
   | 'playlist'
+  | 'playlist_form'
+  | 'track_edit_form'
   | 'favorites'
   | 'radio'
   | 'radio_form'

@@ -381,6 +381,31 @@ pub fn delete_playlist(conn: &Connection, playlist_id: i64) -> Result<()> {
     Ok(())
 }
 
+pub fn rename_playlist(conn: &Connection, playlist_id: i64, new_name: &str) -> Result<()> {
+    conn.execute(
+        "UPDATE playlists SET name = ?1 WHERE id = ?2",
+        params![new_name, playlist_id],
+    )?;
+    Ok(())
+}
+
+pub fn update_track_metadata(
+    conn: &Connection,
+    track_id: i64,
+    title: &str,
+    artist: &str,
+    album: &str,
+    genre: Option<&str>,
+    year: Option<u32>,
+    track_number: Option<u32>,
+) -> Result<()> {
+    conn.execute(
+        "UPDATE tracks SET title = ?1, artist = ?2, album = ?3, genre = ?4, year = ?5, track_number = ?6 WHERE id = ?7",
+        params![title, artist, album, genre, year, track_number, track_id],
+    )?;
+    Ok(())
+}
+
 pub fn get_setting(conn: &Connection, key: &str) -> Result<Option<String>> {
     let mut stmt = conn.prepare("SELECT value FROM settings WHERE key = ?1")?;
     let mut rows = stmt.query(params![key])?;

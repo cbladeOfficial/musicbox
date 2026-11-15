@@ -12,6 +12,7 @@ import {
   Check,
   Plus,
   Music2,
+  Tag,
 } from 'lucide-react';
 import { TrackRecord, PlaylistRecord, TableDensity } from '../types/music';
 import { getCoverUrl } from '../utils/cover';
@@ -29,6 +30,7 @@ interface TrackTableProps {
   onAddToPlaylist: (playlistId: number, trackId: number) => void;
   onViewAlbum?: (albumName: string, artistName: string) => void;
   onViewArtist?: (artistName: string) => void;
+  onEditTrackMetadata?: (track: TrackRecord) => void;
 }
 
 type SortField = 'title' | 'artist' | 'album' | 'duration' | 'track_number';
@@ -53,6 +55,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
   onAddToPlaylist,
   onViewAlbum,
   onViewArtist,
+  onEditTrackMetadata,
 }) => {
   const [sortField, setSortField] = useState<SortField>('artist');
   const [sortAsc, setSortAsc] = useState(true);
@@ -352,6 +355,19 @@ export const TrackTable: React.FC<TrackTableProps> = ({
             >
               <Mic2 className="w-4 h-4 text-zinc-400" />
               <span>Go to Artist</span>
+            </button>
+          )}
+
+          {onEditTrackMetadata && (
+            <button
+              onClick={() => {
+                onEditTrackMetadata(contextMenu.track);
+                setContextMenu(null);
+              }}
+              className="w-full flex items-center space-x-2.5 px-3.5 py-2 hover:bg-white/10 hover:text-white text-left font-medium transition-colors"
+            >
+              <Tag className="w-4 h-4 text-zinc-400" />
+              <span>Edit Track Tags</span>
             </button>
           )}
 

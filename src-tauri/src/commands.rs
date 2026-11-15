@@ -113,6 +113,41 @@ pub fn delete_selected_playlist(
 }
 
 #[tauri::command]
+pub fn rename_selected_playlist(
+    playlist_id: i64,
+    new_name: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db::rename_playlist(&db, playlist_id, &new_name).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn update_track_info(
+    track_id: i64,
+    title: String,
+    artist: String,
+    album: String,
+    genre: Option<String>,
+    year: Option<u32>,
+    track_number: Option<u32>,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db::update_track_metadata(
+        &db,
+        track_id,
+        &title,
+        &artist,
+        &album,
+        genre.as_deref(),
+        year,
+        track_number,
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn save_setting(key: String, value: String, state: State<'_, AppState>) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     db::set_setting(&db, &key, &value).map_err(|e| e.to_string())

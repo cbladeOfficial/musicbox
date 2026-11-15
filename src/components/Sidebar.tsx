@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Music2,
   Disc3,
@@ -21,8 +21,8 @@ interface SidebarProps {
   playlists: PlaylistRecord[];
   selectedPlaylistId: number | null;
   onSelectPlaylist: (id: number) => void;
-  onCreatePlaylist: (name: string) => void;
-  onDeletePlaylist: (id: number) => void;
+  onOpenCreatePlaylist: () => void;
+  onRequestDeletePlaylist: (playlist: PlaylistRecord) => void;
   onOpenFolderPicker: () => void;
   totalTracksCount: number;
   isScanning: boolean;
@@ -34,24 +34,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   playlists,
   selectedPlaylistId,
   onSelectPlaylist,
-  onCreatePlaylist,
-  onDeletePlaylist,
+  onOpenCreatePlaylist,
+  onRequestDeletePlaylist,
   onOpenFolderPicker,
   totalTracksCount,
   isScanning,
 }) => {
-  const [isCreating, setIsCreating] = useState(false);
-  const [newPlaylistName, setNewPlaylistName] = useState('');
-
-  const handleCreateSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPlaylistName.trim()) {
-      onCreatePlaylist(newPlaylistName.trim());
-      setNewPlaylistName('');
-      setIsCreating(false);
-    }
-  };
-
   const navItems = [
     { id: 'tracks' as ViewMode, label: 'Tracks', icon: Music2 },
     { id: 'albums' as ViewMode, label: 'Albums', icon: Disc3 },
@@ -73,7 +61,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive =
-                (currentView === item.id || (item.id === 'radio' && currentView === 'radio_form')) &&
+                (currentView === item.id ||
+                  (item.id === 'radio' && currentView === 'radio_form') ||
+                  (item.id === 'tracks' && currentView === 'track_edit_form')) &&
                 selectedPlaylistId === null;
               return (
                 <button
@@ -110,7 +100,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               Playlists
             </span>
             <button
-              onClick={() => setIsCreating(true)}
+              onClick={onOpenCreatePlaylist}
               title="New Playlist"
               className="p-1 text-zinc-400 hover:text-white hover:bg-white/10 rounded transition-colors"
             >
@@ -118,33 +108,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
           </div>
 
-          {isCreating && (
-            <form onSubmit={handleCreateSubmit} className="px-2 mb-2">
-              <input
-                autoFocus
-                type="text"
-                value={newPlaylistName}
-                onChange={(e) => setNewPlaylistName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') setIsCreating(false);
-                }}
-                onBlur={() => {
-                  if (!newPlaylistName) setIsCreating(false);
-                }}
-                placeholder="Playlist name..."
-                className="w-full bg-[var(--surface-color)] text-xs text-white px-2.5 py-1.5 rounded-md border border-[var(--accent-color)] outline-none shadow-sm"
-              />
-            </form>
-          )}
-
           <div className="space-y-0.5 max-h-56 overflow-y-auto">
-            {playlists.length === 0 && !isCreating && (
+            {playlists.length === 0 && (
               <div className="text-[11px] text-zinc-400 px-3 py-1.5 italic">
                 No playlists created
               </div>
             )}
             {playlists.map((pl) => {
-              const isSelected = currentView === 'playlist' && selectedPlaylistId === pl.id;
+              const isSelected =
+                (currentView === 'playlist' || currentView === 'playlist_form') &&
+                selectedPlaylistId === pl.id;
               return (
                 <div
                   key={pl.id}
@@ -167,9 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm(`Delete playlist "${pl.name}"?`)) {
-                        onDeletePlaylist(pl.id);
-                      }
+                      onRequestDeletePlaylist(pl);
                     }}
                     className="opacity-0 group-hover:opacity-100 hover:text-rose-400 p-1.5 rounded transition-opacity"
                     title="Delete playlist"
