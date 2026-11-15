@@ -30,7 +30,7 @@ interface SettingsViewProps {
 
 type SettingsTab = 'general' | 'appearance' | 'discord' | 'lastfm' | 'audio';
 
-const DEFAULT_DISCORD_APP_ID = '1306646875971485777';
+const DEFAULT_DISCORD_APP_ID = '1176718791388975124';
 
 const PRESET_ACCENTS = [
   { name: 'Sapphire Blue', hex: '#2f81f7' },
@@ -529,7 +529,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   className="w-full bg-[var(--surface-color)] border border-[var(--border-color)] rounded-md px-3 py-2 font-mono text-xs outline-none focus:border-[var(--accent-color)] text-white"
                 />
                 <p className="text-xs text-zinc-400">
-                  Default: {DEFAULT_DISCORD_APP_ID} (MusicBox registered application).
+                  Default: {DEFAULT_DISCORD_APP_ID}. Broadcasts "Listening to MusicBox" with live progress bar, artist, and track details. You can enter your own Discord Application ID from the Discord Developer Portal to customize branding.
                 </p>
               </div>
 

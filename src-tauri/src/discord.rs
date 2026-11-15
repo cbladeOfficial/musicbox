@@ -2,7 +2,7 @@ use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const DEFAULT_DISCORD_APP_ID: &str = "1306646875971485777";
+const DEFAULT_DISCORD_APP_ID: &str = "1176718791388975124";
 
 pub struct DiscordManager {
     client: Mutex<Option<DiscordIpcClient>>,
@@ -106,6 +106,9 @@ impl DiscordManager {
                 .as_secs() as i64;
 
             let mut act = activity::Activity::new()
+                .name("MusicBox")
+                .activity_type(activity::ActivityType::Listening)
+                .status_display_type(activity::StatusDisplayType::Name)
                 .details(title)
                 .state(&state_str);
 
@@ -185,6 +188,9 @@ impl DiscordManager {
                 .as_secs() as i64;
 
             let mut act = activity::Activity::new()
+                .name("MusicBox")
+                .activity_type(activity::ActivityType::Listening)
+                .status_display_type(activity::StatusDisplayType::Name)
                 .details(&details_str)
                 .state(&state_str);
 

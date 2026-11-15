@@ -37,7 +37,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   visualizerMode: 'bars',
   visualizerHeight: 48,
   discordRpcEnabled: true,
-  discordClientId: '1306646875971485777',
+  discordClientId: '1176718791388975124',
   discordShowYear: true,
   artSourcePriority: ['itunes', 'jiosaavn', 'lastfm'],
   lastfmEnabled: true,
@@ -364,6 +364,21 @@ export function App() {
         lastFmScrobbler.onTrackStart(track, settings.lastfmApiKey, settings.lastfmSecret);
       }
 
+      // Update Discord Rich Presence immediately
+      if (settings.discordRpcEnabled) {
+        TauriBridge.updateDiscordPresence({
+          title: track.title,
+          artist: track.artist,
+          album: track.album,
+          year: settings.discordShowYear ? track.year : undefined,
+          duration: track.duration,
+          position: 0,
+          coverUrl: undefined,
+          isPlaying: true,
+          clientId: settings.discordClientId,
+        }).catch(() => {});
+      }
+
       // Resolve online cover art (iTunes / JioSaavn / Last.fm)
       MetadataService.resolveCoverArt(
         track.artist,
@@ -374,8 +389,8 @@ export function App() {
       ).then((onlineCover) => {
         setResolvedCoverArt(onlineCover || undefined);
 
-        // Update Discord Rich Presence
-        if (settings.discordRpcEnabled) {
+        // Update Discord Rich Presence with resolved online cover if available
+        if (settings.discordRpcEnabled && onlineCover) {
           TauriBridge.updateDiscordPresence({
             title: track.title,
             artist: track.artist,
@@ -383,7 +398,7 @@ export function App() {
             year: settings.discordShowYear ? track.year : undefined,
             duration: track.duration,
             position: 0,
-            coverUrl: onlineCover || undefined,
+            coverUrl: onlineCover,
             isPlaying: true,
             clientId: settings.discordClientId,
           }).catch(() => {});
