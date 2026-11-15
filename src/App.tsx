@@ -32,6 +32,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   startMaximized: true,
   customAccentColor: '#2f81f7',
   tableDensity: 'comfortable',
+  trackSortField: 'title',
+  trackSortAsc: true,
   visualizerMode: 'bars',
   visualizerHeight: 48,
   discordRpcEnabled: true,
@@ -1085,6 +1087,11 @@ export function App() {
                 onViewAlbum={handleNavigateToAlbum}
                 onViewArtist={handleNavigateToArtist}
                 onEditTrackMetadata={handleOpenEditTrack}
+                sortField={settings.trackSortField || 'title'}
+                sortAsc={settings.trackSortAsc ?? true}
+                onSortChange={(field, asc) => {
+                  handleUpdateSettings({ trackSortField: field, trackSortAsc: asc });
+                }}
               />
             </div>
           ) : currentView === 'playlist_form' ? (

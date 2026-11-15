@@ -5,7 +5,8 @@ import {
   MoreVertical,
   Volume2,
   Clock,
-  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   ListPlus,
   Disc3,
   Mic2,
@@ -13,8 +14,9 @@ import {
   Plus,
   Music2,
   Tag,
+  ChevronDown,
 } from 'lucide-react';
-import { TrackRecord, PlaylistRecord, TableDensity } from '../types/music';
+import { TrackRecord, PlaylistRecord, TableDensity, TrackSortField } from '../types/music';
 import { getCoverUrl } from '../utils/cover';
 
 interface TrackTableProps {
@@ -31,9 +33,10 @@ interface TrackTableProps {
   onViewAlbum?: (albumName: string, artistName: string) => void;
   onViewArtist?: (artistName: string) => void;
   onEditTrackMetadata?: (track: TrackRecord) => void;
+  sortField?: TrackSortField;
+  sortAsc?: boolean;
+  onSortChange?: (field: TrackSortField, asc: boolean) => void;
 }
-
-type SortField = 'title' | 'artist' | 'album' | 'duration' | 'track_number';
 
 function formatDuration(sec: number): string {
   if (!sec || sec < 0) return '0:00';
@@ -56,9 +59,29 @@ export const TrackTable: React.FC<TrackTableProps> = ({
   onViewAlbum,
   onViewArtist,
   onEditTrackMetadata,
+  sortField: propSortField,
+  sortAsc: propSortAsc,
+  onSortChange,
 }) => {
-  const [sortField, setSortField] = useState<SortField>('artist');
-  const [sortAsc, setSortAsc] = useState(true);
+  const [internalField, setInternalField] = useState<TrackSortField>(() => {
+    try {
+      const saved = localStorage.getItem('musicbox_track_sort_field');
+      if (saved) return saved as TrackSortField;
+    } catch {}
+    return 'title';
+  });
+
+  const [internalAsc, setInternalAsc] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('musicbox_track_sort_asc');
+      if (saved !== null) return saved === 'true';
+    } catch {}
+    return true;
+  });
+
+  const sortField = propSortField ?? internalField;
+  const sortAsc = propSortAsc ?? internalAsc;
+
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -77,29 +100,66 @@ export const TrackTable: React.FC<TrackTableProps> = ({
     return () => window.removeEventListener('click', handleClickOutside);
   }, []);
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortAsc(!sortAsc);
-    } else {
-      setSortField(field);
-      setSortAsc(true);
+  const applySort = (field: TrackSortField, asc: boolean) => {
+    setInternalField(field);
+    setInternalAsc(asc);
+    try {
+      localStorage.setItem('musicbox_track_sort_field', field);
+      localStorage.setItem('musicbox_track_sort_asc', String(asc));
+    } catch {}
+    if (onSortChange) {
+      onSortChange(field, asc);
     }
+  };
+
+  const handleHeaderSort = (field: TrackSortField) => {
+    if (sortField === field) {
+      applySort(field, !sortAsc);
+    } else {
+      applySort(field, true);
+    }
+  };
+
+  const handleDropdownSort = (compositeValue: string) => {
+    const parts = compositeValue.split('_');
+    const asc = parts[parts.length - 1] === 'asc';
+    const field = parts.slice(0, parts.length - 1).join('_') as TrackSortField;
+    applySort(field, asc);
   };
 
   const sortedTracks = useMemo(() => {
     const list = [...tracks];
     list.sort((a, b) => {
-      let vA = (a[sortField] ?? '') as string | number;
-      let vB = (b[sortField] ?? '') as string | number;
+      const vA = a[sortField];
+      const vB = b[sortField];
 
-      if (typeof vA === 'string') {
-        vA = vA.toLowerCase();
-        vB = (vB as string).toLowerCase();
+      if (vA === undefined || vA === null) return sortAsc ? 1 : -1;
+      if (vB === undefined || vB === null) return sortAsc ? -1 : 1;
+
+      if (typeof vA === 'string' && typeof vB === 'string') {
+        const cmp = vA.localeCompare(vB, undefined, { numeric: true, sensitivity: 'base' });
+        if (cmp !== 0) return sortAsc ? cmp : -cmp;
+      } else {
+        if (vA < vB) return sortAsc ? -1 : 1;
+        if (vA > vB) return sortAsc ? 1 : -1;
       }
 
-      if (vA < vB) return sortAsc ? -1 : 1;
-      if (vA > vB) return sortAsc ? 1 : -1;
-      return 0;
+      // Secondary tie-breaker:
+      if (sortField === 'title') {
+        const artistCmp = (a.artist || '').localeCompare(b.artist || '', undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        });
+        if (artistCmp !== 0) return artistCmp;
+      } else {
+        const titleCmp = (a.title || '').localeCompare(b.title || '', undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        });
+        if (titleCmp !== 0) return titleCmp;
+      }
+
+      return (a.track_number || 0) - (b.track_number || 0);
     });
     return list;
   }, [tracks, sortField, sortAsc]);
@@ -109,35 +169,94 @@ export const TrackTable: React.FC<TrackTableProps> = ({
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden select-none bg-[var(--bg-color)] animate-fadeIn">
+      {/* Table Toolbar / Controls */}
+      <div className="h-11 px-4 border-b border-[var(--border-color)] bg-[var(--sidebar-color)]/50 flex items-center justify-between flex-shrink-0 text-xs">
+        <div className="flex items-center space-x-2 text-zinc-400">
+          <span className="font-semibold text-zinc-200">{sortedTracks.length}</span>
+          <span>{sortedTracks.length === 1 ? 'track' : 'tracks'}</span>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <label htmlFor="track-sort-dropdown" className="text-zinc-400 text-xs font-medium">
+            Sort by:
+          </label>
+          <div className="relative">
+            <select
+              id="track-sort-dropdown"
+              value={`${sortField}_${sortAsc ? 'asc' : 'desc'}`}
+              onChange={(e) => handleDropdownSort(e.target.value)}
+              aria-label="Sort tracks by"
+              className="bg-[var(--surface-color)] text-zinc-200 text-xs font-medium rounded-md pl-3 pr-8 py-1.5 border border-[var(--border-color)] hover:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] cursor-pointer appearance-none transition-colors"
+            >
+              <option value="title_asc">Title (A-Z - Alphabetical)</option>
+              <option value="title_desc">Title (Z-A)</option>
+              <option value="artist_asc">Artist (A-Z)</option>
+              <option value="artist_desc">Artist (Z-A)</option>
+              <option value="album_asc">Album (A-Z)</option>
+              <option value="album_desc">Album (Z-A)</option>
+              <option value="duration_asc">Duration (Shortest first)</option>
+              <option value="duration_desc">Duration (Longest first)</option>
+              <option value="date_added_desc">Date Added (Newest first)</option>
+              <option value="date_added_asc">Date Added (Oldest first)</option>
+              <option value="track_number_asc">Track # (Ascending)</option>
+              <option value="track_number_desc">Track # (Descending)</option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-zinc-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+        </div>
+      </div>
+
       {/* Table Header */}
-      <div className="h-10 border-b border-[var(--border-color)] bg-[var(--sidebar-color)] px-4 flex items-center text-xs font-medium text-zinc-400 sticky top-0 z-10 backdrop-blur-md">
-        <div className="w-10 text-center font-mono text-zinc-500">#</div>
+      <div className="h-9 border-b border-[var(--border-color)] bg-[var(--sidebar-color)] px-4 flex items-center text-xs font-medium text-zinc-400 sticky top-0 z-10 backdrop-blur-md">
         <div
-          onClick={() => handleSort('title')}
+          onClick={() => handleHeaderSort('track_number')}
+          className="w-10 text-center font-mono cursor-pointer hover:text-white transition-colors flex items-center justify-center space-x-1"
+          title="Sort by Track Number"
+        >
+          <span>#</span>
+          {sortField === 'track_number' && (
+            sortAsc ? <ArrowUp className="w-3 h-3 text-[var(--accent-color)]" /> : <ArrowDown className="w-3 h-3 text-[var(--accent-color)]" />
+          )}
+        </div>
+        <div
+          onClick={() => handleHeaderSort('title')}
           className="flex-1 flex items-center space-x-1.5 cursor-pointer hover:text-white transition-colors"
+          title="Sort by Title (Alphabetical)"
         >
           <span>Title</span>
-          {sortField === 'title' && <ArrowUpDown className="w-3.5 h-3.5 text-[var(--accent-color)]" />}
+          {sortField === 'title' && (
+            sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[var(--accent-color)]" /> : <ArrowDown className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+          )}
         </div>
         <div
-          onClick={() => handleSort('artist')}
+          onClick={() => handleHeaderSort('artist')}
           className="w-48 hidden md:flex items-center space-x-1.5 cursor-pointer hover:text-white transition-colors"
+          title="Sort by Artist"
         >
           <span>Artist</span>
-          {sortField === 'artist' && <ArrowUpDown className="w-3.5 h-3.5 text-[var(--accent-color)]" />}
+          {sortField === 'artist' && (
+            sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[var(--accent-color)]" /> : <ArrowDown className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+          )}
         </div>
         <div
-          onClick={() => handleSort('album')}
+          onClick={() => handleHeaderSort('album')}
           className="w-48 hidden lg:flex items-center space-x-1.5 cursor-pointer hover:text-white transition-colors"
+          title="Sort by Album"
         >
           <span>Album</span>
-          {sortField === 'album' && <ArrowUpDown className="w-3.5 h-3.5 text-[var(--accent-color)]" />}
+          {sortField === 'album' && (
+            sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[var(--accent-color)]" /> : <ArrowDown className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+          )}
         </div>
         <div
-          onClick={() => handleSort('duration')}
+          onClick={() => handleHeaderSort('duration')}
           className="w-16 flex items-center justify-end space-x-1 cursor-pointer hover:text-white pr-4 transition-colors"
+          title="Sort by Duration"
         >
           <Clock className="w-3.5 h-3.5" />
+          {sortField === 'duration' && (
+            sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[var(--accent-color)]" /> : <ArrowDown className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+          )}
         </div>
         <div className="w-14 text-center"></div>
       </div>

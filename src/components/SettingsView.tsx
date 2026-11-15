@@ -15,8 +15,9 @@ import {
   Maximize2,
   HardDrive,
   Sparkles,
+  ArrowUpDown,
 } from 'lucide-react';
-import { AppSettings, ArtSource, ThemeId, VisualizerMode, TableDensity } from '../types/music';
+import { AppSettings, ArtSource, ThemeId, VisualizerMode, TableDensity, TrackSortField } from '../types/music';
 import { TauriBridge } from '../services/tauriBridge';
 
 interface SettingsViewProps {
@@ -357,6 +358,44 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       {d} Spacing
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Default Track Sort Order */}
+              <div className="border-t border-[var(--border-color)] pt-6 space-y-3">
+                <div className="flex items-center space-x-2">
+                  <ArrowUpDown className="w-4 h-4 text-[var(--accent-color)]" />
+                  <h2 className="text-base font-medium text-white">Default Track Sort Order</h2>
+                </div>
+                <p className="text-xs text-zinc-400">
+                  Choose how tracks are automatically arranged in your library views.
+                </p>
+                <div className="relative w-72">
+                  <select
+                    value={`${settings.trackSortField || 'title'}_${(settings.trackSortAsc ?? true) ? 'asc' : 'desc'}`}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const parts = val.split('_');
+                      const asc = parts[parts.length - 1] === 'asc';
+                      const field = parts.slice(0, parts.length - 1).join('_') as TrackSortField;
+                      onUpdateSettings({ trackSortField: field, trackSortAsc: asc });
+                    }}
+                    className="w-full bg-[var(--surface-color)] text-zinc-200 text-sm font-medium rounded-md pl-3 pr-8 py-2 border border-[var(--border-color)] hover:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] cursor-pointer appearance-none transition-colors"
+                  >
+                    <option value="title_asc">Title (A-Z - Alphabetical)</option>
+                    <option value="title_desc">Title (Z-A)</option>
+                    <option value="artist_asc">Artist (A-Z)</option>
+                    <option value="artist_desc">Artist (Z-A)</option>
+                    <option value="album_asc">Album (A-Z)</option>
+                    <option value="album_desc">Album (Z-A)</option>
+                    <option value="duration_asc">Duration (Shortest first)</option>
+                    <option value="duration_desc">Duration (Longest first)</option>
+                    <option value="date_added_desc">Date Added (Newest first)</option>
+                    <option value="date_added_asc">Date Added (Oldest first)</option>
+                    <option value="track_number_asc">Track # (Ascending)</option>
+                    <option value="track_number_desc">Track # (Descending)</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-zinc-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
               </div>
 

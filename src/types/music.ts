@@ -97,6 +97,8 @@ export type ThemeId = 'feishin' | 'amoled' | 'nord' | 'catppuccin' | 'cyberpunk'
 
 export type ArtSource = 'itunes' | 'lastfm' | 'jiosaavn';
 
+export type TrackSortField = 'title' | 'artist' | 'album' | 'duration' | 'date_added' | 'track_number';
+
 export interface AppSettings {
   musicFolders: string[];
   theme: ThemeId;
@@ -104,6 +106,8 @@ export interface AppSettings {
   startMaximized: boolean;
   customAccentColor: string;
   tableDensity: TableDensity;
+  trackSortField: TrackSortField;
+  trackSortAsc: boolean;
   visualizerMode: VisualizerMode;
   visualizerHeight: number;
   discordRpcEnabled: boolean;

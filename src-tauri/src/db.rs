@@ -216,7 +216,7 @@ pub fn get_all_tracks(conn: &Connection) -> Result<Vec<TrackRecord>> {
         "SELECT id, path, title, artist, album, album_artist, track_number, disc_number,
                 year, genre, duration, bitrate, sample_rate, format, cover_path,
                 file_size, play_count, is_favorite, date_added, last_played
-         FROM tracks ORDER BY artist COLLATE NOCASE, album COLLATE NOCASE, track_number, title COLLATE NOCASE",
+         FROM tracks ORDER BY title COLLATE NOCASE, artist COLLATE NOCASE, album COLLATE NOCASE, track_number",
     )?;
 
     let iter = stmt.query_map([], |row| {

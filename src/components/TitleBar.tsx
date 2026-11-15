@@ -8,7 +8,6 @@ import {
   Radio,
   Settings as SettingsIcon,
   SlidersHorizontal,
-  Music2,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -56,9 +55,11 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       {/* Left: Brand & Navigation History Controls */}
       <div className="flex items-center space-x-3 text-sm font-medium">
         <div className="flex items-center space-x-2">
-          <div className="w-6 h-6 rounded-md bg-[var(--accent-color)] flex items-center justify-center text-white shadow-sm shadow-[var(--accent-color)]/20">
-            <Music2 className="w-4 h-4" />
-          </div>
+          <img
+            src="/app-icon.png"
+            alt="MusicBox Logo"
+            className="w-6 h-6 rounded-md object-contain select-none pointer-events-none drop-shadow-sm"
+          />
           <span className="text-zinc-200 font-medium text-[14px]">MusicBox</span>
         </div>
 
