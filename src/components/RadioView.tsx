@@ -162,6 +162,9 @@ export const RadioView: React.FC<RadioViewProps> = ({
     setIsModalOpen(false);
   };
 
+  // Favorite count
+  const favoriteCount = stations.filter((s) => s.is_favorite).length;
+
   // Filter local stations
   const displayedStations = stations.filter((st) => {
     if (activeTab === 'favorites' && !st.is_favorite) return false;
@@ -201,17 +204,18 @@ export const RadioView: React.FC<RadioViewProps> = ({
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              My Stations
+              My Stations ({stations.length})
             </button>
             <button
               onClick={() => setActiveTab('favorites')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center space-x-1.5 transition-colors ${
                 activeTab === 'favorites'
                   ? 'bg-white/10 text-white border border-white/15'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              Favorites
+              <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
+              <span>Favorites ({favoriteCount})</span>
             </button>
             <button
               onClick={() => setActiveTab('directory')}
@@ -228,7 +232,7 @@ export const RadioView: React.FC<RadioViewProps> = ({
         </div>
 
         {/* Right Actions: Search + Add Station */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2.5">
           {activeTab === 'directory' ? (
             <form onSubmit={handleOnlineSearch} className="relative">
               <input
@@ -236,9 +240,9 @@ export const RadioView: React.FC<RadioViewProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search global stations..."
-                className="w-48 bg-[var(--surface-color)] text-xs text-[var(--text-main)] pl-7 pr-3 py-1 rounded border border-[var(--border-color)] focus:border-[var(--accent-color)] outline-none"
+                className="w-52 bg-[var(--surface-color)] text-xs text-[var(--text-main)] pl-8 pr-3 py-1.5 rounded-md border border-[var(--border-color)] focus:border-[var(--accent-color)] outline-none"
               />
-              <Search className="w-3.5 h-3.5 absolute left-2 top-2 text-[var(--text-muted)]" />
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[var(--text-muted)]" />
             </form>
           ) : (
             <div className="relative">
@@ -247,15 +251,15 @@ export const RadioView: React.FC<RadioViewProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Filter stations..."
-                className="w-44 bg-[var(--surface-color)] text-xs text-[var(--text-main)] pl-7 pr-3 py-1 rounded border border-[var(--border-color)] focus:border-[var(--accent-color)] outline-none"
+                className="w-48 bg-[var(--surface-color)] text-xs text-[var(--text-main)] pl-8 pr-3 py-1.5 rounded-md border border-[var(--border-color)] focus:border-[var(--accent-color)] outline-none"
               />
-              <Search className="w-3.5 h-3.5 absolute left-2 top-2 text-[var(--text-muted)]" />
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[var(--text-muted)]" />
             </div>
           )}
 
           <button
             onClick={openCreateModal}
-            className="flex items-center space-x-1.5 px-3 py-1 rounded bg-[var(--accent-color)] hover:brightness-110 text-white text-xs font-medium transition-all shadow-sm"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white text-xs font-medium transition-all shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Station</span>
@@ -424,7 +428,7 @@ export const RadioView: React.FC<RadioViewProps> = ({
                       <div className="flex-1 min-w-0 pr-1">
                         <div className="flex items-center space-x-1.5">
                           <span
-                            className="font-medium text-[13px] text-zinc-100 truncate cursor-pointer hover:underline"
+                            className="font-medium text-[14px] text-white truncate cursor-pointer hover:underline"
                             onClick={() => onPlayStation(station)}
                             title={station.name}
                           >
@@ -432,9 +436,9 @@ export const RadioView: React.FC<RadioViewProps> = ({
                           </span>
                         </div>
 
-                        <div className="flex items-center space-x-1.5 mt-1 text-[11px] text-zinc-400">
+                        <div className="flex items-center space-x-1.5 mt-1 text-xs text-zinc-400">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                          <span className="font-mono font-medium text-emerald-400 text-[10px]">
+                          <span className="font-mono font-medium text-emerald-400 text-xs">
                             Live
                           </span>
                           {station.country && (
@@ -453,7 +457,7 @@ export const RadioView: React.FC<RadioViewProps> = ({
                               .map((t) => (
                                 <span
                                   key={t}
-                                  className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--surface-active)] text-[var(--text-muted)] border border-[var(--border-color)]/60 truncate"
+                                  className="text-xs px-2 py-0.5 rounded bg-[var(--surface-active)] text-zinc-300 border border-[var(--border-color)]/60 truncate"
                                 >
                                   {t.trim()}
                                 </span>

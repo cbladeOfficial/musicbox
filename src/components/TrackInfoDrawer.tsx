@@ -47,25 +47,25 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
   return (
     <aside className="w-88 h-full bg-[var(--surface-color)]/95 backdrop-blur-md border-l border-[var(--border-color)] flex flex-col z-30 select-none shadow-xl overflow-y-auto flex-shrink-0">
       {/* Header */}
-      <div className="h-11 border-b border-[var(--border-color)] px-4 flex items-center justify-between sticky top-0 bg-[var(--surface-color)]/95 backdrop-blur-md z-10">
+      <div className="h-12 border-b border-[var(--border-color)] px-4 flex items-center justify-between sticky top-0 bg-[var(--surface-color)]/95 backdrop-blur-md z-10">
         <div className="flex items-center space-x-2">
-          <Info className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-          <span className="text-[11px] font-medium text-[var(--text-main)]">
+          <Info className="w-4 h-4 text-[var(--accent-color)]" />
+          <span className="text-sm font-medium text-[var(--text-main)]">
             Track Details & Specs
           </span>
         </div>
         <button
           onClick={onClose}
-          className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)] transition-colors"
+          className="p-1.5 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)] transition-colors"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="w-4 h-4" />
         </button>
       </div>
 
       <div className="p-5 space-y-5">
         {/* Artwork & Header */}
         <div className="flex flex-col items-center text-center">
-          <div className="w-44 h-44 rounded bg-[var(--surface-active)] border border-[var(--border-color)] shadow-md mb-3 overflow-hidden">
+          <div className="w-48 h-48 rounded-lg bg-[var(--surface-active)] border border-[var(--border-color)] shadow-md mb-3 overflow-hidden">
             {coverSrc ? (
               <img
                 src={coverSrc}
@@ -81,19 +81,19 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
               </div>
             )}
           </div>
-          <h2 className="text-sm font-medium text-white">{currentTrack.title}</h2>
-          <span className="text-xs font-normal text-zinc-400 mt-0.5">{currentTrack.artist}</span>
-          <span className="text-[11px] text-zinc-500">{currentTrack.album}</span>
+          <h2 className="text-base font-semibold text-white">{currentTrack.title}</h2>
+          <span className="text-sm font-medium text-zinc-300 mt-0.5">{currentTrack.artist}</span>
+          <span className="text-xs text-zinc-400 mt-0.5">{currentTrack.album}</span>
         </div>
 
         {/* Technical Specs */}
-        <div className="space-y-2.5 p-3.5 rounded-lg bg-[var(--surface-color)] border border-[var(--border-color)] text-xs shadow-sm">
-          <div className="flex items-center space-x-1.5 text-[var(--accent-color)] font-medium text-[11px] mb-1">
-            <Cpu className="w-3.5 h-3.5" />
+        <div className="space-y-3 p-4 rounded-lg bg-[var(--surface-color)] border border-[var(--border-color)] text-xs shadow-sm">
+          <div className="flex items-center space-x-2 text-[var(--accent-color)] font-medium text-xs mb-1">
+            <Cpu className="w-4 h-4" />
             <span>Audio Specifications</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-[11px]">
+          <div className="grid grid-cols-2 gap-2.5 text-xs">
             <div>
               <span className="text-zinc-400">Codec: </span>
               <span className="font-mono text-white font-medium">{currentTrack.format}</span>
@@ -128,20 +128,20 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
             ) : null}
           </div>
 
-          <div className="pt-2 border-t border-white/10 text-[10px] text-zinc-400 flex items-start space-x-1.5 break-all">
-            <Folder className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-zinc-500" />
-            <span className="select-text font-mono text-zinc-400">{currentTrack.path}</span>
+          <div className="pt-2.5 border-t border-white/10 text-xs text-zinc-400 flex items-start space-x-2 break-all">
+            <Folder className="w-4 h-4 flex-shrink-0 mt-0.5 text-zinc-500" />
+            <span className="select-text font-mono text-zinc-300">{currentTrack.path}</span>
           </div>
         </div>
 
         {/* Album Description */}
         {albumInfo?.summary && (
-          <div className="space-y-1.5 text-xs">
-            <div className="flex items-center space-x-1.5 text-[var(--text-main)] font-medium text-[11px]">
-              <Calendar className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+          <div className="space-y-2 text-xs">
+            <div className="flex items-center space-x-2 text-[var(--text-main)] font-medium text-xs">
+              <Calendar className="w-4 h-4 text-[var(--accent-color)]" />
               <span>About the Album ({currentTrack.album})</span>
             </div>
-            <p className="text-[var(--text-muted)] leading-relaxed select-text">
+            <p className="text-zinc-300 text-[13px] leading-relaxed select-text">
               {albumInfo.summary}
             </p>
           </div>
@@ -150,29 +150,29 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
         {/* Artist Biography from Last.fm */}
         {loading ? (
           <div className="flex items-center space-x-2 text-xs text-[var(--text-muted)]">
-            <Sparkles className="w-3.5 h-3.5 animate-spin text-[var(--accent-color)]" />
+            <Sparkles className="w-4 h-4 animate-spin text-[var(--accent-color)]" />
             <span>Loading artist biography from Last.fm...</span>
           </div>
         ) : (
           artistInfo && (
             <div className="space-y-2 text-xs">
-              <div className="flex items-center space-x-1.5 text-[var(--text-main)] font-medium text-[11px]">
-                <Tag className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+              <div className="flex items-center space-x-2 text-[var(--text-main)] font-medium text-xs">
+                <Tag className="w-4 h-4 text-[var(--accent-color)]" />
                 <span>About {currentTrack.artist}</span>
               </div>
               {artistInfo.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1.5">
                   {artistInfo.tags.map((t) => (
                     <span
                       key={t}
-                      className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--surface-active)] text-[var(--text-muted)] border border-[var(--border-color)] font-mono"
+                      className="text-xs px-2 py-0.5 rounded bg-[var(--surface-active)] text-zinc-300 border border-[var(--border-color)] font-mono"
                     >
                       #{t}
                     </span>
                   ))}
                 </div>
               )}
-              <p className="text-[var(--text-muted)] leading-relaxed select-text">
+              <p className="text-zinc-300 text-[13px] leading-relaxed select-text">
                 {artistInfo.bio}
               </p>
             </div>

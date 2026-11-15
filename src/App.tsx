@@ -10,7 +10,7 @@ import { Visualizer } from './components/Visualizer';
 import { LyricsDrawer } from './components/LyricsDrawer';
 import { TrackInfoDrawer } from './components/TrackInfoDrawer';
 import { QueueDrawer } from './components/QueueDrawer';
-import { SettingsModal } from './components/SettingsModal';
+import { SettingsView } from './components/SettingsView';
 import { RadioView } from './components/RadioView';
 
 import { TrackRecord, PlaylistRecord, RadioStation, RadioMetadata, ViewMode, AppSettings } from './types/music';
@@ -105,7 +105,6 @@ export function App() {
   const [showLyrics, setShowLyrics] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
 
@@ -121,19 +120,27 @@ export function App() {
     }
     
     // Resolve font family
-    let resolvedFont = `'Inter', -apple-system, BlinkMacSystemFont, sans-serif`;
+    let resolvedFont = `'Inter', sans-serif`;
     const f = settings.fontFamily || 'Inter';
     if (f === 'Geist Sans') {
-      resolvedFont = `'Geist Sans', -apple-system, sans-serif`;
+      resolvedFont = `'Geist Sans', sans-serif`;
+    } else if (f === 'Outfit') {
+      resolvedFont = `'Outfit', sans-serif`;
+    } else if (f === 'Roboto') {
+      resolvedFont = `'Roboto', sans-serif`;
     } else if (f === 'JetBrains Mono') {
       resolvedFont = `'JetBrains Mono', monospace`;
-    } else if (f === 'System Sans') {
-      resolvedFont = `system-ui, -apple-system, BlinkMacSystemFont, sans-serif`;
+    } else if (f === 'System UI' || f === 'System Sans') {
+      resolvedFont = `system-ui, sans-serif`;
     } else if (f !== 'Inter') {
-      resolvedFont = `'${f}', 'Inter', -apple-system, sans-serif`;
+      resolvedFont = `'${f}', sans-serif`;
     }
 
     document.documentElement.style.setProperty('--app-font-family', resolvedFont);
+    document.documentElement.style.setProperty('--font-sans', resolvedFont);
+    document.body.style.setProperty('--app-font-family', resolvedFont);
+    document.body.style.setProperty('--font-sans', resolvedFont);
+    document.documentElement.style.fontFamily = resolvedFont;
     document.body.style.fontFamily = resolvedFont;
   }, [settings.theme, settings.customAccentColor, settings.fontFamily]);
 
@@ -495,7 +502,6 @@ export function App() {
         setShowLyrics(false);
         setShowQueue(false);
         setShowInfo(false);
-        setIsSettingsOpen(false);
       }
     };
 
@@ -782,12 +788,12 @@ export function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[var(--bg-color)] text-[var(--text-main)] font-sans antialiased">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[var(--bg-color)] text-[var(--text-main)] antialiased">
       {/* 1. Feishin Top Bar */}
       <TitleBar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenSettings={() => navigateToView('settings')}
         isMaximized={isMaximized}
         onToggleMaximize={handleToggleMaximize}
         discordActive={settings.discordRpcEnabled}
@@ -875,6 +881,14 @@ export function App() {
               onPlayArtist={handlePlayArtist}
               currentTrackId={currentTrack?.id}
               lastfmApiKey={settings.lastfmApiKey}
+            />
+          ) : currentView === 'settings' ? (
+            <SettingsView
+              settings={settings}
+              onUpdateSettings={handleUpdateSettings}
+              onScanFolder={handleScanFolder}
+              isScanning={isScanning}
+              onBack={handleNavigateBack}
             />
           ) : null}
         </main>
@@ -980,16 +994,6 @@ export function App() {
         onToggleFavorite={handleToggleFavorite}
         onToggleRadioFavorite={handleToggleRadioFavorite}
         coverArtUrl={resolvedCoverArt}
-      />
-
-      {/* 5. Settings Modal */}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        settings={settings}
-        onUpdateSettings={handleUpdateSettings}
-        onScanFolder={handleScanFolder}
-        isScanning={isScanning}
       />
     </div>
   );

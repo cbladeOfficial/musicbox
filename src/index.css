@@ -5,12 +5,21 @@
 @import '@fontsource/geist-sans/400.css';
 @import '@fontsource/geist-sans/500.css';
 @import '@fontsource/geist-sans/600.css';
+@import '@fontsource/roboto/400.css';
+@import '@fontsource/roboto/500.css';
+@import '@fontsource/outfit/400.css';
+@import '@fontsource/outfit/500.css';
 @import '@fontsource/jetbrains-mono/400.css';
 @import '@fontsource/jetbrains-mono/500.css';
 @import "tailwindcss";
 
+@theme {
+  --font-sans: var(--app-font-family);
+}
+
 :root {
-  --app-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  --app-font-family: 'Inter', sans-serif;
+  --font-sans: var(--app-font-family);
   --bg-color: #08090c;
   --sidebar-color: #0d0e13;
   --surface-color: #13151b;
@@ -84,13 +93,21 @@
   --accent-rgb: 0, 240, 255;
 }
 
+body, button, input, select, textarea, div, span, p, h1, h2, h3, h4, h5, h6 {
+  font-family: var(--app-font-family, 'Inter', sans-serif);
+}
+
+.font-mono, code, kbd, pre {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
 body {
   margin: 0;
   padding: 0;
   user-select: none;
   background-color: var(--bg-color);
   color: var(--text-main);
-  font-family: var(--app-font-family, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
+  font-family: var(--app-font-family, 'Inter', sans-serif);
   font-weight: 400;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
@@ -99,7 +116,7 @@ body {
   font-feature-settings: 'cv02' 1, 'cv03' 1, 'cv04' 1, 'cv11' 1, 'tnum' 1;
 }
 
-/* Custom Sleek Feishin Scrollbar */
+/* Custom Sleek Scrollbar */
 ::-webkit-scrollbar {
   width: 7px;
   height: 7px;

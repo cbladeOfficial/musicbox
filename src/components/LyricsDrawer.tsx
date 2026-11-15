@@ -62,16 +62,16 @@ export const LyricsDrawer: React.FC<LyricsDrawerProps> = ({
   if (!isOpen) return null;
 
   return (
-    <aside className="w-80 h-full bg-[var(--surface-color)]/95 backdrop-blur-md border-l border-[var(--border-color)] flex flex-col z-30 select-none shadow-xl flex-shrink-0">
+    <aside className="w-84 h-full bg-[var(--surface-color)]/95 backdrop-blur-md border-l border-[var(--border-color)] flex flex-col z-30 select-none shadow-xl flex-shrink-0">
       {/* Drawer Header */}
-      <div className="h-11 border-b border-[var(--border-color)] px-4 flex items-center justify-between">
+      <div className="h-12 border-b border-[var(--border-color)] px-4 flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <Mic2 className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-          <span className="text-[11px] font-medium text-[var(--text-main)]">
+          <Mic2 className="w-4 h-4 text-[var(--accent-color)]" />
+          <span className="text-sm font-medium text-[var(--text-main)]">
             Lyrics
           </span>
           {lyrics?.synced && !preferPlain && (
-            <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--accent-color)]/15 text-[var(--accent-color)] font-medium border border-[var(--accent-color)]/20">
+            <span className="text-xs px-2 py-0.5 rounded bg-[var(--accent-color)]/15 text-[var(--accent-color)] font-medium border border-[var(--accent-color)]/20">
               Synced
             </span>
           )}
@@ -82,9 +82,9 @@ export const LyricsDrawer: React.FC<LyricsDrawerProps> = ({
             <button
               onClick={() => setPreferPlain(!preferPlain)}
               title={preferPlain ? 'View Synced Karaoke' : 'View Plain Text'}
-              className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)] transition-colors"
+              className="p-1.5 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)] transition-colors"
             >
-              <FileText className="w-3.5 h-3.5" />
+              <FileText className="w-4 h-4" />
             </button>
           )}
 
@@ -100,16 +100,16 @@ export const LyricsDrawer: React.FC<LyricsDrawerProps> = ({
               }
             }}
             title="Reload lyrics from LRCLIB"
-            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)] transition-colors"
+            className="p-1.5 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)] transition-colors"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
           <button
             onClick={onClose}
-            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)] transition-colors"
+            className="p-1.5 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)] transition-colors"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -117,23 +117,23 @@ export const LyricsDrawer: React.FC<LyricsDrawerProps> = ({
       {/* Lyrics Content */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-6 space-y-3.5 text-center font-medium"
+        className="flex-1 overflow-y-auto p-6 space-y-4 text-center font-medium"
       >
         {loading ? (
-          <div className="h-full flex flex-col items-center justify-center text-xs text-[var(--text-muted)] space-y-2">
-            <Loader2 className="w-5 h-5 animate-spin text-[var(--accent-color)]" />
+          <div className="h-full flex flex-col items-center justify-center text-sm text-[var(--text-muted)] space-y-2.5">
+            <Loader2 className="w-6 h-6 animate-spin text-[var(--accent-color)]" />
             <span>Finding lyrics on LRCLIB...</span>
           </div>
         ) : !lyrics ? (
-          <div className="h-full flex flex-col items-center justify-center text-xs text-[var(--text-muted)] space-y-2">
-            <Music2 className="w-6 h-6 opacity-30 stroke-1" />
+          <div className="h-full flex flex-col items-center justify-center text-sm text-[var(--text-muted)] space-y-2.5">
+            <Music2 className="w-8 h-8 opacity-30 stroke-1" />
             <span>No lyrics found for this track</span>
-            <span className="text-[10px] opacity-70">
+            <span className="text-xs opacity-70">
               {currentTrack?.title} - {currentTrack?.artist}
             </span>
           </div>
         ) : preferPlain || !lyrics.synced ? (
-          <div className="whitespace-pre-line text-xs text-[var(--text-main)] leading-loose select-text font-sans opacity-90">
+          <div className="whitespace-pre-line text-sm text-[var(--text-main)] leading-loose select-text font-sans opacity-90">
             {lyrics.plain || 'No plain text lyrics available.'}
           </div>
         ) : (
@@ -144,10 +144,10 @@ export const LyricsDrawer: React.FC<LyricsDrawerProps> = ({
                 key={idx}
                 ref={isActive ? activeLineRef : null}
                 onClick={() => onSeek(line.time)}
-                className={`py-2 px-3.5 rounded-lg transition-all duration-200 cursor-pointer text-sm leading-relaxed ${
+                className={`py-2 px-3.5 rounded-lg transition-all duration-200 cursor-pointer leading-relaxed ${
                   isActive
-                    ? 'text-white font-medium text-base bg-[var(--accent-color)]/15 ring-1 ring-[var(--accent-color)]/25'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                    ? 'text-white font-medium text-lg bg-[var(--accent-color)]/15 ring-1 ring-[var(--accent-color)]/25'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/5 text-[15px]'
                 }`}
               >
                 {line.text}

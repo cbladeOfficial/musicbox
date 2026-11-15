@@ -137,28 +137,28 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
               <span
                 onClick={onToggleInfo}
                 title={currentTrack.title}
-                className="text-[13px] font-medium text-zinc-100 truncate hover:underline cursor-pointer"
+                className="text-[15px] font-medium text-white truncate hover:underline cursor-pointer tracking-normal"
               >
                 {currentTrack.title}
               </span>
               <span
                 onClick={onToggleInfo}
                 title={currentTrack.artist}
-                className="text-[11px] font-normal text-zinc-400 truncate hover:text-zinc-200 cursor-pointer mt-0.5"
+                className="text-[13px] font-normal text-zinc-300 truncate hover:text-white cursor-pointer mt-0.5"
               >
                 {currentTrack.artist}
               </span>
               <div className="flex items-center space-x-1.5 mt-1">
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/5 text-zinc-400 font-mono border border-white/5">
+                <span className="text-xs px-2 py-0.5 rounded bg-white/5 text-zinc-300 font-mono border border-white/5">
                   {currentTrack.format}
                 </span>
                 {currentTrack.bitrate && (
-                  <span className="text-[10px] text-zinc-500 font-mono tabular-nums">
+                  <span className="text-xs text-zinc-400 font-mono tabular-nums">
                     {Math.round(currentTrack.bitrate / 1000)}k
                   </span>
                 )}
                 {currentTrack.year ? (
-                  <span className="text-[10px] text-zinc-500 font-mono">
+                  <span className="text-xs text-zinc-400 font-mono">
                     • {currentTrack.year}
                   </span>
                 ) : null}
@@ -195,25 +195,25 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             <div className="flex flex-col truncate pr-2">
               <span
                 title={radioNowPlaying?.title || currentRadio.name}
-                className="text-[13px] font-medium text-zinc-100 truncate"
+                className="text-[15px] font-medium text-white truncate"
               >
                 {radioNowPlaying?.title || currentRadio.name}
               </span>
               <span
                 title={radioNowPlaying?.artist || currentRadio.name}
-                className="text-[11px] font-normal text-zinc-400 truncate mt-0.5"
+                className="text-[13px] font-normal text-zinc-300 truncate mt-0.5"
               >
                 {radioNowPlaying?.artist && radioNowPlaying.artist !== 'Live Radio'
                   ? `${radioNowPlaying.artist} • ${currentRadio.name}`
                   : (currentRadio.tags ? currentRadio.tags.split(',')[0] : 'Online Radio')}
               </span>
               <div className="flex items-center space-x-1.5 mt-1">
-                <span className="text-[10px] px-2 py-0.2 rounded-full bg-emerald-500/15 text-emerald-400 font-mono border border-emerald-500/25 flex items-center space-x-1.5 font-normal">
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-mono border border-emerald-500/25 flex items-center space-x-1.5 font-normal">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   <span>LIVE</span>
                 </span>
                 {currentRadio.country && (
-                  <span className="text-[10px] text-zinc-500 font-mono">
+                  <span className="text-xs text-zinc-400 font-mono">
                     • {currentRadio.country}
                   </span>
                 )}
@@ -326,12 +326,12 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
               {isPlaying ? 'LIVE STREAM' : 'STREAM PAUSED'}
             </span>
             <span className="text-zinc-600">•</span>
-            <span className="text-[12px] text-zinc-400 truncate max-w-[280px]">
+            <span className="text-[13px] text-zinc-300 truncate max-w-[280px]">
               {currentRadio.name}
             </span>
           </div>
         ) : (
-          <div className="w-full flex items-center space-x-2.5 text-[12px] text-zinc-400 font-mono tabular-nums">
+          <div className="w-full flex items-center space-x-2.5 text-[13px] text-zinc-300 font-mono tabular-nums">
             <span className="w-10 text-right">{formatTime(displayTime)}</span>
             <div
               ref={progressTrackRef}

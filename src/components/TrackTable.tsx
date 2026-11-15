@@ -107,7 +107,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden select-none bg-[var(--bg-color)]">
       {/* Table Header */}
-      <div className="h-9 border-b border-[var(--border-color)] bg-[var(--sidebar-color)] px-4 flex items-center text-[11px] font-medium text-zinc-400 sticky top-0 z-10 backdrop-blur-md">
+      <div className="h-10 border-b border-[var(--border-color)] bg-[var(--sidebar-color)] px-4 flex items-center text-xs font-medium text-zinc-400 sticky top-0 z-10 backdrop-blur-md">
         <div className="w-10 text-center font-mono text-zinc-500">#</div>
         <div
           onClick={() => handleSort('title')}
@@ -142,10 +142,10 @@ export const TrackTable: React.FC<TrackTableProps> = ({
       {/* Table Body */}
       <div className="flex-1 overflow-y-auto divide-y divide-white/[0.03]">
         {sortedTracks.length === 0 ? (
-          <div className="p-16 flex flex-col items-center justify-center text-center text-xs text-zinc-400 space-y-3">
-            <Music2 className="w-10 h-10 opacity-40 stroke-1" />
-            <p className="text-sm font-medium text-zinc-300">No tracks in this view</p>
-            <p className="text-zinc-500">Scan a music folder in the sidebar to index your library.</p>
+          <div className="p-20 flex flex-col items-center justify-center text-center space-y-3">
+            <Music2 className="w-16 h-16 opacity-30 stroke-1 text-zinc-400 mb-2" />
+            <p className="text-lg font-medium text-zinc-200">No tracks in this view</p>
+            <p className="text-sm text-zinc-400 max-w-sm">Scan a music folder in the sidebar to index and stream your library.</p>
           </div>
         ) : (
           sortedTracks.map((track, idx) => {
@@ -208,15 +208,15 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                   </div>
 
                   <div className="flex flex-col truncate min-w-0 pr-1">
-                    <span className={`truncate text-[13px] ${isCurrent ? 'text-[var(--accent-color)] font-medium' : 'text-zinc-200 font-normal'}`}>
+                    <span className={`truncate text-[14px] ${isCurrent ? 'text-[var(--accent-color)] font-medium' : 'text-zinc-100 font-medium'}`}>
                       {track.title}
                     </span>
-                    <span className="text-[11px] text-zinc-500 md:hidden truncate">
+                    <span className="text-xs text-zinc-400 md:hidden truncate">
                       {track.artist}
                     </span>
                   </div>
 
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/5 text-zinc-400 font-mono border border-white/5 flex-shrink-0 font-normal">
+                  <span className="text-[11px] px-2 py-0.5 rounded bg-white/5 text-zinc-300 font-mono border border-white/5 flex-shrink-0 font-normal">
                     {track.format}
                   </span>
                 </div>
@@ -229,7 +229,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                       onViewArtist(track.artist);
                     }
                   }}
-                  className="w-48 hidden md:block text-zinc-400 truncate pr-2 hover:underline hover:text-zinc-200 text-[12px] font-normal transition-colors"
+                  className="w-48 hidden md:block text-zinc-300 truncate pr-2 hover:underline hover:text-white text-[13px] font-normal transition-colors"
                 >
                   {track.artist}
                 </div>
@@ -242,13 +242,13 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                       onViewAlbum(track.album, track.artist);
                     }
                   }}
-                  className="w-48 hidden lg:block text-zinc-400 truncate pr-2 hover:underline hover:text-white text-[12px] transition-colors"
+                  className="w-48 hidden lg:block text-zinc-400 truncate pr-2 hover:underline hover:text-white text-[13px] transition-colors"
                 >
                   {track.album}
                 </div>
 
                 {/* Duration */}
-                <div className="w-16 text-right text-zinc-400 font-mono text-[12px] tabular-nums pr-4">
+                <div className="w-16 text-right text-zinc-400 font-mono text-[13px] tabular-nums pr-4">
                   {formatDuration(track.duration)}
                 </div>
 

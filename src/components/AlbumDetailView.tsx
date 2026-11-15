@@ -44,7 +44,7 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
       {/* Back Button */}
       <button
         onClick={onBack}
-        className="text-xs text-zinc-400 hover:text-white flex items-center space-x-1.5 transition-colors"
+        className="text-sm text-zinc-400 hover:text-white flex items-center space-x-2 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>Back to Albums</span>
@@ -52,7 +52,7 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
 
       {/* Album Header */}
       <div className="flex flex-col md:flex-row items-start md:items-end gap-6">
-        <div className="w-52 h-52 rounded-lg bg-zinc-900 border border-white/10 shadow-2xl flex-shrink-0 overflow-hidden">
+        <div className="w-56 h-56 rounded-lg bg-zinc-900 border border-white/10 shadow-2xl flex-shrink-0 overflow-hidden">
           {coverSrc ? (
             <img
               src={coverSrc}
@@ -69,14 +69,14 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
           )}
         </div>
 
-        <div className="flex-1 space-y-2">
-          <span className="text-[11px] font-medium text-[var(--accent-color)]">
+        <div className="flex-1 space-y-2.5">
+          <span className="text-xs uppercase tracking-wider font-semibold text-[var(--accent-color)]">
             Album
           </span>
-          <h1 className="text-2xl font-semibold text-white tracking-tight">
+          <h1 className="text-2xl font-bold text-white tracking-tight">
             {album.name}
           </h1>
-          <div className="text-sm font-medium text-zinc-300">
+          <div className="text-base font-medium text-zinc-200">
             {album.artist}
           </div>
           <div className="flex items-center space-x-2 text-xs text-zinc-400 font-mono tabular-nums">
@@ -87,17 +87,17 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
             <span>{mins} mins</span>
           </div>
 
-          <div className="flex items-center space-x-3 pt-3">
+          <div className="flex items-center space-x-3 pt-2">
             <button
               onClick={() => onPlayAlbum(album, false)}
-              className="flex items-center space-x-2 px-5 py-2.5 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white text-xs font-medium shadow-md active:scale-95 transition-all"
+              className="flex items-center space-x-2 px-5 py-2.5 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white text-sm font-medium shadow-md active:scale-95 transition-all"
             >
               <Play className="w-4 h-4 fill-current" />
               <span>Play Album</span>
             </button>
             <button
               onClick={() => onPlayAlbum(album, true)}
-              className="flex items-center space-x-2 px-4 py-2.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-medium transition-all"
+              className="flex items-center space-x-2 px-4 py-2.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-medium transition-all"
             >
               <Shuffle className="w-4 h-4" />
               <span>Shuffle</span>
@@ -115,17 +115,17 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
       ) : (
         albumInfo?.summary && (
           <div className="p-4 rounded-lg bg-[var(--surface-color)] border border-[var(--border-color)] text-xs text-zinc-300 leading-relaxed select-text">
-            <span className="text-[11px] font-medium text-zinc-300 block mb-1">
+            <span className="text-xs uppercase tracking-wider font-semibold text-zinc-300 block mb-1.5">
               About this Album
             </span>
-            <p>{albumInfo.summary}</p>
+            <p className="text-[13px] leading-relaxed text-zinc-300">{albumInfo.summary}</p>
           </div>
         )
       )}
 
       {/* Tracks Table */}
       <div className="rounded-lg bg-[var(--surface-color)] border border-[var(--border-color)] divide-y divide-white/[0.04] overflow-hidden">
-        <div className="h-9 px-4 flex items-center text-[11px] font-medium text-zinc-400 bg-[var(--sidebar-color)] border-b border-[var(--border-color)]">
+        <div className="h-10 px-4 flex items-center text-xs uppercase tracking-wider font-semibold text-zinc-400 bg-[var(--sidebar-color)] border-b border-[var(--border-color)]">
           <div className="w-8">#</div>
           <div className="flex-1">Title</div>
           <div className="w-16 text-right pr-2">
@@ -136,15 +136,15 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
           <div
             key={t.id}
             onDoubleClick={() => onPlayTrack(t)}
-            className={`flex items-center px-4 py-2.5 text-[13px] hover:bg-white/[0.04] cursor-pointer transition-colors ${
+            className={`flex items-center px-4 py-3 text-[14px] hover:bg-white/[0.04] cursor-pointer transition-colors ${
               currentTrackId === t.id ? 'text-[var(--accent-color)] font-medium bg-[var(--accent-color)]/10' : 'text-zinc-200'
             }`}
           >
-            <div className="w-8 text-zinc-500 font-mono text-[12px] tabular-nums">
+            <div className="w-8 text-zinc-500 font-mono text-xs tabular-nums">
               {t.track_number || idx + 1}
             </div>
             <div className="flex-1 truncate font-medium text-white">{t.title}</div>
-            <div className="w-16 text-right text-zinc-400 font-mono text-[12px] tabular-nums pr-2">
+            <div className="w-16 text-right text-zinc-400 font-mono text-xs tabular-nums pr-2">
               {Math.floor(t.duration / 60)}:{(Math.floor(t.duration % 60)).toString().padStart(2, '0')}
             </div>
           </div>

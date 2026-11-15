@@ -83,7 +83,8 @@ export type ViewMode =
   | 'artist_detail'
   | 'playlist'
   | 'favorites'
-  | 'radio';
+  | 'radio'
+  | 'settings';
 
 export type TableDensity = 'comfortable' | 'compact';
 
