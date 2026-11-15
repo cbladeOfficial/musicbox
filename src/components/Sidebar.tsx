@@ -25,6 +25,8 @@ interface SidebarProps {
   onRequestDeletePlaylist: (playlist: PlaylistRecord) => void;
   onOpenFolderPicker: () => void;
   totalTracksCount: number;
+  radioStationsCount?: number;
+  isRadioPlaying?: boolean;
   isScanning: boolean;
 }
 
@@ -38,6 +40,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onRequestDeletePlaylist,
   onOpenFolderPicker,
   totalTracksCount,
+  radioStationsCount = 0,
+  isRadioPlaying = false,
   isScanning,
 }) => {
   const navItems = [
@@ -84,8 +88,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       {totalTracksCount}
                     </span>
                   )}
-                  {item.id === 'radio' && (
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 mr-1" />
+                  {item.id === 'radio' && radioStationsCount > 0 && (
+                    <span
+                      className={`w-2 h-2 rounded-full mr-1 transition-opacity ${
+                        isRadioPlaying
+                          ? 'bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400/50'
+                          : 'bg-emerald-500/80'
+                      }`}
+                      title={
+                        isRadioPlaying
+                          ? 'Radio stream playing'
+                          : `${radioStationsCount} station${radioStationsCount === 1 ? '' : 's'} available`
+                      }
+                    />
                   )}
                 </button>
               );

@@ -1004,6 +1004,8 @@ export function App() {
           onRequestDeletePlaylist={handleRequestDeletePlaylist}
           onOpenFolderPicker={handleScanFolder}
           totalTracksCount={tracks.length}
+          radioStationsCount={radioStations.length}
+          isRadioPlaying={currentRadio !== null && isPlaying}
           isScanning={isScanning}
         />
 
