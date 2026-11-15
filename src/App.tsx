@@ -881,6 +881,8 @@ export function App() {
               onPlayArtist={handlePlayArtist}
               currentTrackId={currentTrack?.id}
               lastfmApiKey={settings.lastfmApiKey}
+              streamPort={streamPort}
+              onViewAlbum={handleNavigateToAlbum}
             />
           ) : currentView === 'settings' ? (
             <SettingsView

@@ -136,34 +136,20 @@ pub fn init_db(db_path: &Path) -> Result<Connection> {
         ",
     )?;
 
-    // Seed curated popular default stations if table is fresh
-    let count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM radio_stations",
+    // Clean up default seeded stations if present so user has a clean custom radio list
+    let _ = conn.execute(
+        "DELETE FROM radio_stations WHERE url IN (
+            'https://stream.zeno.fm/f3wvbbqmdg8uv',
+            'https://radio.plaza.one/mp3',
+            'https://ice1.somafm.com/groovesalad-128-mp3',
+            'https://ice1.somafm.com/defcon-128-mp3',
+            'https://kexp-mp3-128.streamguys1.com/kexp128.mp3',
+            'https://listenssl.ibizaglobalradio.com:8024/ibizaglobalradio.mp3',
+            'https://media-ice.musicradio.com/ClassicFMMP3',
+            'https://stream.live.vc.bbcmedia.co.uk/bbc_radio_one'
+        )",
         [],
-        |row| row.get(0),
-    ).unwrap_or(0);
-
-    if count == 0 {
-        let now = now_timestamp();
-        let default_stations = [
-            ("Lofi Girl", "https://stream.zeno.fm/f3wvbbqmdg8uv", "https://play-lh.googleusercontent.com/9v4e5qH4P4fWbT9yNl59s4X1z7p6-J38N_o5M03sWJ5gB4F9rA3xXz", "Lofi, Chillhop, Beats", "France"),
-            ("Nightwave Plaza", "https://radio.plaza.one/mp3", "https://plaza.one/apple-touch-icon.png", "Vaporwave, Future Funk, Synth", "United States"),
-            ("SomaFM: Groove Salad", "https://ice1.somafm.com/groovesalad-128-mp3", "https://somafm.com/img/groovesalad120.png", "Ambient, Downtempo, Chill", "United States"),
-            ("SomaFM: DEF CON Radio", "https://ice1.somafm.com/defcon-128-mp3", "https://somafm.com/img/defcon120.png", "Cyberpunk, Electronic, Hacking", "United States"),
-            ("KEXP 90.3 FM Seattle", "https://kexp-mp3-128.streamguys1.com/kexp128.mp3", "https://kexp.org/static/assets/img/kexp-logo-square.png", "Indie, Alternative, Rock", "United States"),
-            ("Ibiza Global Radio", "https://listenssl.ibizaglobalradio.com:8024/ibizaglobalradio.mp3", "https://ibizaglobalradio.com/wp-content/uploads/2021/04/cropped-favicon-192x192.png", "House, Deep House, Electronic", "Spain"),
-            ("Classic FM UK", "https://media-ice.musicradio.com/ClassicFMMP3", "https://www.classicfm.com/assets_v5/classic/images/favicons/favicon-196x196.png", "Classical, Symphony, Relax", "United Kingdom"),
-            ("BBC Radio 1", "https://stream.live.vc.bbcmedia.co.uk/bbc_radio_one", "https://sounds.files.bbci.co.uk/2.4.0/networks/bbc_radio_one/colour_default.svg", "Top 40, Pop, Dance", "United Kingdom"),
-        ];
-
-        for (name, url, favicon, tags, country) in default_stations {
-            let _ = conn.execute(
-                "INSERT OR IGNORE INTO radio_stations (name, url, favicon, tags, country, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-                params![name, url, favicon, tags, country, now],
-            );
-        }
-    }
+    );
 
     Ok(conn)
 }

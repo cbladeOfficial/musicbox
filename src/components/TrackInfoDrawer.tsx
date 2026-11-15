@@ -147,7 +147,7 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
           </div>
         )}
 
-        {/* Artist Biography from Last.fm */}
+        {/* Artist Biography from Last.fm / Deezer */}
         {loading ? (
           <div className="flex items-center space-x-2 text-xs text-[var(--text-muted)]">
             <Sparkles className="w-4 h-4 animate-spin text-[var(--accent-color)]" />
@@ -155,10 +155,18 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
           </div>
         ) : (
           artistInfo && (
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center space-x-2 text-[var(--text-main)] font-medium text-xs">
-                <Tag className="w-4 h-4 text-[var(--accent-color)]" />
-                <span>About {currentTrack.artist}</span>
+            <div className="space-y-2.5 text-xs">
+              <div className="flex items-center space-x-2.5 text-[var(--text-main)] font-medium text-xs">
+                {artistInfo.image ? (
+                  <img
+                    src={artistInfo.image}
+                    alt={currentTrack.artist}
+                    className="w-6 h-6 rounded-full object-cover border border-white/20 shadow-sm"
+                  />
+                ) : (
+                  <Tag className="w-4 h-4 text-[var(--accent-color)]" />
+                )}
+                <span className="text-sm font-semibold">About {currentTrack.artist}</span>
               </div>
               {artistInfo.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
@@ -172,9 +180,11 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
                   ))}
                 </div>
               )}
-              <p className="text-zinc-300 text-[13px] leading-relaxed select-text">
-                {artistInfo.bio}
-              </p>
+              {artistInfo.bio && (
+                <p className="text-zinc-300 text-[13px] leading-relaxed select-text">
+                  {artistInfo.bio}
+                </p>
+              )}
             </div>
           )
         )}

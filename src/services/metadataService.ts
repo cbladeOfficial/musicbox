@@ -96,7 +96,9 @@ export const MetadataService = {
           const data = await res.json();
           if (data.artist) {
             if (data.artist.bio?.summary) {
-              result.bio = stripHtml(data.artist.bio.summary);
+              result.bio = stripHtml(data.artist.bio.summary).replace(/Read more on Last\.fm.*$/i, '').trim();
+            } else if (data.artist.bio?.content) {
+              result.bio = stripHtml(data.artist.bio.content).replace(/Read more on Last\.fm.*$/i, '').trim();
             }
             if (Array.isArray(data.artist.tags?.tag)) {
               result.tags = data.artist.tags.tag.map((t: { name: string }) => t.name).slice(0, 5);
@@ -116,7 +118,7 @@ export const MetadataService = {
           const data = await res.json();
           if (data.album) {
             if (data.album.wiki?.summary) {
-              result.albumSummary = stripHtml(data.album.wiki.summary);
+              result.albumSummary = stripHtml(data.album.wiki.summary).replace(/Read more on Last\.fm.*$/i, '').trim();
             }
             if (Array.isArray(data.album.image)) {
               const img = data.album.image.find((i: { size: string }) => i.size === 'extralarge' || i.size === 'mega') || data.album.image[data.album.image.length - 1];
@@ -132,6 +134,68 @@ export const MetadataService = {
     }
 
     return Object.keys(result).length > 0 ? result : null;
+  },
+
+  // 4. Deezer Artist Search (HD Artist Portraits)
+  async fetchArtistFromDeezer(artist: string): Promise<{ imageUrl?: string } | null> {
+    try {
+      if (!artist || artist === 'Unknown Artist') return null;
+      const res = await fetch(`https://api.deezer.com/search/artist?q=${encodeURIComponent(artist)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.data) && data.data.length > 0) {
+          const first = data.data[0];
+          const img = first.picture_xl || first.picture_big || first.picture_medium || first.picture;
+          if (img) return { imageUrl: img };
+        }
+      }
+    } catch (e) {
+      console.warn('Deezer artist search failed:', e);
+    }
+    return null;
+  },
+
+  // 5. Wikipedia Artist Summary & Thumbnail (Fallback)
+  async fetchArtistFromWikipedia(artist: string): Promise<{ bio?: string; imageUrl?: string } | null> {
+    try {
+      if (!artist || artist === 'Unknown Artist') return null;
+      const cleanName = artist.trim().replace(/\s+/g, '_');
+      const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanName)}`);
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          bio: data.extract ? data.extract : undefined,
+          imageUrl: data.thumbnail?.source ? data.thumbnail.source : undefined,
+        };
+      }
+    } catch (e) {
+      console.warn('Wikipedia artist summary fetch failed:', e);
+    }
+    return null;
+  },
+
+  // Fast resolver for artist portraits (cached in localStorage)
+  async fetchArtistImage(artist: string): Promise<string | null> {
+    if (!artist || artist === 'Unknown Artist') return null;
+    const cacheKey = `mb_artist_img_${artist.toLowerCase()}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) return cached;
+
+    // 1. Try Deezer (highest quality musician portraits)
+    const deezer = await this.fetchArtistFromDeezer(artist);
+    if (deezer?.imageUrl) {
+      localStorage.setItem(cacheKey, deezer.imageUrl);
+      return deezer.imageUrl;
+    }
+
+    // 2. Fallback to Wikipedia REST
+    const wiki = await this.fetchArtistFromWikipedia(artist);
+    if (wiki?.imageUrl) {
+      localStorage.setItem(cacheKey, wiki.imageUrl);
+      return wiki.imageUrl;
+    }
+
+    return null;
   },
 
   // Multi-source Cover Art Resolver based on user priority
@@ -175,21 +239,37 @@ export const MetadataService = {
     return null;
   },
 
-  // Fetch Artist Biography & Info
+  // Fetch Full Artist Details: Picture, Bio, Tags, and Similar Artists
   async getArtistDetails(artist: string, apiKey: string): Promise<ArtistInfo | null> {
-    const cacheKey = `mb_artist_bio_${artist}`;
+    if (!artist || artist === 'Unknown Artist') return null;
+    const cacheKey = `mb_artist_details_${artist.toLowerCase()}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
-      try { return JSON.parse(cached); } catch { /* ignore */ }
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed.bio || parsed.image) return parsed;
+      } catch { /* ignore */ }
     }
 
-    const data = await this.fetchFromLastfm(apiKey, artist);
-    if (data?.bio) {
+    // Parallel fetch from Last.fm, Deezer, and Wikipedia
+    const [lastfm, image, wiki] = await Promise.all([
+      this.fetchFromLastfm(apiKey, artist),
+      this.fetchArtistImage(artist),
+      this.fetchArtistFromWikipedia(artist),
+    ]);
+
+    const bio = lastfm?.bio || wiki?.bio || '';
+    const resolvedImage = image || wiki?.imageUrl || undefined;
+    const tags = lastfm?.tags || [];
+    const similar = lastfm?.similar || [];
+
+    if (bio || resolvedImage || tags.length > 0) {
       const info: ArtistInfo = {
         name: artist,
-        bio: data.bio,
-        tags: data.tags || [],
-        similar: data.similar || [],
+        bio,
+        image: resolvedImage,
+        tags,
+        similar,
       };
       localStorage.setItem(cacheKey, JSON.stringify(info));
       return info;
