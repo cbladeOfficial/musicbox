@@ -18,7 +18,7 @@ export const Toast: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="pointer-events-auto flex items-center space-x-2.5 px-4 py-2.5 rounded-lg bg-[#181a20]/95 border border-white/15 text-white text-xs shadow-2xl backdrop-blur-md animate-slideUp"
+          className="pointer-events-auto flex items-center space-x-2.5 px-4 py-2.5 rounded-lg bg-[#181a20]/95 border border-white/15 text-white text-xs shadow-2xl backdrop-blur-md animate-fadeIn transition-opacity duration-200"
         >
           {toast.type === 'info' ? (
             <Info className="w-4 h-4 text-cyan-400 flex-shrink-0" />

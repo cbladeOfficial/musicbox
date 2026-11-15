@@ -87,7 +87,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             title="Discord Rich Presence connected"
             className="hidden sm:flex items-center space-x-1.5 px-2.5 py-0.5 rounded text-xs bg-[#5865F2]/15 text-[#7983f5] font-medium border border-[#5865F2]/20"
           >
-            <Radio className="w-3.5 h-3.5 animate-pulse" />
+            <Radio className="w-3.5 h-3.5" />
             <span>RPC</span>
           </div>
         )}
@@ -102,7 +102,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search tracks, artists, albums, playlists..."
-            className="w-full bg-[var(--surface-color)] hover:bg-[var(--surface-hover)] focus:bg-[var(--surface-color)] text-[13px] text-white placeholder-zinc-400 pl-9 pr-8 py-1.5 rounded-md border border-[var(--border-color)] focus:border-[var(--accent-color)] outline-none transition-all shadow-inner"
+            className="w-full bg-[var(--surface-color)] hover:bg-[var(--surface-hover)] focus:bg-[var(--surface-color)] text-[13px] text-white placeholder-zinc-400 pl-9 pr-8 py-1.5 rounded-md border border-[var(--border-color)] focus:border-[var(--accent-color)] outline-none transition-colors duration-150 shadow-inner"
           />
           {searchQuery ? (
             <button

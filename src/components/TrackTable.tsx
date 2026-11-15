@@ -108,7 +108,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
   const thumbnailSize = density === 'compact' ? 'w-7 h-7' : 'w-9 h-9';
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden select-none bg-[var(--bg-color)]">
+    <div className="flex-1 flex flex-col h-full overflow-hidden select-none bg-[var(--bg-color)] animate-fadeIn">
       {/* Table Header */}
       <div className="h-10 border-b border-[var(--border-color)] bg-[var(--sidebar-color)] px-4 flex items-center text-xs font-medium text-zinc-400 sticky top-0 z-10 backdrop-blur-md">
         <div className="w-10 text-center font-mono text-zinc-500">#</div>
@@ -176,7 +176,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                 {/* Track number / Animated play indicator */}
                 <div className="w-10 text-center text-zinc-400 flex-shrink-0 flex items-center justify-center font-mono text-[12px] tabular-nums">
                   {isCurrent ? (
-                    <Volume2 className={`w-4 h-4 text-[var(--accent-color)] ${isPlaying ? 'animate-pulse' : ''}`} />
+                    <Volume2 className="w-4 h-4 text-[var(--accent-color)]" />
                   ) : (
                     <>
                       <span className="group-hover:hidden">
@@ -184,7 +184,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                       </span>
                       <button
                         onClick={() => onPlayTrack(track)}
-                        className="hidden group-hover:block text-white hover:text-[var(--accent-color)] transition-transform hover:scale-110"
+                        className="hidden group-hover:block text-white hover:text-[var(--accent-color)] transition-colors duration-150"
                       >
                         <Play className="w-4 h-4 fill-current" />
                       </button>

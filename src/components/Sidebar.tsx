@@ -69,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   key={item.id}
                   onClick={() => onSelectView(item.id)}
-                  className={`w-full group relative flex items-center justify-between px-3.5 py-2.5 rounded-md font-medium text-sm transition-all ${
+                  className={`w-full group relative flex items-center justify-between px-3.5 py-2.5 rounded-md font-medium text-sm transition-colors duration-150 ${
                     isActive
                       ? 'bg-[var(--accent-color)]/15 text-white border-l-2 border-[var(--accent-color)] pl-3 shadow-sm'
                       : 'text-zinc-300 hover:text-white hover:bg-white/5'
@@ -85,7 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </span>
                   )}
                   {item.id === 'radio' && (
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-1" />
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 mr-1" />
                   )}
                 </button>
               );

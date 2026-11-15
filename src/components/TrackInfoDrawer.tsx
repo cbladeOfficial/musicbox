@@ -45,7 +45,7 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
   const fileSizeMb = (currentTrack.file_size / (1024 * 1024)).toFixed(2);
 
   return (
-    <aside className="w-88 h-full bg-[var(--surface-color)]/95 backdrop-blur-md border-l border-[var(--border-color)] flex flex-col z-30 select-none shadow-xl overflow-y-auto flex-shrink-0">
+    <aside className="w-88 h-full bg-[var(--surface-color)]/95 backdrop-blur-md border-l border-[var(--border-color)] flex flex-col z-30 select-none shadow-xl overflow-y-auto flex-shrink-0 animate-fadeIn">
       {/* Header */}
       <div className="h-12 border-b border-[var(--border-color)] px-4 flex items-center justify-between sticky top-0 bg-[var(--surface-color)]/95 backdrop-blur-md z-10">
         <div className="flex items-center space-x-2">

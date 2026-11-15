@@ -122,7 +122,7 @@ export const RadioStationFormView: React.FC<RadioStationFormViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[var(--bg-color)] select-none text-[var(--text-main)]">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[var(--bg-color)] select-none text-[var(--text-main)] animate-fadeIn">
       {/* 1. Header Toolbar */}
       <div className="h-13 border-b border-[var(--border-color)] px-6 flex items-center justify-between bg-[var(--sidebar-color)] flex-shrink-0">
         <div className="flex items-center space-x-3">
@@ -165,7 +165,7 @@ export const RadioStationFormView: React.FC<RadioStationFormViewProps> = ({
           <button
             type="button"
             onClick={handleSubmit}
-            className="flex items-center space-x-1.5 px-4 py-1.5 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white text-sm font-medium shadow-sm active:scale-95 transition-all"
+            className="flex items-center space-x-1.5 px-4 py-1.5 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white text-sm font-medium shadow-sm transition-opacity active:opacity-75"
           >
             <Check className="w-4 h-4" />
             <span>{isEditing ? 'Save Changes' : 'Add Station'}</span>
@@ -213,7 +213,7 @@ export const RadioStationFormView: React.FC<RadioStationFormViewProps> = ({
                   type="button"
                   disabled={!url.trim()}
                   onClick={handleToggleTestStream}
-                  className={`text-xs px-2.5 py-1 rounded flex items-center space-x-1.5 transition-all font-medium disabled:opacity-30 ${
+                  className={`text-xs px-2.5 py-1 rounded flex items-center space-x-1.5 transition-colors duration-150 font-medium disabled:opacity-30 ${
                     isTesting
                       ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
                       : 'bg-[var(--accent-color)]/15 text-[var(--accent-color)] border border-[var(--accent-color)]/25 hover:bg-[var(--accent-color)]/25'
@@ -221,7 +221,7 @@ export const RadioStationFormView: React.FC<RadioStationFormViewProps> = ({
                 >
                   {isTesting ? (
                     <>
-                      <Volume2 className="w-3 h-3 animate-pulse" />
+                      <Volume2 className="w-3 h-3 text-rose-300" />
                       <span>Stop Test</span>
                     </>
                   ) : (
@@ -362,7 +362,7 @@ export const RadioStationFormView: React.FC<RadioStationFormViewProps> = ({
               </button>
               <button
                 type="submit"
-                className="flex items-center space-x-2 px-6 py-2.5 rounded-lg bg-[var(--accent-color)] hover:brightness-110 text-white text-sm font-semibold shadow-md active:scale-95 transition-all"
+                className="flex items-center space-x-2 px-6 py-2.5 rounded-lg bg-[var(--accent-color)] hover:brightness-110 text-white text-sm font-semibold shadow-md transition-opacity active:opacity-75"
               >
                 <Check className="w-4 h-4" />
                 <span>{isEditing ? 'Save Changes' : 'Create Radio Station'}</span>

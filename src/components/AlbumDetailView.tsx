@@ -40,11 +40,11 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
   const coverSrc = getCoverUrl(album.coverPath, streamPort, albumInfo?.coverUrl);
 
   return (
-    <div className="flex-1 overflow-y-auto select-none p-6 space-y-6 bg-[var(--bg-color)]">
+    <div className="flex-1 overflow-y-auto select-none p-6 space-y-6 bg-[var(--bg-color)] animate-fadeIn">
       {/* Back Button */}
       <button
         onClick={onBack}
-        className="text-sm text-zinc-400 hover:text-white flex items-center space-x-2 transition-colors"
+        className="text-sm text-zinc-400 hover:text-white flex items-center space-x-2 transition-colors duration-150"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>Back to Albums</span>
@@ -90,14 +90,14 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
           <div className="flex items-center space-x-3 pt-2">
             <button
               onClick={() => onPlayAlbum(album, false)}
-              className="flex items-center space-x-2 px-5 py-2.5 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white text-sm font-medium shadow-md active:scale-95 transition-all"
+              className="flex items-center space-x-2 px-5 py-2.5 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white text-sm font-medium shadow-md transition-opacity active:opacity-75"
             >
               <Play className="w-4 h-4 fill-current" />
               <span>Play Album</span>
             </button>
             <button
               onClick={() => onPlayAlbum(album, true)}
-              className="flex items-center space-x-2 px-4 py-2.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-medium transition-all"
+              className="flex items-center space-x-2 px-4 py-2.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-medium transition-colors duration-150"
             >
               <Shuffle className="w-4 h-4" />
               <span>Shuffle</span>

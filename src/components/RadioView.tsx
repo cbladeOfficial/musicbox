@@ -130,7 +130,7 @@ export const RadioView: React.FC<RadioViewProps> = ({
   });
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden select-none bg-[var(--bg-color)]">
+    <div className="flex-1 flex flex-col h-full overflow-hidden select-none bg-[var(--bg-color)] animate-fadeIn">
       {/* 1. Header Toolbar */}
       <div className="h-12 border-b border-[var(--border-color)] px-5 flex items-center justify-between bg-[var(--sidebar-color)] flex-shrink-0">
         <div className="flex items-center space-x-3">
@@ -358,7 +358,7 @@ export const RadioView: React.FC<RadioViewProps> = ({
                         />
 
                         {isCurrent && (
-                          <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                          <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-emerald-400" />
                         )}
                       </div>
 
@@ -416,7 +416,7 @@ export const RadioView: React.FC<RadioViewProps> = ({
                       >
                         {isCurrent && isPlaying ? (
                           <>
-                            <Volume2 className="w-3.5 h-3.5 animate-pulse text-white" />
+                            <Volume2 className="w-3.5 h-3.5 text-white" />
                             <span>Playing</span>
                           </>
                         ) : (

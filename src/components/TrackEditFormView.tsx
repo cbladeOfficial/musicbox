@@ -65,15 +65,15 @@ export const TrackEditFormView: React.FC<TrackEditFormViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto select-none bg-[var(--bg-color)]">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto select-none bg-[var(--bg-color)] animate-fadeIn">
       {/* Top sticky navigation toolbar */}
       <div className="h-14 border-b border-[var(--border-color)] px-6 flex items-center justify-between sticky top-0 bg-[var(--bg-color)]/95 backdrop-blur-md z-20">
         <button
           onClick={onBack}
           type="button"
-          className="flex items-center space-x-2 text-zinc-400 hover:text-white transition-colors group px-3 py-1.5 rounded-lg hover:bg-white/5"
+          className="flex items-center space-x-2 text-zinc-400 hover:text-white transition-colors duration-150 group px-3 py-1.5 rounded-lg hover:bg-white/5"
         >
-          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+          <ArrowLeft className="w-4 h-4 transition-opacity group-hover:opacity-80" />
           <span className="text-sm font-medium">Back</span>
         </button>
 
@@ -81,14 +81,14 @@ export const TrackEditFormView: React.FC<TrackEditFormViewProps> = ({
           <button
             type="button"
             onClick={onBack}
-            className="px-4 py-1.5 rounded-md text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+            className="px-4 py-1.5 rounded-md text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/5 transition-colors duration-150"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             type="button"
-            className="flex items-center space-x-2 px-5 py-1.5 rounded-md text-xs font-semibold bg-[var(--accent-color)] text-white hover:brightness-110 active:scale-98 transition-all shadow-md shadow-[var(--accent-color)]/20"
+            className="flex items-center space-x-2 px-5 py-1.5 rounded-md text-xs font-semibold bg-[var(--accent-color)] text-white hover:brightness-110 transition-opacity active:opacity-75 shadow-md shadow-[var(--accent-color)]/20"
           >
             {savedSuccess ? (
               <>
@@ -267,7 +267,7 @@ export const TrackEditFormView: React.FC<TrackEditFormViewProps> = ({
             </button>
             <button
               type="submit"
-              className="flex items-center space-x-2 px-6 py-2 rounded-lg text-xs font-semibold bg-[var(--accent-color)] text-white hover:brightness-110 active:scale-98 transition-all shadow-lg shadow-[var(--accent-color)]/25"
+              className="flex items-center space-x-2 px-6 py-2 rounded-lg text-xs font-semibold bg-[var(--accent-color)] text-white hover:brightness-110 transition-opacity active:opacity-75 shadow-lg shadow-[var(--accent-color)]/25"
             >
               <Save className="w-4 h-4" />
               <span>Save Changes</span>

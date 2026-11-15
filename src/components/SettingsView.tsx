@@ -83,7 +83,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[var(--bg-color)] select-none text-[var(--text-main)]">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[var(--bg-color)] select-none text-[var(--text-main)] animate-fadeIn">
       {/* 1. Header Toolbar */}
       <div className="h-13 border-b border-[var(--border-color)] px-6 flex items-center justify-between bg-[var(--sidebar-color)] flex-shrink-0">
         <div className="flex items-center space-x-3">

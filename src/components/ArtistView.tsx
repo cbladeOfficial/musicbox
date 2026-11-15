@@ -60,15 +60,15 @@ const ArtistGridCard: React.FC<{
   return (
     <div
       onClick={onSelect}
-      className="flex flex-col items-center p-4 rounded-xl bg-[var(--surface-color)] hover:bg-[var(--surface-hover)] border border-[var(--border-color)] hover:border-white/20 transition-all duration-200 cursor-pointer group text-center shadow-sm hover:shadow-xl"
+      className="flex flex-col items-center p-4 rounded-xl bg-[var(--surface-color)] hover:bg-[var(--surface-hover)] border border-[var(--border-color)] hover:border-white/20 transition-colors duration-150 cursor-pointer group text-center shadow-sm hover:shadow-xl"
     >
-      <div className="relative w-28 h-28 rounded-full bg-zinc-900 border-2 border-white/10 flex items-center justify-center mb-3.5 shadow-md overflow-hidden group-hover:border-[var(--accent-color)] group-hover:scale-105 transition-all duration-300">
+      <div className="relative w-28 h-28 rounded-full bg-zinc-900 border-2 border-white/10 flex items-center justify-center mb-3.5 shadow-md overflow-hidden group-hover:border-[var(--accent-color)] transition-colors duration-150">
         {pictureUrl ? (
           <img
             src={pictureUrl}
             alt={artist.name}
             loading="lazy"
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+            className="w-full h-full object-cover transition-opacity duration-150 group-hover:opacity-90"
             onError={() => setPictureUrl(null)}
           />
         ) : (
@@ -150,7 +150,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({
   if (!selectedArtist) {
     // 1. Artist List Grid
     return (
-      <div className="flex-1 flex flex-col h-full overflow-hidden select-none bg-[var(--bg-color)]">
+      <div className="flex-1 flex flex-col h-full overflow-hidden select-none bg-[var(--bg-color)] animate-fadeIn">
         {/* Top Filter Bar */}
         <div className="h-12 border-b border-[var(--border-color)] px-6 flex items-center justify-between bg-[var(--sidebar-color)] flex-shrink-0">
           <div className="flex items-center space-x-3">
@@ -199,12 +199,12 @@ export const ArtistView: React.FC<ArtistViewProps> = ({
 
   // 2. Dedicated Artist Detail Page
   return (
-    <div className="flex-1 overflow-y-auto select-none bg-[var(--bg-color)]">
+    <div className="flex-1 overflow-y-auto select-none bg-[var(--bg-color)] animate-fadeIn">
       {/* Back Button & Header Banner */}
       <div className="p-6 bg-gradient-to-b from-white/[0.06] to-transparent border-b border-white/10 space-y-5">
         <button
           onClick={onBackToArtists}
-          className="text-sm text-zinc-400 hover:text-white flex items-center space-x-2 transition-colors"
+          className="text-sm text-zinc-400 hover:text-white flex items-center space-x-2 transition-colors duration-150"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Artists</span>
@@ -246,14 +246,14 @@ export const ArtistView: React.FC<ArtistViewProps> = ({
             <div className="flex items-center space-x-3 pt-2">
               <button
                 onClick={() => onPlayArtist(selectedArtist, false)}
-                className="flex items-center space-x-2 px-5 py-2.5 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white text-sm font-medium shadow-md active:scale-95 transition-all"
+                className="flex items-center space-x-2 px-5 py-2.5 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white text-sm font-medium shadow-md transition-opacity active:opacity-75"
               >
                 <Play className="w-4 h-4 fill-current" />
                 <span>Play All</span>
               </button>
               <button
                 onClick={() => onPlayArtist(selectedArtist, true)}
-                className="flex items-center space-x-2 px-4 py-2.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-medium transition-all"
+                className="flex items-center space-x-2 px-4 py-2.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-medium transition-colors duration-150"
               >
                 <Shuffle className="w-4 h-4" />
                 <span>Shuffle</span>
@@ -343,7 +343,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({
                 <div
                   key={alb.name}
                   onClick={() => onViewAlbum && onViewAlbum(alb.name, selectedArtist.name)}
-                  className="flex flex-col p-3 rounded-lg bg-[var(--surface-color)] hover:bg-[var(--surface-hover)] border border-[var(--border-color)] hover:border-white/20 transition-all cursor-pointer group shadow-sm"
+                  className="flex flex-col p-3 rounded-lg bg-[var(--surface-color)] hover:bg-[var(--surface-hover)] border border-[var(--border-color)] hover:border-white/20 transition-colors duration-150 cursor-pointer group shadow-sm"
                 >
                   <div className="aspect-square w-full rounded-md bg-zinc-900 border border-white/10 mb-2.5 overflow-hidden flex items-center justify-center shadow-md">
                     {coverSrc ? (
@@ -351,7 +351,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({
                         src={coverSrc}
                         alt={alb.name}
                         loading="lazy"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        className="w-full h-full object-cover transition-opacity duration-150 group-hover:opacity-90"
                         onError={(e) => {
                           (e.target as HTMLElement).style.display = 'none';
                         }}

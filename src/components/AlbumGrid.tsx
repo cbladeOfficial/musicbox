@@ -35,7 +35,7 @@ export const AlbumGrid: React.FC<AlbumGridProps> = ({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 select-none bg-[var(--bg-color)]">
+    <div className="flex-1 overflow-y-auto p-6 select-none bg-[var(--bg-color)] animate-fadeIn">
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
         {albums.map((album) => {
           const coverSrc = getCoverUrl(album.coverPath, streamPort);
@@ -43,7 +43,7 @@ export const AlbumGrid: React.FC<AlbumGridProps> = ({
             <div
               key={`${album.artist}_${album.name}`}
               onClick={() => onSelectAlbum(album)}
-              className="group flex flex-col p-3 rounded-lg bg-[var(--surface-color)] hover:bg-[var(--surface-hover)] border border-[var(--border-color)] hover:border-white/20 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-xl"
+              className="group flex flex-col p-3 rounded-lg bg-[var(--surface-color)] hover:bg-[var(--surface-hover)] border border-[var(--border-color)] hover:border-white/20 transition-colors duration-150 cursor-pointer shadow-sm hover:shadow-xl"
             >
               {/* Cover Art Container */}
               <div className="relative aspect-square w-full rounded-md bg-zinc-900 border border-white/10 mb-2.5 overflow-hidden shadow-sm">
@@ -52,7 +52,7 @@ export const AlbumGrid: React.FC<AlbumGridProps> = ({
                     src={coverSrc}
                     alt={album.name}
                     loading="lazy"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-cover transition-opacity duration-150 group-hover:opacity-90"
                     onError={(e) => {
                       (e.target as HTMLElement).style.display = 'none';
                     }}
@@ -70,7 +70,7 @@ export const AlbumGrid: React.FC<AlbumGridProps> = ({
                     onPlayAlbum(album);
                   }}
                   title="Play Album"
-                  className="absolute bottom-2.5 right-2.5 w-10 h-10 rounded-full bg-[var(--accent-color)] text-white flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 shadow-xl shadow-black/60 hover:scale-105 active:scale-95"
+                  className="absolute bottom-2.5 right-2.5 w-10 h-10 rounded-full bg-[var(--accent-color)] text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 shadow-xl shadow-black/60 hover:brightness-110 active:opacity-75"
                 >
                   <Play className="w-4 h-4 fill-current translate-x-0.5" />
                 </button>

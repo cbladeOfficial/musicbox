@@ -1036,7 +1036,7 @@ export function App() {
                             handlePlayTrack(playlistTracks[0]);
                           }
                         }}
-                        className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-[var(--accent-color)] text-white hover:brightness-110 active:scale-98 transition-all shadow-sm"
+                        className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-[var(--accent-color)] text-white hover:brightness-110 transition-opacity active:opacity-75 shadow-sm"
                       >
                         <Play className="w-3 h-3 fill-current" />
                         <span>Play All</span>

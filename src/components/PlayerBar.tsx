@@ -169,8 +169,8 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             <button
               onClick={() => onToggleFavorite(currentTrack.id)}
               title={currentTrack.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
-              className={`p-2 rounded-full hover:bg-white/10 transition-all ${
-                currentTrack.is_favorite ? 'text-rose-500 scale-105' : 'text-zinc-400 hover:text-white'
+              className={`p-2 rounded-full hover:bg-white/10 transition-colors duration-150 ${
+                currentTrack.is_favorite ? 'text-rose-500' : 'text-zinc-400 hover:text-white'
               }`}
             >
               <Heart className={`w-4 h-4 ${currentTrack.is_favorite ? 'fill-rose-500 stroke-rose-500' : ''}`} />
@@ -185,7 +185,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
                 iconClassName="text-[var(--accent-color)] text-xl"
               />
               {isPlaying && (
-                <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400" />
               )}
             </div>
 
@@ -206,7 +206,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
               </span>
               <div className="flex items-center space-x-1.5 mt-1">
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-mono border border-emerald-500/25 flex items-center space-x-1.5 font-normal">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                   <span>LIVE</span>
                 </span>
                 {currentRadio.country && (
@@ -221,8 +221,8 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
               <button
                 onClick={() => onToggleRadioFavorite(currentRadio.id)}
                 title={currentRadio.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
-                className={`p-2 rounded-full hover:bg-white/10 transition-all ${
-                  currentRadio.is_favorite ? 'text-rose-500 scale-105' : 'text-zinc-400 hover:text-white'
+                className={`p-2 rounded-full hover:bg-white/10 transition-colors duration-150 ${
+                  currentRadio.is_favorite ? 'text-rose-500' : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 <Heart className={`w-4 h-4 ${currentRadio.is_favorite ? 'fill-rose-500 stroke-rose-500' : ''}`} />
@@ -259,7 +259,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             onClick={onPrevious}
             disabled={!!currentRadio}
             title={currentRadio ? 'Previous disabled for live stream' : 'Previous (Skip / Restart)'}
-            className={`p-1.5 rounded-md transition-all active:scale-95 ${
+            className={`p-1.5 rounded-md transition-colors duration-150 active:opacity-75 ${
               currentRadio
                 ? 'opacity-20 cursor-not-allowed text-zinc-500'
                 : 'text-zinc-300 hover:text-white hover:bg-white/10'
@@ -272,7 +272,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             onClick={onPlayPause}
             disabled={!currentTrack && !currentRadio}
             title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
-            className="w-9 h-9 rounded-full bg-[var(--accent-color)] hover:brightness-110 text-white flex items-center justify-center transition-all active:scale-95 shadow-md shadow-[var(--accent-color)]/30 disabled:opacity-40"
+            className="w-9 h-9 rounded-full bg-[var(--accent-color)] hover:brightness-110 text-white flex items-center justify-center transition-opacity duration-150 active:opacity-75 shadow-md shadow-[var(--accent-color)]/30 disabled:opacity-40"
           >
             {isPlaying ? (
               <Pause className="w-4.5 h-4.5 fill-current" />
@@ -285,7 +285,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             onClick={onNext}
             disabled={!!currentRadio}
             title={currentRadio ? 'Next disabled for live stream' : 'Next Track'}
-            className={`p-1.5 rounded-md transition-all active:scale-95 ${
+            className={`p-1.5 rounded-md transition-colors duration-150 active:opacity-75 ${
               currentRadio
                 ? 'opacity-20 cursor-not-allowed text-zinc-500'
                 : 'text-zinc-300 hover:text-white hover:bg-white/10'
@@ -298,7 +298,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             onClick={onToggleRepeat}
             disabled={!!currentRadio}
             title={currentRadio ? 'Repeat not available for live radio' : `Repeat mode: ${repeatMode}`}
-            className={`p-1.5 rounded-md transition-colors ${
+            className={`p-1.5 rounded-md transition-colors duration-150 active:opacity-75 ${
               currentRadio
                 ? 'opacity-20 cursor-not-allowed text-zinc-500'
                 : repeatMode !== 'off'
@@ -313,11 +313,8 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         {/* Timeline Slider with Tooltip or Live Radio Banner */}
         {currentRadio ? (
           <div className="w-full flex items-center justify-center space-x-2.5 py-1 text-[12px] text-zinc-300 font-mono">
-            <span className="relative flex h-2.5 w-2.5">
-              {isPlaying && (
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              )}
-              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isPlaying ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+            <span className="relative flex h-2 w-2">
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${isPlaying ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
             </span>
             <span className="text-[11px] font-medium text-zinc-300">
               {isPlaying ? 'LIVE STREAM' : 'STREAM PAUSED'}
