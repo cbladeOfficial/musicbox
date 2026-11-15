@@ -310,7 +310,15 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           <button
             onClick={onToggleRepeat}
             disabled={!!currentRadio}
-            title={currentRadio ? 'Repeat not available for live radio' : `Repeat mode: ${repeatMode}`}
+            title={
+              currentRadio
+                ? 'Repeat not available for live radio'
+                : repeatMode === 'all'
+                ? 'Repeat: All (Continuous playlist playback)'
+                : repeatMode === 'one'
+                ? 'Repeat: One (Loop current track)'
+                : 'Repeat: Off (Single track playback - do not advance)'
+            }
             className={`p-1.5 rounded-md transition-colors duration-150 active:opacity-75 ${
               currentRadio
                 ? 'opacity-20 cursor-not-allowed text-zinc-500'

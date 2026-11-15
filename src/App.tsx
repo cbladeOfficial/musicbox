@@ -348,13 +348,20 @@ export function App() {
     }
   }, []);
 
+  const searchQueryRef = useRef(searchQuery);
+  searchQueryRef.current = searchQuery;
+  const playedFromSearchRef = useRef<boolean>(false);
+
   // Play a specific track
   const handlePlayTrack = useCallback(
-    async (track: TrackRecord) => {
+    async (track: TrackRecord, fromSearch?: boolean) => {
       stopRadioPolling();
       setCurrentRadio(null);
       setRadioNowPlaying(null);
       setResolvedCoverArt(undefined);
+
+      const isFromSearch = fromSearch !== undefined ? fromSearch : searchQueryRef.current.trim().length > 0;
+      playedFromSearchRef.current = isFromSearch;
 
       setCurrentTrack(track);
       setIsPlaying(true);
@@ -471,10 +478,11 @@ export function App() {
 
   // PlayNext or skip track
   const handleNext = useCallback(() => {
+    playedFromSearchRef.current = false;
     if (queue.length > 0) {
       const nextTrack = queue[0];
       setQueue((prev) => prev.slice(1));
-      handlePlayTrack(nextTrack);
+      handlePlayTrack(nextTrack, false);
       return;
     }
 
@@ -482,17 +490,18 @@ export function App() {
 
     if (isShuffle) {
       const randIdx = Math.floor(Math.random() * tracks.length);
-      handlePlayTrack(tracks[randIdx]);
+      handlePlayTrack(tracks[randIdx], false);
     } else if (currentTrack) {
       const currentIdx = tracks.findIndex((t) => t.id === currentTrack.id);
       const nextIdx = (currentIdx + 1) % tracks.length;
-      handlePlayTrack(tracks[nextIdx]);
+      handlePlayTrack(tracks[nextIdx], false);
     } else {
-      handlePlayTrack(tracks[0]);
+      handlePlayTrack(tracks[0], false);
     }
   }, [queue, tracks, isShuffle, currentTrack, handlePlayTrack]);
 
   const handlePrevious = useCallback(() => {
+    playedFromSearchRef.current = false;
     if (currentTime > 3) {
       audioEngine.seek(0);
       setCurrentTime(0);
@@ -503,7 +512,7 @@ export function App() {
     if (currentTrack) {
       const currentIdx = tracks.findIndex((t) => t.id === currentTrack.id);
       const prevIdx = (currentIdx - 1 + tracks.length) % tracks.length;
-      handlePlayTrack(tracks[prevIdx]);
+      handlePlayTrack(tracks[prevIdx], false);
     }
   }, [currentTime, tracks, currentTrack, handlePlayTrack]);
 
@@ -545,14 +554,68 @@ export function App() {
     };
 
     audioEngine.onEnded = () => {
+      // 1. Repeat One: replay current track from start
       if (repeatMode === 'one' && currentTrack) {
         audioEngine.seek(0);
         audioEngine.resume();
-      } else {
+        return;
+      }
+
+      // 2. Track played by searching: do not move to next track
+      if (playedFromSearchRef.current) {
+        setIsPlaying(false);
+        audioEngine.pause();
+        audioEngine.seek(0);
+        setCurrentTime(0);
+        if (currentTrack && settings.discordRpcEnabled) {
+          TauriBridge.updateDiscordPresence({
+            title: currentTrack.title,
+            artist: currentTrack.artist,
+            album: currentTrack.album,
+            year: settings.discordShowYear ? currentTrack.year : undefined,
+            duration: currentTrack.duration,
+            position: 0,
+            coverUrl: resolvedCoverArt,
+            isPlaying: false,
+            clientId: settings.discordClientId,
+          }).catch(() => {});
+        }
+        return;
+      }
+
+      // 3. Explicit queue: proceed through user queue items
+      if (queue.length > 0) {
+        const nextTrack = queue[0];
+        setQueue((prev) => prev.slice(1));
+        handlePlayTrack(nextTrack, false);
+        return;
+      }
+
+      // 4. Played from track list: do not change unless repeat all is chosen
+      if (repeatMode === 'all') {
         handleNext();
+      } else {
+        // Repeat is off: standard media player behavior - do not change track
+        setIsPlaying(false);
+        audioEngine.pause();
+        audioEngine.seek(0);
+        setCurrentTime(0);
+        if (currentTrack && settings.discordRpcEnabled) {
+          TauriBridge.updateDiscordPresence({
+            title: currentTrack.title,
+            artist: currentTrack.artist,
+            album: currentTrack.album,
+            year: settings.discordShowYear ? currentTrack.year : undefined,
+            duration: currentTrack.duration,
+            position: 0,
+            coverUrl: resolvedCoverArt,
+            isPlaying: false,
+            clientId: settings.discordClientId,
+          }).catch(() => {});
+        }
       }
     };
-  }, [currentTrack, currentRadio, radioNowPlaying, settings, repeatMode, resolvedCoverArt, handleNext]);
+  }, [currentTrack, currentRadio, radioNowPlaying, settings, repeatMode, resolvedCoverArt, handleNext, queue, handlePlayTrack]);
 
   // Keyboard navigation shortcuts
   useEffect(() => {
