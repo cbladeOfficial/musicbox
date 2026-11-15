@@ -206,26 +206,39 @@ export const MetadataService = {
     priority: ArtSource[],
     lastfmKey: string
   ): Promise<string | null> {
-    const cacheKey = `mb_art_${artist}_${album}`;
+    const isUnknownArtist = !artist || artist.trim() === '' || artist === 'Unknown Artist';
+    const isUnknownAlbum = !album || album.trim() === '' || album === 'Unknown Album';
+    const isUnknownTitle = !title || title.trim() === '';
+
+    // If artist is unknown and no valid album/title, do not perform arbitrary search queries
+    if (isUnknownArtist && (isUnknownAlbum || isUnknownTitle)) {
+      return null;
+    }
+
+    const cleanArtist = isUnknownArtist ? '' : artist.trim();
+    const cleanAlbum = isUnknownAlbum ? '' : album.trim();
+    const cleanTitle = isUnknownTitle ? '' : title.trim();
+
+    const cacheKey = `mb_art_${cleanArtist.toLowerCase()}_${(cleanAlbum || cleanTitle).toLowerCase()}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) return cached;
 
     for (const source of priority) {
       try {
         if (source === 'itunes') {
-          const res = await this.fetchFromItunes(artist, album, title);
+          const res = await this.fetchFromItunes(cleanArtist, cleanAlbum, cleanTitle);
           if (res?.coverUrl) {
             localStorage.setItem(cacheKey, res.coverUrl);
             return res.coverUrl;
           }
         } else if (source === 'jiosaavn') {
-          const res = await this.fetchFromJioSaavn(artist, album, title);
+          const res = await this.fetchFromJioSaavn(cleanArtist, cleanAlbum, cleanTitle);
           if (res?.coverUrl) {
             localStorage.setItem(cacheKey, res.coverUrl);
             return res.coverUrl;
           }
         } else if (source === 'lastfm') {
-          const res = await this.fetchFromLastfm(lastfmKey, artist, album, title);
+          const res = await this.fetchFromLastfm(lastfmKey, cleanArtist, cleanAlbum, cleanTitle);
           if (res?.coverUrl) {
             localStorage.setItem(cacheKey, res.coverUrl);
             return res.coverUrl;

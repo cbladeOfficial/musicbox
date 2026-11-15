@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Disc3, Info, Sparkles, Folder, Calendar, Cpu, Tag } from 'lucide-react';
 import { TrackRecord, ArtistInfo, AlbumInfo } from '../types/music';
 import { MetadataService } from '../services/metadataService';
-import { getCoverUrl } from '../utils/cover';
+import { getCoverUrl, formatBitrate } from '../utils/cover';
 
 interface TrackInfoDrawerProps {
   currentTrack: TrackRecord | null;
@@ -101,7 +101,7 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
             {currentTrack.bitrate && (
               <div>
                 <span className="text-zinc-400">Bitrate: </span>
-                <span className="font-mono text-white tabular-nums font-medium">{Math.round(currentTrack.bitrate / 1000)} kbps</span>
+                <span className="font-mono text-white tabular-nums font-medium">{formatBitrate(currentTrack.bitrate)}</span>
               </div>
             )}
             {currentTrack.sample_rate && (

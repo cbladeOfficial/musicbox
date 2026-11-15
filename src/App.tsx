@@ -348,6 +348,7 @@ export function App() {
       stopRadioPolling();
       setCurrentRadio(null);
       setRadioNowPlaying(null);
+      setResolvedCoverArt(undefined);
 
       setCurrentTrack(track);
       setIsPlaying(true);

@@ -13,7 +13,7 @@ import {
   Check,
 } from 'lucide-react';
 import { TrackRecord } from '../types/music';
-import { getCoverUrl } from '../utils/cover';
+import { getCoverUrl, formatBitrate } from '../utils/cover';
 
 interface TrackEditFormViewProps {
   track: TrackRecord;
@@ -138,7 +138,7 @@ export const TrackEditFormView: React.FC<TrackEditFormViewProps> = ({
               </span>
               {track.bitrate && (
                 <span className="font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5 text-zinc-300">
-                  {Math.round(track.bitrate / 1000)} kbps
+                  {formatBitrate(track.bitrate)}
                 </span>
               )}
               {track.sample_rate && (

@@ -18,7 +18,7 @@ import {
   Radio,
 } from 'lucide-react';
 import { TrackRecord, RadioStation, RadioMetadata, VisualizerMode } from '../types/music';
-import { getCoverUrl } from '../utils/cover';
+import { getCoverUrl, formatBitrate } from '../utils/cover';
 import { RadioStationIcon } from './RadioStationIcon';
 
 interface PlayerBarProps {
@@ -112,12 +112,12 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   };
 
   return (
-    <footer className="h-20 w-full bg-[var(--sidebar-color)] border-t border-[var(--border-color)] flex items-center justify-between px-5 select-none z-40 transition-colors">
+    <footer className="h-24 py-4 px-6 w-full bg-[var(--sidebar-color)] border-t border-[var(--border-color)] flex items-center justify-between select-none z-40 transition-colors">
       {/* Left: Track Information */}
       <div className="flex items-center space-x-3.5 w-[28%] min-w-[220px]">
         {currentTrack ? (
           <>
-            <div className="relative w-13 h-13 rounded-md bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden shadow-md">
+            <div className="relative w-14 h-14 rounded-md bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden shadow-md">
               {resolvedCover ? (
                 <img
                   src={resolvedCover}
@@ -153,16 +153,14 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
                 <span className="text-xs px-2 py-0.5 rounded bg-white/5 text-zinc-300 font-mono border border-white/5">
                   {currentTrack.format}
                 </span>
-                {currentTrack.bitrate && (
-                  <span className="text-xs text-zinc-400 font-mono tabular-nums">
-                    {Math.round(currentTrack.bitrate / 1000)}k
-                  </span>
-                )}
-                {currentTrack.year ? (
-                  <span className="text-xs text-zinc-400 font-mono">
-                    • {currentTrack.year}
-                  </span>
-                ) : null}
+                {(() => {
+                  const br = formatBitrate(currentTrack.bitrate);
+                  return br ? (
+                    <span className="text-xs text-zinc-400 font-mono tabular-nums">
+                      • {br}
+                    </span>
+                  ) : null;
+                })()}
               </div>
             </div>
 
@@ -178,7 +176,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           </>
         ) : currentRadio ? (
           <>
-            <div className="relative w-13 h-13 rounded-lg bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden shadow-md flex items-center justify-center">
+            <div className="relative w-14 h-14 rounded-lg bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden shadow-md flex items-center justify-center">
               <RadioStationIcon
                 favicon={currentRadio.favicon}
                 name={currentRadio.name}

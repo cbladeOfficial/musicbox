@@ -33,12 +33,12 @@ fn is_supported_audio(ext: &str) -> bool {
     )
 }
 
-fn hash_str(s: &str) -> String {
+fn hash_bytes(bytes: &[u8]) -> String {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
     let mut hasher = DefaultHasher::new();
-    s.hash(&mut hasher);
-    format!("{:x}", hasher.finish())
+    bytes.hash(&mut hasher);
+    format!("{:016x}", hasher.finish())
 }
 
 pub fn scan_file(path: &Path, cache_dir: &Path) -> Option<TrackMetadata> {
@@ -111,16 +111,38 @@ pub fn scan_file(path: &Path, cache_dir: &Path) -> Option<TrackMetadata> {
                     digits.parse::<u32>().ok()
                 });
 
-            // Check embedded pictures
+            // Check embedded pictures (hash by actual image bytes to prevent cross-song collision)
             if let Some(pic) = tag.pictures().first() {
-                let pic_hash = hash_str(&format!("{}_{}", &artist, &album));
+                let pic_hash = hash_bytes(pic.data());
                 let covers_dir = cache_dir.join("covers");
                 let _ = fs::create_dir_all(&covers_dir);
-                let target_cover = covers_dir.join(format!("{}.jpg", pic_hash));
+                let ext_name = match pic.mime_type() {
+                    Some(lofty::picture::MimeType::Png) => "png",
+                    _ => "jpg",
+                };
+                let target_cover = covers_dir.join(format!("{}.{}", pic_hash, ext_name));
                 if !target_cover.exists() {
                     let _ = fs::write(&target_cover, pic.data());
                 }
                 cover_path = Some(target_cover.to_string_lossy().to_string());
+            }
+
+            // Fallback: check parent directory for local cover art file
+            if cover_path.is_none() {
+                if let Some(parent) = path.parent() {
+                    for name in &[
+                        "cover.jpg", "cover.png", "cover.jpeg",
+                        "folder.jpg", "folder.png", "folder.jpeg",
+                        "album.jpg", "album.png", "album.jpeg",
+                        "front.jpg", "front.png", "front.jpeg",
+                    ] {
+                        let candidate = parent.join(name);
+                        if candidate.is_file() {
+                            cover_path = Some(candidate.to_string_lossy().to_string());
+                            break;
+                        }
+                    }
+                }
             }
         }
     }

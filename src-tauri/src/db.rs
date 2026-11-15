@@ -179,7 +179,7 @@ pub fn insert_or_update_tracks(conn: &mut Connection, tracks: &[TrackMetadata]) 
                 bitrate = excluded.bitrate,
                 sample_rate = excluded.sample_rate,
                 format = excluded.format,
-                cover_path = COALESCE(excluded.cover_path, tracks.cover_path),
+                cover_path = excluded.cover_path,
                 file_size = excluded.file_size
             ",
         )?;
