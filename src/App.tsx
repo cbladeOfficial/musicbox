@@ -19,7 +19,7 @@ import { TrackEditFormView } from './components/TrackEditFormView';
 import { ConfirmModal } from './components/ConfirmModal';
 import { Toast, ToastMessage } from './components/Toast';
 
-import { TrackRecord, PlaylistRecord, RadioStation, RadioMetadata, ViewMode, AppSettings } from './types/music';
+import { TrackRecord, PlaylistRecord, RadioStation, RadioMetadata, ViewMode, AppSettings, VisualizerMode } from './types/music';
 import { TauriBridge, isTauri } from './services/tauriBridge';
 import { audioEngine } from './services/audioEngine';
 import { lastFmScrobbler } from './services/lastfmScrobbler';
@@ -1273,7 +1273,15 @@ export function App() {
           setRepeatMode(next);
         }}
         onToggleVisualizer={() => {
-          const modes: ('bars' | 'wave' | 'circle' | 'off')[] = ['bars', 'wave', 'circle', 'off'];
+          const modes: VisualizerMode[] = [
+            'bars',
+            'mirror-bars',
+            'wave',
+            'circle',
+            'rainbow-ribbon',
+            'particles',
+            'off',
+          ];
           const next = modes[(modes.indexOf(settings.visualizerMode) + 1) % modes.length];
           handleUpdateSettings({ visualizerMode: next });
         }}

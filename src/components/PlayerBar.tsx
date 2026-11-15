@@ -61,6 +61,16 @@ function formatTime(seconds: number): string {
   return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 }
 
+const VISUALIZER_LABELS: Record<VisualizerMode, string> = {
+  bars: 'Spectrum Bars',
+  'mirror-bars': 'Mirrored Bars',
+  wave: 'Oscilloscope Wave',
+  circle: 'Circular Reactor',
+  'rainbow-ribbon': 'Rainbow Ribbons',
+  particles: 'Particle Starfield',
+  off: 'Off',
+};
+
 export const PlayerBar: React.FC<PlayerBarProps> = ({
   currentTrack,
   currentRadio,
@@ -373,7 +383,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         {/* Visualizer Toggle */}
         <button
           onClick={onToggleVisualizer}
-          title={`Visualizer Style: ${visualizerMode}`}
+          title={`Visualizer: ${VISUALIZER_LABELS[visualizerMode] || visualizerMode} (Click to switch)`}
           className={`p-2 rounded-md transition-colors ${
             visualizerMode !== 'off'
               ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-medium'

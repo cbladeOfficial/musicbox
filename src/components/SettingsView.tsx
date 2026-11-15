@@ -670,18 +670,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <label className="text-xs text-zinc-300 block mb-2 font-medium">
                       Visualizer Style
                     </label>
-                    <div className="flex space-x-2">
-                      {(['bars', 'wave', 'circle', 'off'] as VisualizerMode[]).map((vMode) => (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { id: 'bars', label: 'Spectrum Bars' },
+                        { id: 'mirror-bars', label: 'Mirrored Bars' },
+                        { id: 'wave', label: 'Oscilloscope Wave' },
+                        { id: 'circle', label: 'Circular Reactor' },
+                        { id: 'rainbow-ribbon', label: 'Rainbow Ribbons' },
+                        { id: 'particles', label: 'Particle Starfield' },
+                        { id: 'off', label: 'Disabled (Off)' },
+                      ].map((item) => (
                         <button
-                          key={vMode}
-                          onClick={() => onUpdateSettings({ visualizerMode: vMode })}
-                          className={`px-4 py-2 rounded-md text-sm capitalize transition-colors ${
-                            settings.visualizerMode === vMode
+                          key={item.id}
+                          onClick={() => onUpdateSettings({ visualizerMode: item.id as VisualizerMode })}
+                          className={`px-3 py-2 rounded-md text-xs transition-colors ${
+                            settings.visualizerMode === item.id
                               ? 'bg-[var(--accent-color)] text-white font-medium shadow-sm'
                               : 'bg-[var(--surface-color)] text-zinc-400 hover:text-white border border-[var(--border-color)]'
                           }`}
                         >
-                          {vMode}
+                          {item.label}
                         </button>
                       ))}
                     </div>

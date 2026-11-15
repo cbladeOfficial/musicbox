@@ -91,7 +91,14 @@ export type ViewMode =
 
 export type TableDensity = 'comfortable' | 'compact';
 
-export type VisualizerMode = 'bars' | 'wave' | 'circle' | 'off';
+export type VisualizerMode =
+  | 'bars'
+  | 'mirror-bars'
+  | 'wave'
+  | 'circle'
+  | 'rainbow-ribbon'
+  | 'particles'
+  | 'off';
 
 export type ThemeId = 'feishin' | 'amoled' | 'nord' | 'catppuccin' | 'cyberpunk';
 
