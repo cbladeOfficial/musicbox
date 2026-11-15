@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { TrackRecord, RadioStation, RadioMetadata, VisualizerMode } from '../types/music';
 import { getCoverUrl } from '../utils/cover';
+import { RadioStationIcon } from './RadioStationIcon';
 
 interface PlayerBarProps {
   currentTrack: TrackRecord | null;
@@ -177,18 +178,14 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           </>
         ) : currentRadio ? (
           <>
-            <div className="relative w-13 h-13 rounded-md bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden shadow-md flex items-center justify-center">
-              {currentRadio.favicon ? (
-                <img
-                  src={currentRadio.favicon}
-                  alt={currentRadio.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-              ) : (
-                <Radio className="w-6 h-6 text-[var(--accent-color)]" />
+            <div className="relative w-13 h-13 rounded-lg bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden shadow-md flex items-center justify-center">
+              <RadioStationIcon
+                favicon={currentRadio.favicon}
+                name={currentRadio.name}
+                iconClassName="text-[var(--accent-color)] text-xl"
+              />
+              {isPlaying && (
+                <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               )}
             </div>
 

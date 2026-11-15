@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { RadioStation } from '../types/music';
 import { RadioBrowserService, OnlineStationResult } from '../services/radioBrowserService';
+import { RadioStationIcon } from './RadioStationIcon';
 
 interface RadioViewProps {
   stations: RadioStation[];
@@ -310,20 +311,12 @@ export const RadioView: React.FC<RadioViewProps> = ({
                   className="group flex flex-col justify-between p-3 rounded bg-[var(--surface-color)]/60 hover:bg-[var(--surface-color)] border border-[var(--border-color)]/60 hover:border-[var(--border-color)] transition-all shadow-sm"
                 >
                   <div className="flex items-start space-x-3 mb-2">
-                    <div className="w-12 h-12 rounded bg-[var(--surface-active)] border border-[var(--border-color)]/40 flex-shrink-0 overflow-hidden flex items-center justify-center">
-                      {st.favicon ? (
-                        <img
-                          src={st.favicon}
-                          alt=""
-                          loading="lazy"
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLElement).style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <Radio className="w-5 h-5 text-[var(--text-muted)] opacity-50" />
-                      )}
+                    <div className="w-12 h-12 rounded-lg bg-[var(--surface-active)] border border-[var(--border-color)]/60 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-inner">
+                      <RadioStationIcon
+                        favicon={st.favicon}
+                        name={st.name}
+                        iconClassName="text-[var(--accent-color)] text-base"
+                      />
                     </div>
 
                     <div className="flex-1 truncate">
@@ -406,19 +399,12 @@ export const RadioView: React.FC<RadioViewProps> = ({
                   >
                     <div className="flex items-start space-x-3 mb-3">
                       {/* Station Icon with Live indicator */}
-                      <div className="relative w-14 h-14 rounded-md bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-md">
-                        {station.favicon ? (
-                          <img
-                            src={station.favicon}
-                            alt=""
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLElement).style.display = 'none';
-                            }}
-                          />
-                        ) : (
-                          <Radio className="w-7 h-7 text-[var(--accent-color)]" />
-                        )}
+                      <div className="relative w-14 h-14 rounded-lg bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-md">
+                        <RadioStationIcon
+                          favicon={station.favicon}
+                          name={station.name}
+                          iconClassName="text-[var(--accent-color)] text-xl"
+                        />
 
                         {isCurrent && (
                           <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
@@ -585,19 +571,12 @@ export const RadioView: React.FC<RadioViewProps> = ({
                   Custom Icon / Favicon URL (Optional)
                 </label>
                 <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 rounded bg-[var(--surface-active)] border border-[var(--border-color)] flex-shrink-0 overflow-hidden flex items-center justify-center">
-                    {formFavicon ? (
-                      <img
-                        src={formFavicon}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <Radio className="w-4 h-4 text-[var(--text-muted)] opacity-50" />
-                    )}
+                  <div className="w-9 h-9 rounded bg-[var(--surface-active)] border border-[var(--border-color)] flex-shrink-0 overflow-hidden flex items-center justify-center">
+                    <RadioStationIcon
+                      favicon={formFavicon}
+                      name="Preview"
+                      iconClassName="text-[var(--accent-color)] text-sm"
+                    />
                   </div>
                   <input
                     type="url"
