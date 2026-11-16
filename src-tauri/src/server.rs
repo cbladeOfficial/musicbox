@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
-use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::atomic::{AtomicU16, Ordering};
 use std::thread;
@@ -32,8 +31,9 @@ fn get_mime_type(path: &str) -> &'static str {
 }
 
 pub fn start_stream_server() -> u16 {
-    let addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
-    let server = Server::http(addr).expect("Failed to start local audio streaming server");
+    let server = Server::http("127.0.0.1:45321")
+        .or_else(|_| Server::http("127.0.0.1:0"))
+        .expect("Failed to start local audio streaming server");
     let port = server.server_addr().to_ip().unwrap().port();
     SERVER_PORT.store(port, Ordering::SeqCst);
 
@@ -48,6 +48,23 @@ pub fn start_stream_server() -> u16 {
                 response.add_header(Header::from_bytes(&b"Access-Control-Allow-Methods"[..], &b"GET, OPTIONS"[..]).unwrap());
                 response.add_header(Header::from_bytes(&b"Access-Control-Allow-Headers"[..], &b"Range, Content-Type"[..]).unwrap());
                 let _ = request.respond(response);
+                continue;
+            }
+
+            if url == "/icon" || url.starts_with("/icon?") {
+                let icon_bytes = include_bytes!("../icons/icon.png");
+                let resp = Response::new(
+                    StatusCode(200),
+                    vec![
+                        Header::from_bytes(&b"Content-Type"[..], &b"image/png"[..]).unwrap(),
+                        Header::from_bytes(&b"Content-Length"[..], icon_bytes.len().to_string().as_bytes()).unwrap(),
+                        Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..]).unwrap(),
+                    ],
+                    &icon_bytes[..],
+                    Some(icon_bytes.len()),
+                    None,
+                );
+                let _ = request.respond(resp);
                 continue;
             }
 

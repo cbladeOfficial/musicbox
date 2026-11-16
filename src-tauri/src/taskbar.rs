@@ -206,6 +206,27 @@ pub mod win {
 
                 let _ = RegCloseKey(hkey);
             }
+
+            // Ensure Start Menu shortcut exists so Windows Action Center identifies the app as "MusicBox"
+            if let Ok(appdata) = std::env::var("APPDATA") {
+                let lnk_path = std::path::Path::new(&appdata).join(r"Microsoft\Windows\Start Menu\Programs\MusicBox.lnk");
+                if !lnk_path.exists() {
+                    if let Ok(exe_path) = std::env::current_exe() {
+                        let script = format!(
+                            "$w=New-Object -ComObject WScript.Shell;$s=$w.CreateShortcut('{}');$s.TargetPath='{}';$s.WorkingDirectory='{}';$s.IconLocation='{},0';$s.Description='MusicBox';$s.Save()",
+                            lnk_path.display(),
+                            exe_path.display(),
+                            exe_path.parent().map(|p| p.display().to_string()).unwrap_or_default(),
+                            exe_path.display(),
+                        );
+                        use std::os::windows::process::CommandExt;
+                        let _ = std::process::Command::new("powershell")
+                            .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+                            .creation_flags(0x08000000) // CREATE_NO_WINDOW
+                            .spawn();
+                    }
+                }
+            }
         }
     }
 

@@ -32,6 +32,7 @@ export function updateMediaSessionMetadata(params: MediaSessionMetadataParams) {
     );
   } else {
     artwork.push(
+      { src: 'http://127.0.0.1:45321/icon', sizes: '512x512', type: 'image/png' },
       { src: '/icon.png', sizes: '512x512', type: 'image/png' },
       { src: '/app-icon.png', sizes: '128x128', type: 'image/png' }
     );

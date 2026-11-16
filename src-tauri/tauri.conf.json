@@ -5,7 +5,6 @@
   "identifier": "com.cblade.musicbox",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:5173",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },
@@ -22,7 +21,8 @@
         "fullscreen": false,
         "decorations": false,
         "transparent": false,
-        "center": true
+        "center": true,
+        "backgroundColor": "#08090b"
       }
     ],
     "security": {
