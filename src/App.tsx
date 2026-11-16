@@ -1044,6 +1044,15 @@ export function App() {
     await loadPlaylists();
   };
 
+  const handleQuickCreatePlaylist = async (name: string, trackId?: number) => {
+    const newId = await TauriBridge.createPlaylist(name);
+    if (newId && trackId) {
+      await TauriBridge.addToPlaylist(newId, trackId);
+    }
+    await loadPlaylists();
+    showToast(`Created playlist "${name}"`, 'success');
+  };
+
   const handleDeletePlaylist = async (id: number) => {
     await TauriBridge.deletePlaylist(id);
     if (selectedPlaylistId === id) {
@@ -1478,13 +1487,18 @@ export function App() {
                 density={settings.tableDensity}
                 streamPort={streamPort}
                 onPlayTrack={handlePlayTrack}
+                onPlayNext={(t) => setQueue((prev) => [t, ...prev])}
                 onToggleFavorite={handleToggleFavorite}
                 onAddToQueue={(t) => setQueue((prev) => [...prev, t])}
                 playlists={playlists}
                 onAddToPlaylist={handleAddToPlaylist}
+                onCreatePlaylist={handleQuickCreatePlaylist}
                 onViewAlbum={handleNavigateToAlbum}
                 onViewArtist={handleNavigateToArtist}
                 onEditTrackMetadata={handleOpenEditTrack}
+                onToggleInfo={() => setShowInfo(true)}
+                resolvedCoverArt={resolvedCoverArt}
+                onShowToast={(msg) => showToast(msg, 'info')}
                 sortField={settings.trackSortField || 'title'}
                 sortAsc={settings.trackSortAsc ?? true}
                 onSortChange={(field, asc) => {
@@ -1705,6 +1719,13 @@ export function App() {
         coverArtUrl={resolvedCoverArt}
         onViewArtist={handleNavigateToArtist}
         onViewAlbum={handleNavigateToAlbum}
+        playlists={playlists}
+        onAddToPlaylist={handleAddToPlaylist}
+        onPlayTrack={handlePlayTrack}
+        onPlayNext={(t) => setQueue((prev) => [t, ...prev])}
+        onAddToQueue={(t) => setQueue((prev) => [...prev, t])}
+        onEditTrackMetadata={handleOpenEditTrack}
+        onCreatePlaylist={handleQuickCreatePlaylist}
       />
 
       {/* Non-blocking Toast Alerts */}

@@ -7,18 +7,14 @@ import {
   Clock,
   ArrowUp,
   ArrowDown,
-  ListPlus,
   Disc3,
-  Mic2,
-  Check,
-  Plus,
   Music2,
-  Tag,
   ChevronDown,
 } from 'lucide-react';
 import { TrackRecord, PlaylistRecord, TableDensity, TrackSortField } from '../types/music';
 import { getCoverUrl } from '../utils/cover';
 import { ArtistLinks } from './ArtistLinks';
+import { TrackContextMenu } from './TrackContextMenu';
 
 interface TrackTableProps {
   tracks: TrackRecord[];
@@ -27,16 +23,22 @@ interface TrackTableProps {
   density: TableDensity;
   streamPort: number;
   onPlayTrack: (track: TrackRecord) => void;
+  onPlayNext?: (track: TrackRecord) => void;
   onToggleFavorite: (id: number) => void;
   onAddToQueue: (track: TrackRecord) => void;
   playlists: PlaylistRecord[];
   onAddToPlaylist: (playlistId: number, trackId: number) => void;
-  onViewAlbum?: (albumName: string, artistName: string) => void;
+  onCreatePlaylist?: (name: string, trackId?: number) => void;
+  onViewAlbum?: (albumName: string, artistName?: string) => void;
   onViewArtist?: (artistName: string) => void;
   onEditTrackMetadata?: (track: TrackRecord) => void;
+  onToggleInfo?: () => void;
   sortField?: TrackSortField;
   sortAsc?: boolean;
   onSortChange?: (field: TrackSortField, asc: boolean) => void;
+  resolvedCoverArt?: string;
+  onStartRadio?: (track: TrackRecord) => void;
+  onShowToast?: (message: string) => void;
 }
 
 function formatDuration(sec: number): string {
@@ -46,6 +48,36 @@ function formatDuration(sec: number): string {
   return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
+const TrackThumbnail: React.FC<{
+  src?: string;
+  size: string;
+  alt?: string;
+}> = ({ src, size, alt = '' }) => {
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [src]);
+
+  return (
+    <div
+      className={`${size} rounded-md overflow-hidden bg-zinc-900 border border-white/10 flex-shrink-0 flex items-center justify-center shadow-sm`}
+    >
+      {src && !hasError ? (
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          className="w-full h-full object-cover"
+          onError={() => setHasError(true)}
+        />
+      ) : (
+        <Disc3 className="w-4 h-4 text-zinc-500" />
+      )}
+    </div>
+  );
+};
+
 export const TrackTable: React.FC<TrackTableProps> = ({
   tracks,
   currentTrackId,
@@ -53,16 +85,22 @@ export const TrackTable: React.FC<TrackTableProps> = ({
   density,
   streamPort,
   onPlayTrack,
+  onPlayNext,
   onToggleFavorite,
   onAddToQueue,
   playlists,
   onAddToPlaylist,
+  onCreatePlaylist,
   onViewAlbum,
   onViewArtist,
   onEditTrackMetadata,
+  onToggleInfo,
   sortField: propSortField,
   sortAsc: propSortAsc,
   onSortChange,
+  resolvedCoverArt,
+  onStartRadio,
+  onShowToast,
 }) => {
   const [internalField, setInternalField] = useState<TrackSortField>(() => {
     try {
@@ -89,177 +127,117 @@ export const TrackTable: React.FC<TrackTableProps> = ({
     track: TrackRecord;
   } | null>(null);
 
-  const menuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setContextMenu(null);
-      }
-    };
-    window.addEventListener('click', handleClickOutside);
-    return () => window.removeEventListener('click', handleClickOutside);
-  }, []);
-
-  const applySort = (field: TrackSortField, asc: boolean) => {
+  const handleHeaderSort = (field: TrackSortField) => {
+    let nextAsc = true;
+    if (sortField === field) {
+      nextAsc = !sortAsc;
+    }
     setInternalField(field);
-    setInternalAsc(asc);
+    setInternalAsc(nextAsc);
     try {
       localStorage.setItem('musicbox_track_sort_field', field);
-      localStorage.setItem('musicbox_track_sort_asc', String(asc));
+      localStorage.setItem('musicbox_track_sort_asc', nextAsc.toString());
     } catch {}
     if (onSortChange) {
-      onSortChange(field, asc);
+      onSortChange(field, nextAsc);
     }
-  };
-
-  const handleHeaderSort = (field: TrackSortField) => {
-    if (sortField === field) {
-      applySort(field, !sortAsc);
-    } else {
-      applySort(field, true);
-    }
-  };
-
-  const handleDropdownSort = (compositeValue: string) => {
-    const parts = compositeValue.split('_');
-    const asc = parts[parts.length - 1] === 'asc';
-    const field = parts.slice(0, parts.length - 1).join('_') as TrackSortField;
-    applySort(field, asc);
   };
 
   const sortedTracks = useMemo(() => {
-    const list = [...tracks];
-    list.sort((a, b) => {
-      const vA = a[sortField];
-      const vB = b[sortField];
-
-      if (vA === undefined || vA === null) return sortAsc ? 1 : -1;
-      if (vB === undefined || vB === null) return sortAsc ? -1 : 1;
-
-      if (typeof vA === 'string' && typeof vB === 'string') {
-        const cmp = vA.localeCompare(vB, undefined, { numeric: true, sensitivity: 'base' });
-        if (cmp !== 0) return sortAsc ? cmp : -cmp;
-      } else {
-        if (vA < vB) return sortAsc ? -1 : 1;
-        if (vA > vB) return sortAsc ? 1 : -1;
+    return [...tracks].sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case 'title':
+          comparison = (a.title || '').localeCompare(b.title || '');
+          break;
+        case 'artist':
+          comparison = (a.artist || '').localeCompare(b.artist || '');
+          break;
+        case 'album':
+          comparison = (a.album || '').localeCompare(b.album || '');
+          break;
+        case 'duration':
+          comparison = (a.duration || 0) - (b.duration || 0);
+          break;
+        case 'track_number':
+          comparison = (a.track_number || 0) - (b.track_number || 0);
+          break;
+        case 'date_added': {
+          const aDate = typeof a.date_added === 'number' ? a.date_added : (Number(a.date_added) || 0);
+          const bDate = typeof b.date_added === 'number' ? b.date_added : (Number(b.date_added) || 0);
+          comparison = aDate - bDate;
+          break;
+        }
+        default:
+          comparison = 0;
       }
-
-      // Secondary tie-breaker:
-      if (sortField === 'title') {
-        const artistCmp = (a.artist || '').localeCompare(b.artist || '', undefined, {
-          numeric: true,
-          sensitivity: 'base',
-        });
-        if (artistCmp !== 0) return artistCmp;
-      } else {
-        const titleCmp = (a.title || '').localeCompare(b.title || '', undefined, {
-          numeric: true,
-          sensitivity: 'base',
-        });
-        if (titleCmp !== 0) return titleCmp;
-      }
-
-      return (a.track_number || 0) - (b.track_number || 0);
+      return sortAsc ? comparison : -comparison;
     });
-    return list;
   }, [tracks, sortField, sortAsc]);
 
   const rowPadding = density === 'compact' ? 'py-1.5' : 'py-2.5';
-  const thumbnailSize = density === 'compact' ? 'w-7 h-7' : 'w-9 h-9';
+  const thumbnailSize = density === 'compact' ? 'w-7 h-7' : 'w-8 h-8';
+
+  const renderSortIndicator = (field: TrackSortField) => {
+    if (sortField !== field) return null;
+    return sortAsc ? (
+      <ArrowUp className="w-3.5 h-3.5 inline ml-1 text-[var(--accent-color)]" />
+    ) : (
+      <ArrowDown className="w-3.5 h-3.5 inline ml-1 text-[var(--accent-color)]" />
+    );
+  };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden select-none bg-[var(--bg-color)] animate-fadeIn">
-      {/* Table Toolbar / Controls */}
-      <div className="h-11 px-4 border-b border-[var(--border-color)] bg-[var(--sidebar-color)]/50 flex items-center justify-between flex-shrink-0 text-xs">
-        <div className="flex items-center space-x-2 text-zinc-400">
-          <span className="font-semibold text-zinc-200">{sortedTracks.length}</span>
-          <span>{sortedTracks.length === 1 ? 'track' : 'tracks'}</span>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <label htmlFor="track-sort-dropdown" className="text-zinc-400 text-xs font-medium">
-            Sort by:
-          </label>
-          <div className="relative">
-            <select
-              id="track-sort-dropdown"
-              value={`${sortField}_${sortAsc ? 'asc' : 'desc'}`}
-              onChange={(e) => handleDropdownSort(e.target.value)}
-              aria-label="Sort tracks by"
-              className="bg-[var(--surface-color)] text-zinc-200 text-xs font-medium rounded-md pl-3 pr-8 py-1.5 border border-[var(--border-color)] hover:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] cursor-pointer appearance-none transition-colors"
-            >
-              <option value="title_asc">Title (A-Z - Alphabetical)</option>
-              <option value="title_desc">Title (Z-A)</option>
-              <option value="artist_asc">Artist (A-Z)</option>
-              <option value="artist_desc">Artist (Z-A)</option>
-              <option value="album_asc">Album (A-Z)</option>
-              <option value="album_desc">Album (Z-A)</option>
-              <option value="duration_asc">Duration (Shortest first)</option>
-              <option value="duration_desc">Duration (Longest first)</option>
-              <option value="date_added_desc">Date Added (Newest first)</option>
-              <option value="date_added_asc">Date Added (Oldest first)</option>
-              <option value="track_number_asc">Track # (Ascending)</option>
-              <option value="track_number_desc">Track # (Descending)</option>
-            </select>
-            <ChevronDown className="w-3.5 h-3.5 text-zinc-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
-        </div>
-      </div>
-
-      {/* Table Header */}
-      <div className="h-9 border-b border-[var(--border-color)] bg-[var(--sidebar-color)] px-4 flex items-center text-xs font-medium text-zinc-400 sticky top-0 z-10 backdrop-blur-md">
+    <div className="flex flex-col h-full w-full select-none text-zinc-300">
+      {/* Table Header Bar */}
+      <div className="flex items-center px-2.5 py-2 border-b border-[var(--border-color)] text-[11px] font-semibold uppercase tracking-wider text-zinc-400 bg-[var(--surface-color)]/60 backdrop-blur-sm sticky top-0 z-10">
         <div
           onClick={() => handleHeaderSort('track_number')}
-          className="w-10 text-center font-mono cursor-pointer hover:text-white transition-colors flex items-center justify-center space-x-1"
+          className="w-10 text-center cursor-pointer hover:text-white transition-colors"
           title="Sort by Track Number"
         >
-          <span>#</span>
-          {sortField === 'track_number' && (
-            sortAsc ? <ArrowUp className="w-3 h-3 text-[var(--accent-color)]" /> : <ArrowDown className="w-3 h-3 text-[var(--accent-color)]" />
-          )}
+          # {renderSortIndicator('track_number')}
         </div>
+
         <div
           onClick={() => handleHeaderSort('title')}
-          className="flex-1 flex items-center space-x-1.5 cursor-pointer hover:text-white transition-colors"
-          title="Sort by Title (Alphabetical)"
+          className="flex-1 cursor-pointer hover:text-white transition-colors pl-3 flex items-center"
+          title="Sort by Title"
         >
           <span>Title</span>
-          {sortField === 'title' && (
-            sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[var(--accent-color)]" /> : <ArrowDown className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-          )}
+          {renderSortIndicator('title')}
         </div>
+
         <div
           onClick={() => handleHeaderSort('artist')}
-          className="w-48 hidden md:flex items-center space-x-1.5 cursor-pointer hover:text-white transition-colors"
+          className="w-48 hidden md:flex items-center cursor-pointer hover:text-white transition-colors"
           title="Sort by Artist"
         >
           <span>Artist</span>
-          {sortField === 'artist' && (
-            sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[var(--accent-color)]" /> : <ArrowDown className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-          )}
+          {renderSortIndicator('artist')}
         </div>
+
         <div
           onClick={() => handleHeaderSort('album')}
-          className="w-48 hidden lg:flex items-center space-x-1.5 cursor-pointer hover:text-white transition-colors"
+          className="w-44 hidden lg:flex items-center cursor-pointer hover:text-white transition-colors"
           title="Sort by Album"
         >
           <span>Album</span>
-          {sortField === 'album' && (
-            sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[var(--accent-color)]" /> : <ArrowDown className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-          )}
+          {renderSortIndicator('album')}
         </div>
+
         <div
           onClick={() => handleHeaderSort('duration')}
-          className="w-16 flex items-center justify-end space-x-1 cursor-pointer hover:text-white pr-4 transition-colors"
+          className="w-16 text-right pr-4 cursor-pointer hover:text-white transition-colors flex items-center justify-end"
           title="Sort by Duration"
         >
           <Clock className="w-3.5 h-3.5" />
-          {sortField === 'duration' && (
-            sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[var(--accent-color)]" /> : <ArrowDown className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-          )}
+          {renderSortIndicator('duration')}
         </div>
-        <div className="w-14 text-center"></div>
+
+        <div className="w-16 text-right pr-2">
+          <span className="sr-only">Actions</span>
+        </div>
       </div>
 
       {/* Table Body */}
@@ -273,7 +251,10 @@ export const TrackTable: React.FC<TrackTableProps> = ({
         ) : (
           sortedTracks.map((track, idx) => {
             const isCurrent = currentTrackId === track.id;
-            const coverSrc = getCoverUrl(track.cover_path, streamPort);
+            // For active track: prioritize resolvedCoverArt, fallback to getCoverUrl
+            const coverSrc = isCurrent && resolvedCoverArt
+              ? resolvedCoverArt
+              : getCoverUrl(track.cover_path, streamPort);
 
             return (
               <div
@@ -282,8 +263,8 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                 onContextMenu={(e) => {
                   e.preventDefault();
                   setContextMenu({
-                    x: Math.min(e.clientX, window.innerWidth - 220),
-                    y: Math.min(e.clientY, window.innerHeight - 260),
+                    x: Math.min(e.clientX, window.innerWidth - 240),
+                    y: Math.min(e.clientY, window.innerHeight - 400),
                     track,
                   });
                 }}
@@ -296,7 +277,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                 {/* Track number / Animated play indicator */}
                 <div className="w-10 text-center text-zinc-400 flex-shrink-0 flex items-center justify-center font-mono text-[12px] tabular-nums">
                   {isCurrent ? (
-                    <Volume2 className="w-4 h-4 text-[var(--accent-color)]" />
+                    <Volume2 className="w-4 h-4 text-[var(--accent-color)] animate-pulse" />
                   ) : (
                     <>
                       <span className="group-hover:hidden">
@@ -314,21 +295,11 @@ export const TrackTable: React.FC<TrackTableProps> = ({
 
                 {/* Title + Thumbnail + Format badge */}
                 <div className="flex-1 flex items-center space-x-3 truncate pr-3">
-                  <div className={`${thumbnailSize} rounded-md overflow-hidden bg-zinc-900 border border-white/10 flex-shrink-0 flex items-center justify-center shadow-sm`}>
-                    {coverSrc ? (
-                      <img
-                        src={coverSrc}
-                        alt=""
-                        loading="lazy"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <Disc3 className="w-4 h-4 text-zinc-500" />
-                    )}
-                  </div>
+                  <TrackThumbnail
+                    src={coverSrc}
+                    size={thumbnailSize}
+                    alt={track.album}
+                  />
 
                   <div className="flex flex-col truncate min-w-0 pr-1">
                     <span className={`truncate text-[14px] ${isCurrent ? 'text-[var(--accent-color)] font-medium' : 'text-zinc-100 font-medium'}`}>
@@ -360,23 +331,25 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                       onViewAlbum(track.album, track.artist);
                     }
                   }}
-                  className="w-48 hidden lg:block text-zinc-400 truncate pr-2 hover:underline hover:text-white text-[13px] transition-colors"
+                  title={track.album}
+                  className="w-44 hidden lg:block text-zinc-400 truncate pr-2 text-[13px] font-normal hover:text-blue-400 hover:underline transition-colors"
                 >
-                  {track.album}
+                  {track.album || 'Unknown Album'}
                 </div>
 
                 {/* Duration */}
-                <div className="w-16 text-right text-zinc-400 font-mono text-[13px] tabular-nums pr-4">
+                <div className="w-16 text-right pr-4 font-mono text-[12px] tabular-nums text-zinc-400 flex-shrink-0">
                   {formatDuration(track.duration)}
                 </div>
 
-                {/* Favorite & More button */}
-                <div className="w-14 flex items-center justify-center space-x-1">
+                {/* Quick Hover Actions: Favorite + Three Dots Menu */}
+                <div className="w-16 flex items-center justify-end space-x-1 pr-1 flex-shrink-0">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onToggleFavorite(track.id);
                     }}
+                    title={track.is_favorite ? 'Remove Favorite' : 'Mark Favorite'}
                     className={`p-1.5 rounded-full hover:bg-white/10 transition-colors ${
                       track.is_favorite
                         ? 'text-rose-500'
@@ -391,11 +364,12 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                       e.stopPropagation();
                       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                       setContextMenu({
-                        x: Math.min(rect.left - 180, window.innerWidth - 220),
-                        y: Math.min(rect.bottom + 5, window.innerHeight - 260),
+                        x: Math.min(rect.left - 180, window.innerWidth - 240),
+                        y: Math.min(rect.bottom + 5, window.innerHeight - 400),
                         track,
                       });
                     }}
+                    title="Track actions"
                     className="p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <MoreVertical className="w-3.5 h-3.5" />
@@ -407,117 +381,27 @@ export const TrackTable: React.FC<TrackTableProps> = ({
         )}
       </div>
 
-      {/* Feishin Desktop Context Menu */}
+      {/* Full Feishin Desktop Context Menu Matching Image 6 */}
       {contextMenu && (
-        <div
-          ref={menuRef}
-          style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
-          className="fixed w-56 bg-[#13151b] border border-white/15 rounded-lg shadow-2xl py-1.5 z-50 text-[12px] select-none text-zinc-200 backdrop-blur-xl"
-        >
-          <button
-            onClick={() => {
-              onPlayTrack(contextMenu.track);
-              setContextMenu(null);
-            }}
-            className="w-full flex items-center space-x-2.5 px-3.5 py-2 hover:bg-white/10 hover:text-white text-left font-medium transition-colors"
-          >
-            <Play className="w-4 h-4 text-[var(--accent-color)]" />
-            <span>Play Now</span>
-          </button>
-
-          <button
-            onClick={() => {
-              onAddToQueue(contextMenu.track);
-              setContextMenu(null);
-            }}
-            className="w-full flex items-center space-x-2.5 px-3.5 py-2 hover:bg-white/10 hover:text-white text-left font-medium transition-colors"
-          >
-            <ListPlus className="w-4 h-4 text-zinc-400" />
-            <span>Add to Queue</span>
-          </button>
-
-          <button
-            onClick={() => {
-              onToggleFavorite(contextMenu.track.id);
-              setContextMenu(null);
-            }}
-            className="w-full flex items-center space-x-2.5 px-3.5 py-2 hover:bg-white/10 hover:text-white text-left font-medium transition-colors"
-          >
-            <Heart className={`w-4 h-4 ${contextMenu.track.is_favorite ? 'text-rose-500 fill-rose-500' : 'text-zinc-400'}`} />
-            <span>{contextMenu.track.is_favorite ? 'Remove Favorite' : 'Favorite'}</span>
-          </button>
-
-          {onViewAlbum && (
-            <button
-              onClick={() => {
-                onViewAlbum(contextMenu.track.album, contextMenu.track.artist);
-                setContextMenu(null);
-              }}
-              className="w-full flex items-center space-x-2.5 px-3.5 py-2 hover:bg-white/10 hover:text-white text-left font-medium transition-colors"
-            >
-              <Disc3 className="w-4 h-4 text-zinc-400" />
-              <span>Go to Album</span>
-            </button>
-          )}
-
-          {onViewArtist && (() => {
-            const artists = (contextMenu.track.artist || 'Unknown Artist')
-              .split(',')
-              .map((a) => a.trim())
-              .filter(Boolean);
-            const list = artists.length > 0 ? artists : ['Unknown Artist'];
-            return list.map((art) => (
-              <button
-                key={art}
-                onClick={() => {
-                  onViewArtist(art);
-                  setContextMenu(null);
-                }}
-                className="w-full flex items-center space-x-2.5 px-3.5 py-2 hover:bg-white/10 hover:text-white text-left font-medium transition-colors"
-              >
-                <Mic2 className="w-4 h-4 text-zinc-400" />
-                <span className="truncate">Go to Artist: {art}</span>
-              </button>
-            ));
-          })()}
-
-          {onEditTrackMetadata && (
-            <button
-              onClick={() => {
-                onEditTrackMetadata(contextMenu.track);
-                setContextMenu(null);
-              }}
-              className="w-full flex items-center space-x-2.5 px-3.5 py-2 hover:bg-white/10 hover:text-white text-left font-medium transition-colors"
-            >
-              <Tag className="w-4 h-4 text-zinc-400" />
-              <span>Edit Track Tags</span>
-            </button>
-          )}
-
-          {/* Submenu: Add to Playlist */}
-          {playlists.length > 0 && (
-            <div className="border-t border-white/10 my-1 pt-1">
-              <div className="text-[10px] font-medium text-zinc-500 px-3.5 py-1">
-                Add to Playlist
-              </div>
-              <div className="max-h-28 overflow-y-auto">
-                {playlists.map((pl) => (
-                  <button
-                    key={pl.id}
-                    onClick={() => {
-                      onAddToPlaylist(pl.id, contextMenu.track.id);
-                      setContextMenu(null);
-                    }}
-                    className="w-full flex items-center space-x-2 px-3.5 py-1.5 hover:bg-white/10 hover:text-white text-left text-[11px] truncate"
-                  >
-                    <Plus className="w-3.5 h-3.5 text-zinc-400" />
-                    <span className="truncate">{pl.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <TrackContextMenu
+          track={contextMenu.track}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          onPlayTrack={onPlayTrack}
+          onPlayNext={onPlayNext}
+          onAddToQueue={onAddToQueue}
+          onToggleFavorite={onToggleFavorite}
+          playlists={playlists}
+          onAddToPlaylist={onAddToPlaylist}
+          onCreatePlaylist={onCreatePlaylist}
+          onViewAlbum={onViewAlbum}
+          onViewArtist={onViewArtist}
+          onEditTrackMetadata={onEditTrackMetadata}
+          onToggleInfo={onToggleInfo}
+          onStartRadio={onStartRadio}
+          onShowToast={onShowToast}
+        />
       )}
     </div>
   );

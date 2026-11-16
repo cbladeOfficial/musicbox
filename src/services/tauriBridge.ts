@@ -271,4 +271,9 @@ export const TauriBridge = {
     if (!isTauri()) return;
     return safeInvoke<void>('update_taskbar_playback_state', { isPlaying });
   },
+
+  async showInFileManager(path: string): Promise<void> {
+    if (!isTauri()) return;
+    return safeInvoke<void>('show_in_file_manager', { path });
+  },
 };

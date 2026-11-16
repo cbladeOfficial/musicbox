@@ -116,6 +116,7 @@ pub fn run() {
             fetch_radio_metadata,
             update_radio_presence,
             update_taskbar_playback_state,
+            show_in_file_manager,
         ])
         .run(tauri::generate_context!())
         .expect("error while building tauri application");

@@ -110,18 +110,30 @@ impl DiscordManager {
 
         let mut client_lock = self.client.lock().unwrap();
         if let Some(client) = client_lock.as_mut() {
-            let state_str = if !album.is_empty() {
-                if let Some(y) = year {
-                    if y > 0 {
-                        format!("{} • {} ({})", artist, album, y)
-                    } else {
-                        format!("{} • {}", artist, album)
-                    }
-                } else {
-                    format!("{} • {}", artist, album)
-                }
+            // Segment 1 in Discord RPC: artist only (album removed per user request)
+            let state_str = if artist.is_empty() {
+                "Unknown Artist".to_string()
             } else {
                 artist.to_string()
+            };
+
+            // Segment 2 in Discord RPC: album with year in brackets if present in metadata
+            let album_display = if let Some(y) = year {
+                if y > 0 && !album.is_empty() {
+                    format!("{} ({})", album, y)
+                } else {
+                    album.to_string()
+                }
+            } else {
+                album.to_string()
+            };
+
+            let safe_album_display: String = if album_display.chars().count() > 128 {
+                let mut s: String = album_display.chars().take(125).collect();
+                s.push_str("...");
+                s
+            } else {
+                album_display
             };
 
             let now = SystemTime::now()
@@ -243,16 +255,16 @@ impl DiscordManager {
 
             if let Some(url) = cover_url {
                 if url.starts_with("http://") || url.starts_with("https://") {
-                    assets = assets.large_image(url).large_text(album).large_url(&album_url);
+                    assets = assets.large_image(url).large_text(&safe_album_display).large_url(&album_url);
                 } else if self.is_default_app() {
-                    assets = assets.large_image("spotube-logo-foreground").large_text(album).large_url(&album_url);
+                    assets = assets.large_image("spotube-logo-foreground").large_text(&safe_album_display).large_url(&album_url);
                 } else {
-                    assets = assets.large_image(default_icon_url).large_text(album).large_url(&album_url);
+                    assets = assets.large_image(default_icon_url).large_text(&safe_album_display).large_url(&album_url);
                 }
             } else if self.is_default_app() {
-                assets = assets.large_image("spotube-logo-foreground").large_text(album).large_url(&album_url);
+                assets = assets.large_image("spotube-logo-foreground").large_text(&safe_album_display).large_url(&album_url);
             } else {
-                assets = assets.large_image(default_icon_url).large_text(album).large_url(&album_url);
+                assets = assets.large_image(default_icon_url).large_text(&safe_album_display).large_url(&album_url);
             }
 
             act = act.assets(assets);

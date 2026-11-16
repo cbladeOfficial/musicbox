@@ -233,6 +233,25 @@ pub fn is_app_maximized(window: Window) -> Result<bool, String> {
 }
 
 #[tauri::command]
+pub fn show_in_file_manager(path: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        let norm = path.replace('/', "\\");
+        let _ = Command::new("explorer")
+            .arg(format!("/select,{}", norm))
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = path;
+        Ok(())
+    }
+}
+
+#[tauri::command]
 pub fn update_taskbar_playback_state(is_playing: bool) {
     crate::taskbar::win::update_playback_state(is_playing);
 }
