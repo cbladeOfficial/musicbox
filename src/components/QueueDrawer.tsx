@@ -61,7 +61,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
             <span className="text-xs font-medium text-[var(--accent-color)] px-1">
               Now Playing
             </span>
-            <div className="flex items-center px-3.5 py-3 rounded-lg bg-[var(--accent-color)]/15 border border-[var(--accent-color)]/30 shadow-sm">
+            <div className="flex items-center px-3.5 py-3 rounded-lg bg-[var(--accent-color)]/15 shadow-sm">
               <div className="flex-1 truncate">
                 <div className="font-medium text-white text-[14px] truncate">
                   {currentTrack.title}

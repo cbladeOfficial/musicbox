@@ -262,7 +262,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
       </div>
 
       {/* Table Body */}
-      <div className="flex-1 overflow-y-auto divide-y divide-white/[0.03]">
+      <div className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
         {sortedTracks.length === 0 ? (
           <div className="p-20 flex flex-col items-center justify-center text-center space-y-3">
             <Music2 className="w-16 h-16 opacity-30 stroke-1 text-zinc-400 mb-2" />
@@ -286,10 +286,10 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                     track,
                   });
                 }}
-                className={`group flex items-center px-4 ${rowPadding} text-[13px] transition-colors cursor-pointer ${
+                className={`group flex items-center px-2.5 ${rowPadding} text-[13px] rounded-lg transition-colors cursor-pointer select-none outline-none focus:outline-none ${
                   isCurrent
-                    ? 'bg-[var(--accent-color)]/15 text-white font-medium border-l-2 border-[var(--accent-color)] pl-3.5'
-                    : 'hover:bg-white/[0.04] text-zinc-200'
+                    ? 'bg-[var(--accent-color)]/15 text-white font-medium shadow-sm'
+                    : 'hover:bg-white/[0.06] text-zinc-200'
                 }`}
               >
                 {/* Track number / Animated play indicator */}

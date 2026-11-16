@@ -124,8 +124,8 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
       )}
 
       {/* Tracks Table */}
-      <div className="rounded-lg bg-[var(--surface-color)] border border-[var(--border-color)] divide-y divide-white/[0.04] overflow-hidden">
-        <div className="h-10 px-4 flex items-center text-xs uppercase tracking-wider font-semibold text-zinc-400 bg-[var(--sidebar-color)] border-b border-[var(--border-color)]">
+      <div className="rounded-lg bg-[var(--surface-color)] border border-[var(--border-color)] p-1.5 space-y-0.5 overflow-hidden">
+        <div className="h-10 px-3.5 flex items-center text-xs uppercase tracking-wider font-semibold text-zinc-400 bg-[var(--sidebar-color)] border-b border-[var(--border-color)] rounded-md mb-1">
           <div className="w-8">#</div>
           <div className="flex-1">Title</div>
           <div className="w-16 text-right pr-2">
@@ -136,8 +136,8 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
           <div
             key={t.id}
             onDoubleClick={() => onPlayTrack(t)}
-            className={`flex items-center px-4 py-3 text-[14px] hover:bg-white/[0.04] cursor-pointer transition-colors ${
-              currentTrackId === t.id ? 'text-[var(--accent-color)] font-medium bg-[var(--accent-color)]/10' : 'text-zinc-200'
+            className={`flex items-center px-3.5 py-2.5 text-[14px] rounded-lg cursor-pointer transition-colors outline-none select-none ${
+              currentTrackId === t.id ? 'text-[var(--accent-color)] font-medium bg-[var(--accent-color)]/15 shadow-sm' : 'text-zinc-200 hover:bg-white/[0.06]'
             }`}
           >
             <div className="w-8 text-zinc-500 font-mono text-xs tabular-nums">
