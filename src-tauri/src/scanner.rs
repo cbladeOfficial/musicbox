@@ -41,6 +41,74 @@ fn hash_bytes(bytes: &[u8]) -> String {
     format!("{:016x}", hasher.finish())
 }
 
+fn extract_all_artists(tag: &lofty::tag::Tag) -> Option<String> {
+    let mut artists: Vec<String> = Vec::new();
+
+    for item in tag.items() {
+        if item.key() == ItemKey::TrackArtist {
+            if let Some(text) = item.value().text() {
+                for part in text.split('\0') {
+                    let trimmed = part.trim();
+                    if !trimmed.is_empty() && !artists.contains(&trimmed.to_string()) {
+                        artists.push(trimmed.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    if artists.is_empty() {
+        if let Some(a) = tag.artist() {
+            for part in a.split('\0') {
+                let trimmed = part.trim();
+                if !trimmed.is_empty() && !artists.contains(&trimmed.to_string()) {
+                    artists.push(trimmed.to_string());
+                }
+            }
+        }
+    }
+
+    if artists.is_empty() {
+        None
+    } else {
+        Some(artists.join(", "))
+    }
+}
+
+fn extract_all_album_artists(tag: &lofty::tag::Tag) -> Option<String> {
+    let mut artists: Vec<String> = Vec::new();
+
+    for item in tag.items() {
+        if item.key() == ItemKey::AlbumArtist {
+            if let Some(text) = item.value().text() {
+                for part in text.split('\0') {
+                    let trimmed = part.trim();
+                    if !trimmed.is_empty() && !artists.contains(&trimmed.to_string()) {
+                        artists.push(trimmed.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    if artists.is_empty() {
+        if let Some(aa) = tag.get_string(ItemKey::AlbumArtist) {
+            for part in aa.split('\0') {
+                let trimmed = part.trim();
+                if !trimmed.is_empty() && !artists.contains(&trimmed.to_string()) {
+                    artists.push(trimmed.to_string());
+                }
+            }
+        }
+    }
+
+    if artists.is_empty() {
+        None
+    } else {
+        Some(artists.join(", "))
+    }
+}
+
 pub fn scan_file(path: &Path, cache_dir: &Path) -> Option<TrackMetadata> {
     let ext = path.extension()?.to_str()?.to_lowercase();
     if !is_supported_audio(&ext) {
@@ -77,7 +145,9 @@ pub fn scan_file(path: &Path, cache_dir: &Path) -> Option<TrackMetadata> {
                     title = trimmed.to_string();
                 }
             }
-            if let Some(a) = tag.artist() {
+            if let Some(all_artists) = extract_all_artists(tag) {
+                artist = all_artists;
+            } else if let Some(a) = tag.artist() {
                 let trimmed = a.trim();
                 if !trimmed.is_empty() {
                     artist = trimmed.to_string();
@@ -95,7 +165,9 @@ pub fn scan_file(path: &Path, cache_dir: &Path) -> Option<TrackMetadata> {
                     genre = Some(trimmed.to_string());
                 }
             }
-            if let Some(aa) = tag.get_string(ItemKey::AlbumArtist) {
+            if let Some(all_aa) = extract_all_album_artists(tag) {
+                album_artist = Some(all_aa);
+            } else if let Some(aa) = tag.get_string(ItemKey::AlbumArtist) {
                 let trimmed = aa.trim();
                 if !trimmed.is_empty() {
                     album_artist = Some(trimmed.to_string());

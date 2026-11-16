@@ -249,6 +249,36 @@ export const MetadataService = {
       }
     }
 
+    // Fallback: If artist has multiple artists (e.g. "Artist A, Artist B"), try with primary artist
+    if (cleanArtist.includes(',')) {
+      const primaryArtist = cleanArtist.split(',')[0].trim();
+      for (const source of priority) {
+        try {
+          if (source === 'itunes') {
+            const res = await this.fetchFromItunes(primaryArtist, cleanAlbum, cleanTitle);
+            if (res?.coverUrl) {
+              localStorage.setItem(cacheKey, res.coverUrl);
+              return res.coverUrl;
+            }
+          } else if (source === 'jiosaavn') {
+            const res = await this.fetchFromJioSaavn(primaryArtist, cleanAlbum, cleanTitle);
+            if (res?.coverUrl) {
+              localStorage.setItem(cacheKey, res.coverUrl);
+              return res.coverUrl;
+            }
+          } else if (source === 'lastfm') {
+            const res = await this.fetchFromLastfm(lastfmKey, primaryArtist, cleanAlbum, cleanTitle);
+            if (res?.coverUrl) {
+              localStorage.setItem(cacheKey, res.coverUrl);
+              return res.coverUrl;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+
     return null;
   },
 
@@ -286,6 +316,11 @@ export const MetadataService = {
       };
       localStorage.setItem(cacheKey, JSON.stringify(info));
       return info;
+    }
+
+    // Fallback: If artist has multiple artists, try primary artist
+    if (artist.includes(',')) {
+      return this.getArtistDetails(artist.split(',')[0].trim(), apiKey);
     }
 
     return null;

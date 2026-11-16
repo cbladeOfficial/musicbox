@@ -333,7 +333,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                     <span className={`truncate text-[14px] ${isCurrent ? 'text-[var(--accent-color)] font-medium' : 'text-zinc-100 font-medium'}`}>
                       {track.title}
                     </span>
-                    <span className="text-xs text-zinc-400 md:hidden truncate">
+                    <span className="text-xs text-zinc-400 md:hidden truncate" title={track.artist}>
                       {track.artist}
                     </span>
                   </div>
@@ -351,6 +351,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                       onViewArtist(track.artist);
                     }
                   }}
+                  title={track.artist}
                   className="w-48 hidden md:block text-zinc-300 truncate pr-2 hover:underline hover:text-white text-[13px] font-normal transition-colors"
                 >
                   {track.artist}

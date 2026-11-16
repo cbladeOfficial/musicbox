@@ -32,6 +32,12 @@ pub fn run() {
             let db_path = app_data_dir.join("musicbox.db");
             let conn = db::init_db(&db_path).expect("Failed to initialize database");
 
+            // Automatically migrate and refresh multi-artist track tags in database
+            if db::get_setting(&conn, "all_artists_migrated_v2").ok().flatten().is_none() {
+                db::refresh_all_track_artists(&conn, &app_data_dir);
+                let _ = db::set_setting(&conn, "all_artists_migrated_v2", "true");
+            }
+
             // Check if user configured startMaximized (defaults to true)
             let start_maximized = db::get_setting(&conn, "user_settings")
                 .ok()

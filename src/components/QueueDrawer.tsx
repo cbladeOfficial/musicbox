@@ -66,7 +66,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
                 <div className="font-medium text-white text-[14px] truncate">
                   {currentTrack.title}
                 </div>
-                <div className="text-[13px] text-zinc-300 font-normal truncate mt-0.5">
+                <div title={currentTrack.artist} className="text-[13px] text-zinc-300 font-normal truncate mt-0.5">
                   {currentTrack.artist}
                 </div>
               </div>
@@ -101,7 +101,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
                       <div className="text-white font-medium text-[14px] truncate group-hover:text-[var(--accent-color)] transition-colors">
                         {track.title}
                       </div>
-                      <div className="text-xs text-zinc-400 truncate">
+                      <div title={track.artist} className="text-xs text-zinc-400 truncate">
                         {track.artist}
                       </div>
                     </div>

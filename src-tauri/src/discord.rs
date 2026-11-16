@@ -111,12 +111,20 @@ impl DiscordManager {
                 .unwrap_or_default()
                 .as_secs() as i64;
 
+            let safe_state: String = if state_str.chars().count() > 128 {
+                let mut s: String = state_str.chars().take(125).collect();
+                s.push_str("...");
+                s
+            } else {
+                state_str
+            };
+
             // In Discord IPC, ActivityType::Listening and status_display_type cause
             // Discord to reject/close the IPC pipe for 3rd-party client IDs.
             // We set details to "Listening to MusicBox" so Discord shows it prominently.
             let mut act = activity::Activity::new()
                 .details("Listening to MusicBox")
-                .state(&state_str);
+                .state(&safe_state);
 
             if is_playing && duration_secs > 0.0 {
                 let start_time = now - position_secs as i64;

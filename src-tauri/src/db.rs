@@ -500,3 +500,28 @@ pub fn toggle_radio_favorite(conn: &Connection, id: i64) -> Result<bool> {
     )?;
     Ok(new_val == 1)
 }
+
+pub fn refresh_all_track_artists(conn: &Connection, cache_dir: &std::path::Path) {
+    let mut stmt = match conn.prepare("SELECT id, path FROM tracks") {
+        Ok(s) => s,
+        Err(_) => return,
+    };
+
+    let rows: Vec<(i64, String)> = stmt
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+        .ok()
+        .map(|iter| iter.filter_map(|r| r.ok()).collect())
+        .unwrap_or_default();
+
+    for (id, path_str) in rows {
+        let p = std::path::Path::new(&path_str);
+        if p.is_file() {
+            if let Some(meta) = crate::scanner::scan_file(p, cache_dir) {
+                let _ = conn.execute(
+                    "UPDATE tracks SET artist = ?1, album_artist = ?2 WHERE id = ?3",
+                    params![meta.artist, meta.album_artist, id],
+                );
+            }
+        }
+    }
+}
