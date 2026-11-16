@@ -78,7 +78,15 @@ export function App() {
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
-  const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
+  const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('musicbox_repeat_mode');
+      if (saved === 'off' || saved === 'all' || saved === 'one') {
+        return saved;
+      }
+    }
+    return 'off';
+  });
   const [queue, setQueue] = useState<TrackRecord[]>([]);
 
   // Navigation & Views
@@ -310,6 +318,13 @@ export function App() {
         }
       }
     });
+
+    TauriBridge.loadSetting('repeat_mode').then((saved) => {
+      if (saved === 'off' || saved === 'all' || saved === 'one') {
+        setRepeatMode(saved);
+        localStorage.setItem('musicbox_repeat_mode', saved);
+      }
+    }).catch(() => {});
 
     return () => {
       if (radioTimerRef.current) {
@@ -766,6 +781,12 @@ export function App() {
       TauriBridge.clearDiscordPresence().catch(() => {});
     }
   }, [settings.discordRpcEnabled]);
+
+  // Save repeat mode state on change so it persists across app restarts
+  useEffect(() => {
+    localStorage.setItem('musicbox_repeat_mode', repeatMode);
+    TauriBridge.saveSetting('repeat_mode', repeatMode).catch(() => {});
+  }, [repeatMode]);
 
   // Sync playback state with Windows SMTC & Taskbar thumbnail toolbar
   useEffect(() => {
