@@ -228,6 +228,19 @@ impl DiscordManager {
                 "https://raw.githubusercontent.com/cbladeOfficial/MusicBox/main/public/app-icon.png";
             let mut assets = activity::Assets::new();
 
+            let (small_image_url, small_text) = if is_playing {
+                (
+                    "https://raw.githubusercontent.com/cbladeOfficial/MusicBox/main/public/play.png",
+                    "Playing",
+                )
+            } else {
+                (
+                    "https://raw.githubusercontent.com/cbladeOfficial/MusicBox/main/public/pause.png",
+                    "Paused",
+                )
+            };
+            assets = assets.small_image(small_image_url).small_text(small_text);
+
             if let Some(url) = cover_url {
                 if url.starts_with("http://") || url.starts_with("https://") {
                     assets = assets.large_image(url).large_text(album).large_url(&album_url);
@@ -347,6 +360,19 @@ impl DiscordManager {
             let default_icon_url =
                 "https://raw.githubusercontent.com/cbladeOfficial/MusicBox/main/public/app-icon.png";
             let mut assets = activity::Assets::new();
+
+            let (small_image_url, small_text) = if is_playing {
+                (
+                    "https://raw.githubusercontent.com/cbladeOfficial/MusicBox/main/public/play.png",
+                    "Playing",
+                )
+            } else {
+                (
+                    "https://raw.githubusercontent.com/cbladeOfficial/MusicBox/main/public/pause.png",
+                    "Paused",
+                )
+            };
+            assets = assets.small_image(small_image_url).small_text(small_text);
 
             if let Some(url) = icon_url {
                 if url.starts_with("http://") || url.starts_with("https://") {
