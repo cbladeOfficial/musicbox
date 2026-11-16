@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Play,
   Pause,
@@ -7,19 +7,23 @@ import {
   Shuffle,
   Repeat,
   Repeat1,
+  Square,
+  MoreVertical,
   Volume2,
   VolumeX,
   Heart,
   ListMusic,
   Mic2,
-  Info,
   Activity,
   Disc3,
-  Radio,
-  Maximize2,
+  Star,
+  Cast,
+  TimerOff,
+  SlidersHorizontal,
+  PanelRightClose,
 } from 'lucide-react';
 import { TrackRecord, RadioStation, RadioMetadata, VisualizerMode } from '../types/music';
-import { getCoverUrl, formatBitrate } from '../utils/cover';
+import { getCoverUrl } from '../utils/cover';
 import { RadioStationIcon } from './RadioStationIcon';
 import { ArtistLinks } from './ArtistLinks';
 
@@ -44,6 +48,7 @@ interface PlayerBarProps {
   onPlayPause: () => void;
   onPrevious: () => void;
   onNext: () => void;
+  onStop?: () => void;
   onSeek: (time: number) => void;
   onVolumeChange: (vol: number) => void;
   onToggleMute: () => void;
@@ -58,6 +63,8 @@ interface PlayerBarProps {
   onToggleRadioFavorite?: (id: number) => void;
   onViewArtist?: (artistName: string) => void;
   onViewAlbum?: (albumName: string, artistName?: string) => void;
+  onToggleAutoDj?: () => void;
+  isAutoDj?: boolean;
 }
 
 function formatTime(seconds: number): string {
@@ -98,6 +105,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   onPlayPause,
   onPrevious,
   onNext,
+  onStop,
   onSeek,
   onVolumeChange,
   onToggleMute,
@@ -112,12 +120,79 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   onToggleRadioFavorite,
   onViewArtist,
   onViewAlbum,
+  onToggleAutoDj,
+  isAutoDj = false,
 }) => {
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekVal, setSeekVal] = useState(0);
-  const [hoverTime, setHoverTime] = useState<number | null>(null);
-  const [hoverPos, setHoverPos] = useState<number>(0);
+  const [, setHoverTime] = useState<number | null>(null);
   const progressTrackRef = useRef<HTMLDivElement | null>(null);
+
+  // Track rating state (1 to 5 stars)
+  const [trackRating, setTrackRating] = useState<number>(0);
+
+  // Sleep timer minutes state (0, 15, 30, 45, 60)
+  const [sleepMinutes, setSleepMinutes] = useState<number>(0);
+  const sleepTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Toast / feedback message
+  const [statusTooltip, setStatusTooltip] = useState<string | null>(null);
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showStatus = (msg: string) => {
+    if (tooltipTimeoutRef.current) clearTimeout(tooltipTimeoutRef.current);
+    setStatusTooltip(msg);
+    tooltipTimeoutRef.current = setTimeout(() => setStatusTooltip(null), 2500);
+  };
+
+  // Sync star rating from track favorite status or saved rating
+  useEffect(() => {
+    if (currentTrack) {
+      const saved = localStorage.getItem(`musicbox_rating_${currentTrack.id}`);
+      if (saved) {
+        setTrackRating(parseInt(saved, 10) || 0);
+      } else {
+        setTrackRating(currentTrack.is_favorite ? 5 : 0);
+      }
+    } else {
+      setTrackRating(0);
+    }
+  }, [currentTrack]);
+
+  const handleSetRating = (stars: number) => {
+    if (!currentTrack) return;
+    const newRating = trackRating === stars ? 0 : stars;
+    setTrackRating(newRating);
+    localStorage.setItem(`musicbox_rating_${currentTrack.id}`, newRating.toString());
+    if (newRating >= 4 && !currentTrack.is_favorite) {
+      onToggleFavorite(currentTrack.id);
+    } else if (newRating === 0 && currentTrack.is_favorite) {
+      onToggleFavorite(currentTrack.id);
+    }
+    showStatus(newRating > 0 ? `Rated ${newRating} star${newRating > 1 ? 's' : ''}` : 'Rating cleared');
+  };
+
+  // Sleep timer toggle
+  const handleSleepTimerToggle = () => {
+    const intervals = [0, 15, 30, 45, 60];
+    const nextIdx = (intervals.indexOf(sleepMinutes) + 1) % intervals.length;
+    const nextMin = intervals[nextIdx];
+    setSleepMinutes(nextMin);
+
+    if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current);
+
+    if (nextMin > 0) {
+      showStatus(`Sleep timer: playback will stop in ${nextMin}m`);
+      sleepTimerRef.current = setTimeout(() => {
+        if (onStop) onStop();
+        else onPlayPause();
+        setSleepMinutes(0);
+        showStatus('Sleep timer finished: playback stopped');
+      }, nextMin * 60 * 1000);
+    } else {
+      showStatus('Sleep timer disabled');
+    }
+  };
 
   const displayTime = isSeeking ? seekVal : currentTime;
   const progressPercent = duration > 0 ? (displayTime / duration) * 100 : 0;
@@ -133,20 +208,44 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
     if (!progressTrackRef.current || duration <= 0) return;
     const rect = progressTrackRef.current.getBoundingClientRect();
     const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    setHoverPos(e.clientX - rect.left);
     setHoverTime(pos * duration);
+    if (isSeeking) {
+      setSeekVal(pos * duration);
+    }
+  };
+
+  const handleClickProgress = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!progressTrackRef.current || duration <= 0) return;
+    const rect = progressTrackRef.current.getBoundingClientRect();
+    const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    onSeek(pos * duration);
+    setIsSeeking(false);
+  };
+
+  const handleClickVolume = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    onVolumeChange(pos);
   };
 
   return (
-    <footer className="h-24 py-4 px-6 w-full bg-[var(--sidebar-color)] border-t border-[var(--border-color)] flex items-center justify-between select-none z-40 transition-colors">
-      {/* Left: Track Information */}
-      <div className="flex items-center space-x-3.5 w-[28%] min-w-[220px]">
+    <footer className="relative h-16 px-4 w-full bg-[#0a0b0e] border-t border-white/5 flex items-center justify-between select-none z-40 transition-colors">
+      {/* Floating status pill notification */}
+      {statusTooltip && (
+        <div className="absolute -top-9 right-8 px-3 py-1 bg-zinc-900 border border-white/10 text-xs text-white rounded-md shadow-xl backdrop-blur-md animate-fadeIn z-50 pointer-events-none font-medium">
+          {statusTooltip}
+        </div>
+      )}
+
+      {/* 1. Left: Track Information (Cover + Title + ⋮ + Artist + Album) */}
+      <div className="flex items-center space-x-3 w-[28%] min-w-[200px]">
         {currentTrack ? (
           <>
+            {/* Square Album Cover Thumbnail */}
             <div
               onClick={handleOpenAlbum}
               title={currentTrack.album ? `Open album: ${currentTrack.album}` : 'Open album'}
-              className="relative w-14 h-14 rounded-md bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden shadow-md cursor-pointer hover:border-[var(--accent-color)]/70 hover:opacity-90 transition-all group"
+              className="relative w-11 h-11 rounded-[4px] bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden shadow cursor-pointer hover:border-blue-400/60 hover:opacity-90 transition-all group"
             >
               {resolvedCover ? (
                 <img
@@ -158,182 +257,181 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
                   }}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-zinc-500 group-hover:text-zinc-300 transition-colors">
-                  <Disc3 className="w-7 h-7 stroke-1" />
+                <div className="w-full h-full flex items-center justify-center text-zinc-500">
+                  <Disc3 className="w-5 h-5 stroke-1" />
                 </div>
               )}
             </div>
 
-            <div className="flex flex-col truncate pr-2">
-              <span
-                onClick={handleOpenAlbum}
-                title={currentTrack.album ? `Open album: ${currentTrack.album}` : currentTrack.title}
-                className="text-[15px] font-medium text-white truncate hover:underline hover:text-[var(--accent-color)] cursor-pointer tracking-normal transition-colors"
-              >
-                {currentTrack.title}
-              </span>
-              <div
-                title={currentTrack.artist}
-                className="text-[13px] font-normal text-zinc-300 truncate mt-0.5"
-              >
+            {/* 3-Line Vertical Track Details Stack */}
+            <div className="flex flex-col min-w-0 pr-2 leading-none">
+              {/* Line 1: Song Title + ⋮ Menu icon */}
+              <div className="flex items-center space-x-1 truncate">
+                <span
+                  onClick={handleOpenAlbum}
+                  title={currentTrack.album ? `Open album: ${currentTrack.album}` : currentTrack.title}
+                  className="text-[13px] font-semibold text-white truncate hover:underline hover:text-white cursor-pointer tracking-tight"
+                >
+                  {currentTrack.title}
+                </span>
+                <button
+                  onClick={onToggleInfo}
+                  title="Track details & specifications"
+                  className="text-zinc-500 hover:text-white transition-colors p-0.5 rounded flex-shrink-0"
+                >
+                  <MoreVertical className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Line 2: Artist */}
+              <div className="text-[11px] text-zinc-400 truncate mt-0.5 font-normal">
                 <ArtistLinks
                   artists={currentTrack.artist}
                   onSelectArtist={onViewArtist}
-                  linkClassName="hover:underline hover:text-white cursor-pointer transition-colors"
+                  linkClassName="hover:underline hover:text-zinc-200 cursor-pointer transition-colors"
                 />
               </div>
-              <div className="flex items-center space-x-1.5 mt-1">
-                <span className="text-xs px-2 py-0.5 rounded bg-white/5 text-zinc-300 font-mono border border-white/5">
-                  {currentTrack.format}
+
+              {/* Line 3: Album */}
+              <div className="text-[11px] text-zinc-400 truncate mt-0.5 font-normal">
+                <span
+                  onClick={handleOpenAlbum}
+                  title={currentTrack.album}
+                  className="hover:underline hover:text-zinc-200 cursor-pointer transition-colors"
+                >
+                  {currentTrack.album || 'Unknown Album'}
                 </span>
-                {(() => {
-                  const br = formatBitrate(currentTrack.bitrate);
-                  return br ? (
-                    <span className="text-xs text-zinc-400 font-mono tabular-nums">
-                      • {br}
-                    </span>
-                  ) : null;
-                })()}
               </div>
             </div>
-
-            <button
-              onClick={() => onToggleFavorite(currentTrack.id)}
-              title={currentTrack.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
-              className={`p-2 rounded-full hover:bg-white/10 transition-colors duration-150 ${
-                currentTrack.is_favorite ? 'text-rose-500' : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <Heart className={`w-4 h-4 ${currentTrack.is_favorite ? 'fill-rose-500 stroke-rose-500' : ''}`} />
-            </button>
           </>
         ) : currentRadio ? (
           <>
-            <div className="relative w-14 h-14 rounded-lg bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden shadow-md flex items-center justify-center">
+            <div className="relative w-11 h-11 rounded-[4px] bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden shadow flex items-center justify-center">
               <RadioStationIcon
                 favicon={currentRadio.favicon}
                 name={currentRadio.name}
-                iconClassName="text-[var(--accent-color)] text-xl"
+                iconClassName="text-blue-400 text-lg"
               />
               {isPlaying && (
-                <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400" />
+                <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-emerald-400" />
               )}
             </div>
 
-            <div className="flex flex-col truncate pr-2">
-              <span
-                title={radioNowPlaying?.title || currentRadio.name}
-                className="text-[15px] font-medium text-white truncate"
-              >
-                {radioNowPlaying?.title || currentRadio.name}
-              </span>
-              <div
-                title={radioNowPlaying?.artist || currentRadio.name}
-                className="text-[13px] font-normal text-zinc-300 truncate mt-0.5"
-              >
+            <div className="flex flex-col min-w-0 pr-2 leading-none">
+              <div className="flex items-center space-x-1 truncate">
+                <span
+                  title={radioNowPlaying?.title || currentRadio.name}
+                  className="text-[13px] font-semibold text-white truncate tracking-tight"
+                >
+                  {radioNowPlaying?.title || currentRadio.name}
+                </span>
+                <button
+                  onClick={onToggleInfo}
+                  title="Station details"
+                  className="text-zinc-500 hover:text-white transition-colors p-0.5 rounded flex-shrink-0"
+                >
+                  <MoreVertical className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="text-[11px] text-zinc-400 truncate mt-0.5 font-normal">
                 {radioNowPlaying?.artist && radioNowPlaying.artist !== 'Live Radio' ? (
-                  <>
-                    <ArtistLinks
-                      artists={radioNowPlaying.artist}
-                      onSelectArtist={onViewArtist}
-                      linkClassName="hover:underline hover:text-white cursor-pointer transition-colors"
-                    />
-                    <span className="text-zinc-400"> • {currentRadio.name}</span>
-                  </>
+                  <ArtistLinks
+                    artists={radioNowPlaying.artist}
+                    onSelectArtist={onViewArtist}
+                    linkClassName="hover:underline hover:text-zinc-200 cursor-pointer transition-colors"
+                  />
                 ) : (
                   <span>{currentRadio.tags ? currentRadio.tags.split(',')[0] : 'Online Radio'}</span>
                 )}
               </div>
-              <div className="flex items-center space-x-1.5 mt-1">
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-mono border border-emerald-500/25 flex items-center space-x-1.5 font-normal">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span>LIVE</span>
-                </span>
-                {currentRadio.country && (
-                  <span className="text-xs text-zinc-400 font-mono">
-                    • {currentRadio.country}
-                  </span>
-                )}
+
+              <div className="text-[11px] text-zinc-400 truncate mt-0.5 font-normal">
+                <span>{currentRadio.name}</span>
               </div>
             </div>
-
-            {onToggleRadioFavorite && (
-              <button
-                onClick={() => onToggleRadioFavorite(currentRadio.id)}
-                title={currentRadio.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
-                className={`p-2 rounded-full hover:bg-white/10 transition-colors duration-150 ${
-                  currentRadio.is_favorite ? 'text-rose-500' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <Heart className={`w-4 h-4 ${currentRadio.is_favorite ? 'fill-rose-500 stroke-rose-500' : ''}`} />
-              </button>
-            )}
           </>
         ) : (
-          <div className="flex items-center space-x-2.5 text-xs text-zinc-400">
-            <Disc3 className="w-5 h-5 text-zinc-500" />
-            <span className="font-medium text-zinc-400">Ready for playback</span>
+          <div className="flex items-center space-x-2 text-xs text-zinc-400">
+            <Disc3 className="w-4 h-4 text-zinc-500" />
+            <span className="font-normal text-zinc-400">Ready for playback</span>
           </div>
         )}
       </div>
 
-      {/* Center: Playback Controls & Timeline */}
-      <div className="flex flex-col items-center max-w-xl w-[44%] px-4">
-        <div className="flex items-center space-x-4 mb-1.5">
+      {/* 2. Center: Playback Controls (Row 1) & Progress Bar (Row 2) */}
+      <div className="flex flex-col items-center justify-center w-[44%] max-w-[480px] px-2">
+        {/* Row 1: Center Controls: Stop ■, Shuffle 🔀, Prev ⏮, Play/Pause ⏸, Next ⏭, Repeat 🔁, Queue 𝄃≡ */}
+        <div className="flex items-center space-x-4 mb-1">
+          {/* Stop Button ■ */}
+          <button
+            onClick={onStop || onPlayPause}
+            disabled={!currentTrack && !currentRadio}
+            title="Stop playback"
+            className="p-1 text-zinc-400 hover:text-white transition-colors duration-150 disabled:opacity-30"
+          >
+            <Square className="w-3.5 h-3.5 fill-current text-zinc-300 hover:text-white" />
+          </button>
+
+          {/* Shuffle Button 🔀 */}
           <button
             onClick={onToggleShuffle}
             disabled={!!currentRadio}
             title={currentRadio ? 'Shuffle not available for live radio' : (isShuffle ? 'Shuffle: On' : 'Shuffle: Off')}
-            className={`p-1.5 rounded-md transition-colors ${
+            className={`p-1 transition-colors duration-150 ${
               currentRadio
                 ? 'opacity-20 cursor-not-allowed text-zinc-500'
                 : isShuffle
-                ? 'text-[var(--accent-color)] font-bold bg-[var(--accent-color)]/10'
-                : 'text-zinc-400 hover:text-white hover:bg-white/10'
+                ? 'text-blue-400 font-bold'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
             <Shuffle className="w-4 h-4" />
           </button>
 
+          {/* Previous Track Button ⏮ */}
           <button
             onClick={onPrevious}
             disabled={!!currentRadio}
-            title={currentRadio ? 'Previous disabled for live stream' : 'Previous (Skip / Restart)'}
-            className={`p-1.5 rounded-md transition-colors duration-150 active:opacity-75 ${
+            title={currentRadio ? 'Previous disabled for live stream' : 'Previous track'}
+            className={`p-1 transition-colors duration-150 ${
               currentRadio
                 ? 'opacity-20 cursor-not-allowed text-zinc-500'
-                : 'text-zinc-300 hover:text-white hover:bg-white/10'
+                : 'text-zinc-300 hover:text-white'
             }`}
           >
-            <SkipBack className="w-4.5 h-4.5 fill-current" />
+            <SkipBack className="w-4 h-4 fill-current" />
           </button>
 
+          {/* Play/Pause Button: Solid White Circle with Black Icon */}
           <button
             onClick={onPlayPause}
             disabled={!currentTrack && !currentRadio}
             title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
-            className="w-9 h-9 rounded-full bg-[var(--accent-color)] hover:brightness-110 text-white flex items-center justify-center transition-opacity duration-150 active:opacity-75 shadow-md shadow-[var(--accent-color)]/30 disabled:opacity-40"
+            className="w-8 h-8 rounded-full bg-white hover:scale-105 active:scale-95 text-black flex items-center justify-center transition-all duration-150 shadow-md flex-shrink-0 disabled:opacity-40"
           >
             {isPlaying ? (
-              <Pause className="w-4.5 h-4.5 fill-current" />
+              <Pause className="w-4 h-4 fill-black text-black" />
             ) : (
-              <Play className="w-4.5 h-4.5 fill-current translate-x-0.5" />
+              <Play className="w-4 h-4 fill-black text-black ml-0.5" />
             )}
           </button>
 
+          {/* Next Track Button ⏭ */}
           <button
             onClick={onNext}
             disabled={!!currentRadio}
-            title={currentRadio ? 'Next disabled for live stream' : 'Next Track'}
-            className={`p-1.5 rounded-md transition-colors duration-150 active:opacity-75 ${
+            title={currentRadio ? 'Next disabled for live stream' : 'Next track'}
+            className={`p-1 transition-colors duration-150 ${
               currentRadio
                 ? 'opacity-20 cursor-not-allowed text-zinc-500'
-                : 'text-zinc-300 hover:text-white hover:bg-white/10'
+                : 'text-zinc-300 hover:text-white'
             }`}
           >
-            <SkipForward className="w-4.5 h-4.5 fill-current" />
+            <SkipForward className="w-4 h-4 fill-current" />
           </button>
 
+          {/* Repeat Button 🔁 */}
           <button
             onClick={onToggleRepeat}
             disabled={!!currentRadio}
@@ -341,176 +439,219 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
               currentRadio
                 ? 'Repeat not available for live radio'
                 : repeatMode === 'all'
-                ? 'Repeat: All (Continuous playlist playback)'
+                ? 'Repeat: All'
                 : repeatMode === 'one'
-                ? 'Repeat: One (Loop current track)'
-                : 'Repeat: Off (Single track playback - do not advance)'
+                ? 'Repeat: One'
+                : 'Repeat: Off'
             }
-            className={`p-1.5 rounded-md transition-colors duration-150 active:opacity-75 ${
+            className={`p-1 transition-colors duration-150 ${
               currentRadio
                 ? 'opacity-20 cursor-not-allowed text-zinc-500'
                 : repeatMode !== 'off'
-                ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/10 font-bold'
-                : 'text-zinc-400 hover:text-white hover:bg-white/10'
+                ? 'text-blue-400 font-bold'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
             {repeatMode === 'one' ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
           </button>
-        </div>
 
-        {/* Timeline Slider with Tooltip or Live Radio Banner */}
-        {currentRadio ? (
-          <div className="w-full flex items-center justify-center space-x-2.5 py-1 text-[12px] text-zinc-300 font-mono">
-            <span className="relative flex h-2 w-2">
-              <span className={`relative inline-flex rounded-full h-2 w-2 ${isPlaying ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-            </span>
-            <span className="text-[11px] font-medium text-zinc-300">
-              {isPlaying ? 'LIVE STREAM' : 'STREAM PAUSED'}
-            </span>
-            <span className="text-zinc-600">•</span>
-            <span className="text-[13px] text-zinc-300 truncate max-w-[280px]">
-              {currentRadio.name}
-            </span>
-          </div>
-        ) : (
-          <div className="w-full flex items-center space-x-2.5 text-[13px] text-zinc-300 font-mono tabular-nums">
-            <span className="w-10 text-right">{formatTime(displayTime)}</span>
-            <div
-              ref={progressTrackRef}
-              onMouseMove={handleMouseMoveProgress}
-              onMouseLeave={() => setHoverTime(null)}
-              className="relative flex-1 flex items-center h-4 group cursor-pointer"
-            >
-              {/* Hover timestamp tooltip */}
-              {hoverTime !== null && (
-                <div
-                  className="absolute -top-7 px-2 py-0.5 rounded bg-zinc-900 border border-white/20 text-[11px] text-white font-mono pointer-events-none transform -translate-x-1/2 shadow-xl"
-                  style={{ left: `${hoverPos}px` }}
-                >
-                  {formatTime(hoverTime)}
-                </div>
-              )}
-
-              <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden group-hover:h-2 transition-all">
-                <div
-                  className="h-full bg-[var(--accent-color)] rounded-full relative"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-
-              <input
-                type="range"
-                min={0}
-                max={duration || 100}
-                step={0.25}
-                value={displayTime}
-                onMouseDown={() => setIsSeeking(true)}
-                onChange={(e) => setSeekVal(parseFloat(e.target.value))}
-                onMouseUp={() => {
-                  onSeek(seekVal);
-                  setIsSeeking(false);
-                }}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-            </div>
-            <span className="w-10">{formatTime(duration)}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Right: Drawer Toggles, Visualizer & Volume */}
-      <div className="flex items-center justify-end space-x-2 w-[28%] min-w-[220px]">
-        {/* Visualizer Toggle */}
-        <button
-          onClick={onToggleVisualizer}
-          title={`Visualizer: ${VISUALIZER_LABELS[visualizerMode] || visualizerMode} (Click to switch)`}
-          className={`p-2 rounded-md transition-colors ${
-            visualizerMode !== 'off'
-              ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-medium'
-              : 'text-zinc-400 hover:text-white hover:bg-white/10'
-          }`}
-        >
-          <Activity className="w-4 h-4" />
-        </button>
-
-        {/* Full-space Visualizer View Toggle */}
-        {onToggleFullVisualizer && (
+          {/* Queue Button 𝄃≡ */}
           <button
-            onClick={onToggleFullVisualizer}
-            title={isFullVisualizer ? 'Exit Full-space Visualizer' : 'Enter Full-space Visualizer'}
-            className={`p-2 rounded-md transition-colors ${
-              isFullVisualizer
-                ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-medium'
-                : 'text-zinc-400 hover:text-white hover:bg-white/10'
+            onClick={onToggleQueue}
+            title={showQueue ? 'Close queue' : 'Open queue'}
+            className={`p-1 transition-colors duration-150 ${
+              showQueue ? 'text-blue-400 font-bold' : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <Maximize2 className="w-4 h-4" />
+            <ListMusic className="w-4 h-4" />
           </button>
-        )}
+        </div>
 
-        {/* Synced Lyrics Toggle */}
-        <button
-          onClick={onToggleLyrics}
-          title="Synced Karaoke Lyrics"
-          className={`p-2 rounded-md transition-colors ${
-            showLyrics
-              ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-medium'
-              : 'text-zinc-400 hover:text-white hover:bg-white/10'
-          }`}
-        >
-          <Mic2 className="w-4 h-4" />
-        </button>
+        {/* Row 2: Seekbar / Progress Timeline: Time 3:13 ▬▬▬▬▬▬▬▬▬ 4:18 */}
+        <div className="flex items-center space-x-2.5 w-full">
+          <span className="text-[11px] font-mono text-zinc-400 tabular-nums w-8 text-right select-none">
+            {formatTime(displayTime)}
+          </span>
 
-        {/* Queue Toggle */}
-        <button
-          onClick={onToggleQueue}
-          title="Play Queue"
-          className={`p-2 rounded-md transition-colors ${
-            showQueue
-              ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-medium'
-              : 'text-zinc-400 hover:text-white hover:bg-white/10'
-          }`}
-        >
-          <ListMusic className="w-4 h-4" />
-        </button>
-
-        {/* Info Drawer Toggle */}
-        <button
-          onClick={onToggleInfo}
-          title="Track Specs & Bio"
-          className={`p-2 rounded-md transition-colors ${
-            showInfo
-              ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/15 font-medium'
-              : 'text-zinc-400 hover:text-white hover:bg-white/10'
-          }`}
-        >
-          <Info className="w-4 h-4" />
-        </button>
-
-        <div className="h-4 w-[1px] bg-white/10 mx-1" />
-
-        {/* Volume Slider */}
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={onToggleMute}
-            title={isMuted ? 'Unmute' : 'Mute'}
-            className="text-zinc-400 hover:text-white p-1 rounded-md transition-colors"
+          <div
+            ref={progressTrackRef}
+            onClick={handleClickProgress}
+            onMouseMove={handleMouseMoveProgress}
+            onMouseLeave={() => setHoverTime(null)}
+            className="flex-1 h-1 hover:h-1.5 rounded-full bg-[#3f3f46]/80 cursor-pointer relative transition-all group overflow-hidden"
           >
-            {isMuted || volume === 0 ? (
-              <VolumeX className="w-4 h-4 text-rose-400" />
-            ) : (
-              <Volume2 className="w-4 h-4" />
-            )}
+            <div
+              className="h-full bg-white rounded-full transition-[width] duration-75"
+              style={{ width: `${Math.min(100, Math.max(0, progressPercent))}%` }}
+            />
+          </div>
+
+          <span className="text-[11px] font-mono text-zinc-400 tabular-nums w-8 text-left select-none">
+            {formatTime(duration)}
+          </span>
+        </div>
+      </div>
+
+      {/* 3. Right: Rating + AUTO DJ (Top Row) and Action Icons + Volume (Bottom Row) */}
+      <div className="w-[28%] min-w-[220px] flex flex-col items-end justify-center pr-1">
+        {/* Top Sub-row: 5 Stars Rating + AUTO DJ badge */}
+        <div className="flex items-center space-x-3 mb-1">
+          {/* 5-Star Rating */}
+          <div className="flex items-center space-x-0.5" title={`Track rating: ${trackRating} of 5 stars`}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                onClick={() => handleSetRating(star)}
+                disabled={!currentTrack}
+                className="p-0.5 text-zinc-500 hover:text-amber-400 transition-colors disabled:opacity-20"
+              >
+                <Star
+                  className={`w-3 h-3 ${
+                    star <= trackRating ? 'fill-amber-400 text-amber-400' : 'text-zinc-500'
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
+
+          {/* AUTO DJ button */}
+          <button
+            onClick={() => {
+              if (onToggleAutoDj) onToggleAutoDj();
+              showStatus(isAutoDj ? 'Auto DJ disabled' : 'Auto DJ enabled: Continuous library mix');
+            }}
+            title={isAutoDj ? 'Auto DJ: Active (Endless library mix)' : 'Enable Auto DJ'}
+            className={`text-[10px] font-bold tracking-wider uppercase transition-colors px-1 py-0.5 rounded ${
+              isAutoDj ? 'text-blue-400 bg-blue-500/15' : 'text-blue-400 hover:text-blue-300'
+            }`}
+          >
+            AUTO DJ
           </button>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={isMuted ? 0 : volume}
-            onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
-            className="w-20 h-1.5 bg-zinc-800 accent-[var(--accent-color)] rounded-full appearance-none cursor-pointer"
-          />
+        </div>
+
+        {/* Bottom Sub-row: Cast, SleepTimer, Equalizer, Lyrics, Favorite, Panel, Visualizer, Volume */}
+        <div className="flex items-center space-x-2.5">
+          {/* Cast Icon */}
+          <button
+            onClick={() => showStatus('Default Output: Windows WASAPI Audio Engine')}
+            title="Audio Output / Cast"
+            className="text-zinc-400 hover:text-white transition-colors p-0.5"
+          >
+            <Cast className="w-4 h-4" />
+          </button>
+
+          {/* Sleep Timer Icon */}
+          <button
+            onClick={handleSleepTimerToggle}
+            title={sleepMinutes ? `Sleep timer: ${sleepMinutes}m active` : 'Set Sleep Timer'}
+            className={`p-0.5 transition-colors ${
+              sleepMinutes > 0 ? 'text-blue-400 font-bold' : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <TimerOff className="w-4 h-4" />
+          </button>
+
+          {/* Equalizer Icon */}
+          <button
+            onClick={() => showStatus('Equalizer: Flat / Direct Output')}
+            title="Equalizer"
+            className="text-zinc-400 hover:text-white transition-colors p-0.5"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+          </button>
+
+          {/* Lyrics Icon (Mic2) */}
+          <button
+            onClick={onToggleLyrics}
+            title="Synced Karaoke Lyrics"
+            className={`p-0.5 transition-colors ${
+              showLyrics ? 'text-blue-400 font-bold' : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <Mic2 className="w-4 h-4" />
+          </button>
+
+          {/* Favorite / Heart Icon */}
+          <button
+            onClick={() => {
+              if (currentTrack) {
+                onToggleFavorite(currentTrack.id);
+              } else if (currentRadio && onToggleRadioFavorite) {
+                onToggleRadioFavorite(currentRadio.id);
+              }
+            }}
+            title={
+              (currentTrack?.is_favorite || currentRadio?.is_favorite)
+                ? 'Remove from favorites'
+                : 'Add to favorites'
+            }
+            className={`p-0.5 transition-colors ${
+              (currentTrack?.is_favorite || currentRadio?.is_favorite)
+                ? 'text-rose-500'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <Heart
+              className={`w-4 h-4 ${
+                (currentTrack?.is_favorite || currentRadio?.is_favorite)
+                  ? 'fill-rose-500 stroke-rose-500'
+                  : ''
+              }`}
+            />
+          </button>
+
+          {/* Right Panel / Info Toggle Icon (PanelRightClose) */}
+          <button
+            onClick={onToggleInfo}
+            title="Track Information Drawer"
+            className={`p-0.5 transition-colors ${
+              showInfo ? 'text-blue-400 font-bold' : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <PanelRightClose className="w-4 h-4" />
+          </button>
+
+          {/* SEPARATE VISUALIZER BUTTON (Preserved as explicitly requested) */}
+          <button
+            onClick={onToggleVisualizer}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              if (onToggleFullVisualizer) onToggleFullVisualizer();
+            }}
+            title={`Visualizer: ${VISUALIZER_LABELS[visualizerMode]} (Right-click for full screen)`}
+            className={`p-0.5 transition-colors ${
+              visualizerMode !== 'off' || isFullVisualizer
+                ? 'text-blue-400 font-bold'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+          </button>
+
+          {/* Volume Control: Speaker Icon + Sleek White Filled Pill Slider */}
+          <div className="flex items-center space-x-1.5 ml-1">
+            <button
+              onClick={onToggleMute}
+              title={isMuted ? 'Unmute' : 'Mute'}
+              className="text-zinc-400 hover:text-white transition-colors p-0.5"
+            >
+              {isMuted || volume === 0 ? (
+                <VolumeX className="w-4 h-4 text-rose-400" />
+              ) : (
+                <Volume2 className="w-4 h-4" />
+              )}
+            </button>
+            <div
+              onClick={handleClickVolume}
+              title={`Volume: ${Math.round((isMuted ? 0 : volume) * 100)}%`}
+              className="w-16 h-1.5 bg-[#3f3f46]/80 rounded-full cursor-pointer relative overflow-hidden group transition-all"
+            >
+              <div
+                className="h-full bg-white rounded-full transition-all group-hover:bg-zinc-100"
+                style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </footer>

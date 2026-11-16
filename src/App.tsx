@@ -1649,6 +1649,7 @@ export function App() {
         onPlayPause={handlePlayPause}
         onPrevious={handlePrevious}
         onNext={handleNext}
+        onStop={handleStop}
         onSeek={(time) => audioEngine.seek(time)}
         onVolumeChange={handleVolumeChange}
         onToggleMute={handleToggleMute}
