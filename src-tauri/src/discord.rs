@@ -4,6 +4,22 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const DEFAULT_DISCORD_APP_ID: &str = "1176718791388975124";
 
+fn url_encode(s: &str) -> String {
+    let mut encoded = String::with_capacity(s.len() * 2);
+    for b in s.bytes() {
+        match b {
+            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                encoded.push(b as char);
+            }
+            b' ' => encoded.push('+'),
+            _ => {
+                encoded.push_str(&format!("%{:02X}", b));
+            }
+        }
+    }
+    encoded
+}
+
 pub struct DiscordManager {
     client: Mutex<Option<DiscordIpcClient>>,
     enabled: Mutex<bool>,
@@ -129,11 +145,78 @@ impl DiscordManager {
                 state_str
             };
 
+            let primary_artist = artist.split(',').next().unwrap_or(artist).trim();
+            let safe_primary_artist = if primary_artist.is_empty() || primary_artist == "Unknown Artist" {
+                ""
+            } else {
+                primary_artist
+            };
+
+            let search_query = if !safe_primary_artist.is_empty() {
+                format!("{} {}", title, safe_primary_artist)
+            } else {
+                title.to_string()
+            };
+
+            // 1. Song Title Link (Last.fm track page with JioSaavn fallback)
+            let track_url = if !safe_primary_artist.is_empty() {
+                format!(
+                    "https://www.last.fm/music/{}/_/{}",
+                    url_encode(safe_primary_artist),
+                    url_encode(title)
+                )
+            } else {
+                format!(
+                    "https://www.jiosaavn.com/search/{}",
+                    url_encode(&search_query)
+                )
+            };
+
+            // 2. Artist Link (Last.fm artist page with JioSaavn fallback)
+            let artist_url = if !safe_primary_artist.is_empty() {
+                format!(
+                    "https://www.last.fm/music/{}",
+                    url_encode(safe_primary_artist)
+                )
+            } else {
+                format!(
+                    "https://www.jiosaavn.com/search/{}",
+                    url_encode(artist)
+                )
+            };
+
+            // 3. Album Link (Last.fm album page with JioSaavn fallback)
+            let album_url = if !album.is_empty() && album != "Unknown Album" && !safe_primary_artist.is_empty() {
+                format!(
+                    "https://www.last.fm/music/{}/{}",
+                    url_encode(safe_primary_artist),
+                    url_encode(album)
+                )
+            } else {
+                format!(
+                    "https://www.jiosaavn.com/search/{}",
+                    url_encode(&format!("{} album", if !album.is_empty() && album != "Unknown Album" { album } else { &search_query }))
+                )
+            };
+
+            let jiosaavn_url = format!(
+                "https://www.jiosaavn.com/search/{}",
+                url_encode(&search_query)
+            );
+
             let mut act = activity::Activity::new()
                 .name("MusicBox")
                 .activity_type(activity::ActivityType::Listening)
                 .details(&safe_title)
-                .state(&safe_state);
+                .details_url(&track_url)
+                .state(&safe_state)
+                .state_url(&artist_url);
+
+            let buttons = vec![
+                activity::Button::new("Play on Last.fm", &track_url),
+                activity::Button::new("Find on JioSaavn", &jiosaavn_url),
+            ];
+            act = act.buttons(buttons);
 
             if is_playing && duration_secs > 0.0 {
                 let start_time = now - position_secs as i64;
@@ -147,16 +230,16 @@ impl DiscordManager {
 
             if let Some(url) = cover_url {
                 if url.starts_with("http://") || url.starts_with("https://") {
-                    assets = assets.large_image(url).large_text(album);
+                    assets = assets.large_image(url).large_text(album).large_url(&album_url);
                 } else if self.is_default_app() {
-                    assets = assets.large_image("spotube-logo-foreground").large_text(album);
+                    assets = assets.large_image("spotube-logo-foreground").large_text(album).large_url(&album_url);
                 } else {
-                    assets = assets.large_image(default_icon_url).large_text(album);
+                    assets = assets.large_image(default_icon_url).large_text(album).large_url(&album_url);
                 }
             } else if self.is_default_app() {
-                assets = assets.large_image("spotube-logo-foreground").large_text(album);
+                assets = assets.large_image("spotube-logo-foreground").large_text(album).large_url(&album_url);
             } else {
-                assets = assets.large_image(default_icon_url).large_text(album);
+                assets = assets.large_image(default_icon_url).large_text(album).large_url(&album_url);
             }
 
             act = act.assets(assets);
@@ -227,11 +310,35 @@ impl DiscordManager {
                 .unwrap_or_default()
                 .as_secs() as i64;
 
+            let radio_query = match artist {
+                Some(a) if !a.trim().is_empty() && a != "Live Radio" => {
+                    format!("{} {}", song, a.trim())
+                }
+                _ => song.to_string(),
+            };
+
+            let jiosaavn_radio_url = format!(
+                "https://www.jiosaavn.com/search/{}",
+                url_encode(&radio_query)
+            );
+            let lastfm_radio_url = format!(
+                "https://www.last.fm/search?q={}",
+                url_encode(&radio_query)
+            );
+
             let mut act = activity::Activity::new()
                 .name("MusicBox")
                 .activity_type(activity::ActivityType::Listening)
                 .details(&safe_song)
-                .state(&safe_state);
+                .details_url(&jiosaavn_radio_url)
+                .state(&safe_state)
+                .state_url(&lastfm_radio_url);
+
+            let buttons = vec![
+                activity::Button::new("Find on JioSaavn", &jiosaavn_radio_url),
+                activity::Button::new("Search on Last.fm", &lastfm_radio_url),
+            ];
+            act = act.buttons(buttons);
 
             if is_playing {
                 act = act.timestamps(activity::Timestamps::new().start(now));

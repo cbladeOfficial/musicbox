@@ -57,6 +57,7 @@ interface PlayerBarProps {
   onToggleFavorite: (id: number) => void;
   onToggleRadioFavorite?: (id: number) => void;
   onViewArtist?: (artistName: string) => void;
+  onViewAlbum?: (albumName: string, artistName?: string) => void;
 }
 
 function formatTime(seconds: number): string {
@@ -110,6 +111,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   onToggleFavorite,
   onToggleRadioFavorite,
   onViewArtist,
+  onViewAlbum,
 }) => {
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekVal, setSeekVal] = useState(0);
@@ -120,6 +122,12 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   const displayTime = isSeeking ? seekVal : currentTime;
   const progressPercent = duration > 0 ? (displayTime / duration) * 100 : 0;
   const resolvedCover = getCoverUrl(currentTrack?.cover_path, streamPort, coverArtUrl);
+
+  const handleOpenAlbum = () => {
+    if (currentTrack && onViewAlbum) {
+      onViewAlbum(currentTrack.album, currentTrack.artist);
+    }
+  };
 
   const handleMouseMoveProgress = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!progressTrackRef.current || duration <= 0) return;
@@ -135,18 +143,22 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
       <div className="flex items-center space-x-3.5 w-[28%] min-w-[220px]">
         {currentTrack ? (
           <>
-            <div className="relative w-14 h-14 rounded-md bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden shadow-md">
+            <div
+              onClick={handleOpenAlbum}
+              title={currentTrack.album ? `Open album: ${currentTrack.album}` : 'Open album'}
+              className="relative w-14 h-14 rounded-md bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden shadow-md cursor-pointer hover:border-[var(--accent-color)]/70 hover:opacity-90 transition-all group"
+            >
               {resolvedCover ? (
                 <img
                   src={resolvedCover}
                   alt={currentTrack.album}
-                  className="w-full h-full object-cover transition-opacity duration-300"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   onError={(e) => {
                     (e.target as HTMLElement).style.display = 'none';
                   }}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-zinc-500">
+                <div className="w-full h-full flex items-center justify-center text-zinc-500 group-hover:text-zinc-300 transition-colors">
                   <Disc3 className="w-7 h-7 stroke-1" />
                 </div>
               )}
@@ -154,9 +166,9 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
 
             <div className="flex flex-col truncate pr-2">
               <span
-                onClick={onToggleInfo}
-                title={currentTrack.title}
-                className="text-[15px] font-medium text-white truncate hover:underline cursor-pointer tracking-normal"
+                onClick={handleOpenAlbum}
+                title={currentTrack.album ? `Open album: ${currentTrack.album}` : currentTrack.title}
+                className="text-[15px] font-medium text-white truncate hover:underline hover:text-[var(--accent-color)] cursor-pointer tracking-normal transition-colors"
               >
                 {currentTrack.title}
               </span>

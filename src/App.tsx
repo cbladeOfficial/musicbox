@@ -1204,14 +1204,27 @@ export function App() {
   };
 
   const handleNavigateToAlbum = (albumName: string, artistName?: string) => {
+    setShowLyrics(false);
+    setShowQueue(false);
+    setShowInfo(false);
+    const trimmedAlbum = albumName?.trim();
+    if (!trimmedAlbum) {
+      setSelectedAlbum(null);
+      setCurrentView('albums');
+      return;
+    }
+
     const found = albumGroups.find(
       (a) =>
-        a.name.toLowerCase() === albumName.toLowerCase() &&
+        a.name.toLowerCase() === trimmedAlbum.toLowerCase() &&
         (!artistName || a.artist.toLowerCase() === artistName.toLowerCase())
-    ) || albumGroups.find((a) => a.name.toLowerCase() === albumName.toLowerCase());
+    ) || albumGroups.find((a) => a.name.toLowerCase() === trimmedAlbum.toLowerCase());
 
     if (found) {
       setSelectedAlbum(found);
+      setCurrentView('albums');
+    } else {
+      setSelectedAlbum(null);
       setCurrentView('albums');
     }
   };
@@ -1690,6 +1703,7 @@ export function App() {
         onToggleRadioFavorite={handleToggleRadioFavorite}
         coverArtUrl={resolvedCoverArt}
         onViewArtist={handleNavigateToArtist}
+        onViewAlbum={handleNavigateToAlbum}
       />
 
       {/* Non-blocking Toast Alerts */}
