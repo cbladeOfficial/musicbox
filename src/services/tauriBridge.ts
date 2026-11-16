@@ -266,4 +266,9 @@ export const TauriBridge = {
       clientId: params.clientId || null,
     });
   },
+
+  async updateTaskbarPlaybackState(isPlaying: boolean): Promise<void> {
+    if (!isTauri()) return;
+    return safeInvoke<void>('update_taskbar_playback_state', { isPlaying });
+  },
 };

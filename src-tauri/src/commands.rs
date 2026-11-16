@@ -233,6 +233,11 @@ pub fn is_app_maximized(window: Window) -> Result<bool, String> {
 }
 
 #[tauri::command]
+pub fn update_taskbar_playback_state(is_playing: bool) {
+    crate::taskbar::win::update_playback_state(is_playing);
+}
+
+#[tauri::command]
 pub fn get_radio_stations(state: State<'_, AppState>) -> Result<Vec<RadioStation>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     db::get_radio_stations(&db).map_err(|e| e.to_string())

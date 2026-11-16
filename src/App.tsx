@@ -30,6 +30,12 @@ import { audioEngine } from './services/audioEngine';
 import { lastFmScrobbler } from './services/lastfmScrobbler';
 import { MetadataService } from './services/metadataService';
 import { getCoverUrl } from './utils/cover';
+import {
+  updateMediaSessionMetadata,
+  updateMediaSessionPlaybackState,
+  updateMediaSessionPosition,
+  setupMediaSessionActions,
+} from './services/mediaSession';
 
 const DEFAULT_SETTINGS: AppSettings = {
   defaultStartingPage: 'home',
@@ -559,6 +565,7 @@ export function App() {
     audioEngine.onTimeUpdate = (curr, dur) => {
       setCurrentTime(curr);
       if (dur > 0) setDuration(dur);
+      updateMediaSessionPosition(curr, dur);
 
       if (settings.lastfmEnabled) {
         lastFmScrobbler.checkScrobbleEligibility(curr, settings.lastfmApiKey, settings.lastfmSecret);
@@ -707,7 +714,7 @@ export function App() {
     }
   };
 
-  const handlePlayPause = () => {
+  const handlePlayPause = useCallback(() => {
     if (currentRadio) {
       if (isPlaying) {
         audioEngine.pause();
@@ -748,7 +755,107 @@ export function App() {
     } else {
       audioEngine.resume();
     }
-  };
+  }, [currentRadio, isPlaying, settings, radioNowPlaying, currentTrack, tracks, handlePlayTrack]);
+
+  const handleStop = useCallback(() => {
+    audioEngine.pause();
+    audioEngine.seek(0);
+    setIsPlaying(false);
+    setCurrentTime(0);
+    if (settings.discordRpcEnabled) {
+      TauriBridge.clearDiscordPresence().catch(() => {});
+    }
+  }, [settings.discordRpcEnabled]);
+
+  // Sync playback state with Windows SMTC & Taskbar thumbnail toolbar
+  useEffect(() => {
+    updateMediaSessionPlaybackState(isPlaying);
+    TauriBridge.updateTaskbarPlaybackState(isPlaying).catch(() => {});
+  }, [isPlaying]);
+
+  // Sync MediaSession metadata (Title, Artist, Album, Artwork) for Windows Action Center
+  useEffect(() => {
+    if (currentRadio) {
+      updateMediaSessionMetadata({
+        title: radioNowPlaying?.title || currentRadio.name,
+        artist: radioNowPlaying?.artist || 'Live Radio',
+        album: currentRadio.name,
+        artworkUrl: currentRadio.favicon || undefined,
+      });
+    } else if (currentTrack) {
+      const coverUrl = getCoverUrl(currentTrack.cover_path, streamPort, resolvedCoverArt);
+      updateMediaSessionMetadata({
+        title: currentTrack.title,
+        artist: currentTrack.artist,
+        album: currentTrack.album,
+        artworkUrl: coverUrl,
+      });
+    }
+  }, [currentTrack, currentRadio, radioNowPlaying, resolvedCoverArt, streamPort]);
+
+  // Register MediaSession action handlers (Windows Action Center & keyboard media keys)
+  useEffect(() => {
+    const cleanup = setupMediaSessionActions({
+      onPlay: () => handlePlayPause(),
+      onPause: () => handlePlayPause(),
+      onPrevious: () => handlePrevious(),
+      onNext: () => handleNext(),
+      onStop: () => handleStop(),
+      onSeek: (time) => audioEngine.seek(time),
+    });
+    return cleanup;
+  }, [handlePlayPause, handlePrevious, handleNext, handleStop]);
+
+  // Listen to Win32 Taskbar thumbnail toolbar events (VLC-style buttons on taskbar hover preview)
+  useEffect(() => {
+    if (!isTauri()) return;
+
+    let unlistenToggle: (() => void) | undefined;
+    let unlistenPrev: (() => void) | undefined;
+    let unlistenNext: (() => void) | undefined;
+    let unlistenStop: (() => void) | undefined;
+    let isMounted = true;
+
+    import('@tauri-apps/api/event').then(({ listen }) => {
+      if (!isMounted) return;
+
+      listen('media-toggle-play', () => {
+        handlePlayPause();
+      }).then((un) => {
+        if (isMounted) unlistenToggle = un;
+        else un();
+      });
+
+      listen('media-previous', () => {
+        handlePrevious();
+      }).then((un) => {
+        if (isMounted) unlistenPrev = un;
+        else un();
+      });
+
+      listen('media-next', () => {
+        handleNext();
+      }).then((un) => {
+        if (isMounted) unlistenNext = un;
+        else un();
+      });
+
+      listen('media-stop', () => {
+        handleStop();
+      }).then((un) => {
+        if (isMounted) unlistenStop = un;
+        else un();
+      });
+    });
+
+    return () => {
+      isMounted = false;
+      unlistenToggle?.();
+      unlistenPrev?.();
+      unlistenNext?.();
+      unlistenStop?.();
+    };
+  }, [handlePlayPause, handlePrevious, handleNext, handleStop]);
 
   const handleToggleFavorite = async (trackId: number) => {
     const isFav = await TauriBridge.toggleFavorite(trackId);

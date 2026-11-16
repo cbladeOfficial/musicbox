@@ -4,6 +4,7 @@ mod discord;
 mod radio;
 mod scanner;
 mod server;
+mod taskbar;
 
 use commands::*;
 use discord::DiscordManager;
@@ -13,6 +14,9 @@ use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(windows)]
+    taskbar::win::set_app_user_model_id();
+
     let _port = server::start_stream_server();
 
     tauri::Builder::default()
@@ -47,6 +51,13 @@ pub fn run() {
                 let _ = window.center();
                 if start_maximized {
                     let _ = window.maximize();
+                }
+
+                #[cfg(windows)]
+                {
+                    if let Ok(hwnd) = window.hwnd() {
+                        taskbar::win::init_taskbar(&app.handle(), hwnd);
+                    }
                 }
             }
 
@@ -91,6 +102,7 @@ pub fn run() {
             toggle_radio_favorite,
             fetch_radio_metadata,
             update_radio_presence,
+            update_taskbar_playback_state,
         ])
         .run(tauri::generate_context!())
         .expect("error while building tauri application");
