@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { TrackRecord, PlaylistRecord, TableDensity, TrackSortField } from '../types/music';
 import { getCoverUrl } from '../utils/cover';
+import { ArtistLinks } from './ArtistLinks';
 
 interface TrackTableProps {
   tracks: TrackRecord[];
@@ -334,7 +335,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                       {track.title}
                     </span>
                     <span className="text-xs text-zinc-400 md:hidden truncate" title={track.artist}>
-                      {track.artist}
+                      <ArtistLinks artists={track.artist} onSelectArtist={onViewArtist} />
                     </span>
                   </div>
 
@@ -345,16 +346,10 @@ export const TrackTable: React.FC<TrackTableProps> = ({
 
                 {/* Artist */}
                 <div
-                  onClick={(e) => {
-                    if (onViewArtist) {
-                      e.stopPropagation();
-                      onViewArtist(track.artist);
-                    }
-                  }}
                   title={track.artist}
-                  className="w-48 hidden md:block text-zinc-300 truncate pr-2 hover:underline hover:text-white text-[13px] font-normal transition-colors"
+                  className="w-48 hidden md:block text-zinc-300 truncate pr-2 text-[13px] font-normal transition-colors"
                 >
-                  {track.artist}
+                  <ArtistLinks artists={track.artist} onSelectArtist={onViewArtist} />
                 </div>
 
                 {/* Album */}
@@ -465,18 +460,26 @@ export const TrackTable: React.FC<TrackTableProps> = ({
             </button>
           )}
 
-          {onViewArtist && (
-            <button
-              onClick={() => {
-                onViewArtist(contextMenu.track.artist);
-                setContextMenu(null);
-              }}
-              className="w-full flex items-center space-x-2.5 px-3.5 py-2 hover:bg-white/10 hover:text-white text-left font-medium transition-colors"
-            >
-              <Mic2 className="w-4 h-4 text-zinc-400" />
-              <span>Go to Artist</span>
-            </button>
-          )}
+          {onViewArtist && (() => {
+            const artists = (contextMenu.track.artist || 'Unknown Artist')
+              .split(',')
+              .map((a) => a.trim())
+              .filter(Boolean);
+            const list = artists.length > 0 ? artists : ['Unknown Artist'];
+            return list.map((art) => (
+              <button
+                key={art}
+                onClick={() => {
+                  onViewArtist(art);
+                  setContextMenu(null);
+                }}
+                className="w-full flex items-center space-x-2.5 px-3.5 py-2 hover:bg-white/10 hover:text-white text-left font-medium transition-colors"
+              >
+                <Mic2 className="w-4 h-4 text-zinc-400" />
+                <span className="truncate">Go to Artist: {art}</span>
+              </button>
+            ));
+          })()}
 
           {onEditTrackMetadata && (
             <button

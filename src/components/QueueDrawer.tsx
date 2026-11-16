@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Trash2, ListMusic, Play } from 'lucide-react';
 import { TrackRecord } from '../types/music';
+import { ArtistLinks } from './ArtistLinks';
 
 interface QueueDrawerProps {
   queue: TrackRecord[];
@@ -10,6 +11,7 @@ interface QueueDrawerProps {
   onPlayFromQueue: (index: number) => void;
   onRemoveFromQueue: (index: number) => void;
   onClearQueue: () => void;
+  onViewArtist?: (artistName: string) => void;
 }
 
 export const QueueDrawer: React.FC<QueueDrawerProps> = ({
@@ -20,6 +22,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
   onPlayFromQueue,
   onRemoveFromQueue,
   onClearQueue,
+  onViewArtist,
 }) => {
   if (!isOpen) return null;
 
@@ -67,7 +70,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
                   {currentTrack.title}
                 </div>
                 <div title={currentTrack.artist} className="text-[13px] text-zinc-300 font-normal truncate mt-0.5">
-                  {currentTrack.artist}
+                  <ArtistLinks artists={currentTrack.artist} onSelectArtist={onViewArtist} />
                 </div>
               </div>
             </div>
@@ -102,7 +105,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
                         {track.title}
                       </div>
                       <div title={track.artist} className="text-xs text-zinc-400 truncate">
-                        {track.artist}
+                        <ArtistLinks artists={track.artist} onSelectArtist={onViewArtist} />
                       </div>
                     </div>
                   </button>

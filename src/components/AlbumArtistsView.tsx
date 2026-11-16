@@ -21,21 +21,26 @@ export const AlbumArtistsView: React.FC<AlbumArtistsViewProps> = ({
     const map = new Map<string, { name: string; tracks: TrackRecord[]; albumSet: Set<string>; sampleTrack: TrackRecord }>();
 
     tracks.forEach((t) => {
-      const art = (t.album_artist || t.artist || 'Unknown Artist').trim();
-      if (!map.has(art)) {
-        map.set(art, {
-          name: art,
-          tracks: [],
-          albumSet: new Set<string>(),
-          sampleTrack: t,
-        });
-      }
-      const entry = map.get(art)!;
-      entry.tracks.push(t);
-      if (t.album) entry.albumSet.add(t.album);
-      if (!entry.sampleTrack.cover_path && t.cover_path) {
-        entry.sampleTrack = t;
-      }
+      const raw = t.album_artist || t.artist || 'Unknown Artist';
+      const names = raw.split(',').map((s) => s.trim()).filter(Boolean);
+      const uniqueNames = names.length > 0 ? Array.from(new Set(names)) : ['Unknown Artist'];
+
+      uniqueNames.forEach((art) => {
+        if (!map.has(art)) {
+          map.set(art, {
+            name: art,
+            tracks: [],
+            albumSet: new Set<string>(),
+            sampleTrack: t,
+          });
+        }
+        const entry = map.get(art)!;
+        entry.tracks.push(t);
+        if (t.album) entry.albumSet.add(t.album);
+        if (!entry.sampleTrack.cover_path && t.cover_path) {
+          entry.sampleTrack = t;
+        }
+      });
     });
 
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));

@@ -3,6 +3,7 @@ import { X, Disc3, Info, Sparkles, Folder, Calendar, Cpu, Tag } from 'lucide-rea
 import { TrackRecord, ArtistInfo, AlbumInfo } from '../types/music';
 import { MetadataService } from '../services/metadataService';
 import { getCoverUrl, formatBitrate } from '../utils/cover';
+import { ArtistLinks } from './ArtistLinks';
 
 interface TrackInfoDrawerProps {
   currentTrack: TrackRecord | null;
@@ -11,6 +12,7 @@ interface TrackInfoDrawerProps {
   lastfmApiKey: string;
   coverArtUrl?: string;
   streamPort: number;
+  onViewArtist?: (artistName: string) => void;
 }
 
 export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
@@ -20,6 +22,7 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
   lastfmApiKey,
   coverArtUrl,
   streamPort,
+  onViewArtist,
 }) => {
   const [artistInfo, setArtistInfo] = useState<ArtistInfo | null>(null);
   const [albumInfo, setAlbumInfo] = useState<AlbumInfo | null>(null);
@@ -82,7 +85,9 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
             )}
           </div>
           <h2 className="text-base font-semibold text-white">{currentTrack.title}</h2>
-          <span className="text-sm font-medium text-zinc-300 mt-0.5">{currentTrack.artist}</span>
+          <span className="text-sm font-medium text-zinc-300 mt-0.5">
+            <ArtistLinks artists={currentTrack.artist} onSelectArtist={onViewArtist} />
+          </span>
           <span className="text-xs text-zinc-400 mt-0.5">{currentTrack.album}</span>
         </div>
 

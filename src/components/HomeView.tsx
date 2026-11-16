@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { TrackRecord } from '../types/music';
 import { getCoverUrl } from '../utils/cover';
+import { ArtistLinks } from './ArtistLinks';
 
 interface HomeViewProps {
   tracks: TrackRecord[];
@@ -200,7 +201,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 {/* Track Details */}
                 <div className="flex-1 px-3 min-w-0">
                   <div className="text-sm font-semibold text-white truncate">{track.title}</div>
-                  <div className="text-xs text-zinc-400 truncate">{track.artist}</div>
+                  <div className="text-xs text-zinc-400 truncate">
+                    <ArtistLinks artists={track.artist} onSelectArtist={onSelectArtist} />
+                  </div>
                 </div>
 
                 {/* Hover Play Button */}
@@ -333,7 +336,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       {track.title}
                     </div>
                     <div className="text-[11px] text-zinc-400 truncate mt-0.5" title={track.artist}>
-                      {track.artist}
+                      <ArtistLinks artists={track.artist} onSelectArtist={onSelectArtist} />
                     </div>
                     <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
                       {track.play_count} play{track.play_count === 1 ? '' : 's'}
@@ -393,7 +396,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       {track.title}
                     </div>
                     <div className="text-[11px] text-zinc-400 truncate mt-0.5" title={track.artist}>
-                      {track.artist}
+                      <ArtistLinks artists={track.artist} onSelectArtist={onSelectArtist} />
                     </div>
                   </div>
                 </div>

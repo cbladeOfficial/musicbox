@@ -982,25 +982,30 @@ export function App() {
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [tracks]);
 
-  // Group tracks into Artists
+  // Group tracks into Artists (properly indexing each individual artist when tracks feature multiple artists)
   const artistGroups = useMemo(() => {
     const map = new Map<string, ArtistGroup>();
     for (const t of tracks) {
-      const artistName = t.artist || 'Unknown Artist';
-      if (!map.has(artistName)) {
-        map.set(artistName, {
-          name: artistName,
-          trackCount: 0,
-          albumCount: 0,
-          tracks: [],
-        });
+      const raw = t.artist ? t.artist.split(',') : ['Unknown Artist'];
+      const artistNames = raw.map((a) => a.trim()).filter(Boolean);
+      const uniqueNames = artistNames.length > 0 ? Array.from(new Set(artistNames)) : ['Unknown Artist'];
+
+      for (const artistName of uniqueNames) {
+        if (!map.has(artistName)) {
+          map.set(artistName, {
+            name: artistName,
+            trackCount: 0,
+            albumCount: 0,
+            tracks: [],
+          });
+        }
+        const item = map.get(artistName)!;
+        item.trackCount += 1;
+        item.tracks.push(t);
       }
-      const item = map.get(artistName)!;
-      item.trackCount += 1;
-      item.tracks.push(t);
     }
     return Array.from(map.values()).map((a) => {
-      const albums = new Set(a.tracks.map((t) => t.album));
+      const albums = new Set(a.tracks.map((t) => t.album).filter(Boolean));
       return { ...a, albumCount: albums.size };
     }).sort((a, b) => a.name.localeCompare(b.name));
   }, [tracks]);
@@ -1212,12 +1217,37 @@ export function App() {
   };
 
   const handleNavigateToArtist = (artistName: string) => {
-    const found = artistGroups.find(
-      (a) => a.name.toLowerCase() === artistName.toLowerCase()
+    const trimmed = artistName.trim();
+    if (!trimmed) return;
+
+    let found = artistGroups.find(
+      (a) => a.name.toLowerCase() === trimmed.toLowerCase()
     );
+
+    if (!found) {
+      const q = trimmed.toLowerCase();
+      const matchingTracks = tracks.filter((t) => {
+        const artists = (t.artist || '').split(',').map((s) => s.trim().toLowerCase());
+        const albumArtists = (t.album_artist || '').split(',').map((s) => s.trim().toLowerCase());
+        return artists.includes(q) || albumArtists.includes(q) || (t.artist && t.artist.toLowerCase().includes(q));
+      });
+
+      if (matchingTracks.length > 0) {
+        const albums = new Set(matchingTracks.map((t) => t.album).filter(Boolean));
+        found = {
+          name: trimmed,
+          trackCount: matchingTracks.length,
+          albumCount: albums.size,
+          tracks: matchingTracks,
+        };
+      }
+    }
+
     if (found) {
       setSelectedArtist(found);
-      setCurrentView('artists');
+      setCurrentView('album_artists');
+      setNavHistory((prev) => [...prev.slice(0, navHistoryIndex + 1), 'album_artists']);
+      setNavHistoryIndex((prev) => prev + 1);
     }
   };
 
@@ -1302,17 +1332,33 @@ export function App() {
               }}
             />
           ) : currentView === 'album_artists' ? (
-            <AlbumArtistsView
-              tracks={tracks}
-              onSelectArtist={(artName) => handleNavigateToArtist(artName)}
-              onPlayTracks={(artTracks) => {
-                if (artTracks.length > 0) {
-                  setQueue(artTracks);
-                  handlePlayTrack(artTracks[0]);
-                }
-              }}
-              streamPort={streamPort}
-            />
+            selectedArtist ? (
+              <ArtistView
+                artists={artistGroups}
+                selectedArtist={selectedArtist}
+                onSelectArtist={(art) => setSelectedArtist(art)}
+                onBackToArtists={() => setSelectedArtist(null)}
+                onPlayTrack={handlePlayTrack}
+                onPlayArtist={handlePlayArtist}
+                currentTrackId={currentTrack?.id}
+                lastfmApiKey={settings.lastfmApiKey || ''}
+                streamPort={streamPort}
+                onViewAlbum={handleNavigateToAlbum}
+                backLabel="Back to Album Artists"
+              />
+            ) : (
+              <AlbumArtistsView
+                tracks={tracks}
+                onSelectArtist={(artName) => handleNavigateToArtist(artName)}
+                onPlayTracks={(artTracks) => {
+                  if (artTracks.length > 0) {
+                    setQueue(artTracks);
+                    handlePlayTrack(artTracks[0]);
+                  }
+                }}
+                streamPort={streamPort}
+              />
+            )
           ) : currentView === 'visualizer' ? (
             <FullVisualizerView
               currentTrack={currentTrack}
@@ -1488,6 +1534,7 @@ export function App() {
                 onPlayAlbum={handlePlayAlbum}
                 currentTrackId={currentTrack?.id}
                 lastfmApiKey={settings.lastfmApiKey}
+                onViewArtist={handleNavigateToArtist}
               />
             ) : (
               <AlbumGrid
@@ -1538,6 +1585,7 @@ export function App() {
           lastfmApiKey={settings.lastfmApiKey}
           coverArtUrl={resolvedCoverArt}
           streamPort={streamPort}
+          onViewArtist={handleNavigateToArtist}
         />
 
         {/* Right Queue Drawer */}
@@ -1553,6 +1601,7 @@ export function App() {
           }}
           onRemoveFromQueue={(idx) => setQueue((prev) => prev.filter((_, i) => i !== idx))}
           onClearQueue={() => setQueue([])}
+          onViewArtist={handleNavigateToArtist}
         />
       </div>
 
@@ -1640,6 +1689,7 @@ export function App() {
         onToggleFavorite={handleToggleFavorite}
         onToggleRadioFavorite={handleToggleRadioFavorite}
         coverArtUrl={resolvedCoverArt}
+        onViewArtist={handleNavigateToArtist}
       />
 
       {/* Non-blocking Toast Alerts */}

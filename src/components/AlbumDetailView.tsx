@@ -4,6 +4,7 @@ import { AlbumItem } from './AlbumGrid';
 import { TrackRecord, AlbumInfo } from '../types/music';
 import { MetadataService } from '../services/metadataService';
 import { getCoverUrl } from '../utils/cover';
+import { ArtistLinks } from './ArtistLinks';
 
 interface AlbumDetailViewProps {
   album: AlbumItem;
@@ -13,6 +14,7 @@ interface AlbumDetailViewProps {
   onPlayAlbum: (album: AlbumItem, shuffle?: boolean) => void;
   currentTrackId?: number;
   lastfmApiKey: string;
+  onViewArtist?: (artistName: string) => void;
 }
 
 export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
@@ -23,6 +25,7 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
   onPlayAlbum,
   currentTrackId,
   lastfmApiKey,
+  onViewArtist,
 }) => {
   const [albumInfo, setAlbumInfo] = useState<AlbumInfo | null>(null);
   const [loading, setLoading] = useState(false);
@@ -77,7 +80,7 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
             {album.name}
           </h1>
           <div className="text-base font-medium text-zinc-200">
-            {album.artist}
+            <ArtistLinks artists={album.artist} onSelectArtist={onViewArtist} />
           </div>
           <div className="flex items-center space-x-2 text-xs text-zinc-400 font-mono tabular-nums">
             {album.year ? <span>{album.year}</span> : null}

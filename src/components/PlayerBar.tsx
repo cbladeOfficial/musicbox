@@ -21,6 +21,7 @@ import {
 import { TrackRecord, RadioStation, RadioMetadata, VisualizerMode } from '../types/music';
 import { getCoverUrl, formatBitrate } from '../utils/cover';
 import { RadioStationIcon } from './RadioStationIcon';
+import { ArtistLinks } from './ArtistLinks';
 
 interface PlayerBarProps {
   currentTrack: TrackRecord | null;
@@ -55,6 +56,7 @@ interface PlayerBarProps {
   onToggleInfo: () => void;
   onToggleFavorite: (id: number) => void;
   onToggleRadioFavorite?: (id: number) => void;
+  onViewArtist?: (artistName: string) => void;
 }
 
 function formatTime(seconds: number): string {
@@ -107,6 +109,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   onToggleInfo,
   onToggleFavorite,
   onToggleRadioFavorite,
+  onViewArtist,
 }) => {
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekVal, setSeekVal] = useState(0);
@@ -157,13 +160,16 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
               >
                 {currentTrack.title}
               </span>
-              <span
-                onClick={onToggleInfo}
+              <div
                 title={currentTrack.artist}
-                className="text-[13px] font-normal text-zinc-300 truncate hover:text-white cursor-pointer mt-0.5"
+                className="text-[13px] font-normal text-zinc-300 truncate mt-0.5"
               >
-                {currentTrack.artist}
-              </span>
+                <ArtistLinks
+                  artists={currentTrack.artist}
+                  onSelectArtist={onViewArtist}
+                  linkClassName="hover:underline hover:text-white cursor-pointer transition-colors"
+                />
+              </div>
               <div className="flex items-center space-x-1.5 mt-1">
                 <span className="text-xs px-2 py-0.5 rounded bg-white/5 text-zinc-300 font-mono border border-white/5">
                   {currentTrack.format}
@@ -209,14 +215,23 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
               >
                 {radioNowPlaying?.title || currentRadio.name}
               </span>
-              <span
+              <div
                 title={radioNowPlaying?.artist || currentRadio.name}
                 className="text-[13px] font-normal text-zinc-300 truncate mt-0.5"
               >
-                {radioNowPlaying?.artist && radioNowPlaying.artist !== 'Live Radio'
-                  ? `${radioNowPlaying.artist} • ${currentRadio.name}`
-                  : (currentRadio.tags ? currentRadio.tags.split(',')[0] : 'Online Radio')}
-              </span>
+                {radioNowPlaying?.artist && radioNowPlaying.artist !== 'Live Radio' ? (
+                  <>
+                    <ArtistLinks
+                      artists={radioNowPlaying.artist}
+                      onSelectArtist={onViewArtist}
+                      linkClassName="hover:underline hover:text-white cursor-pointer transition-colors"
+                    />
+                    <span className="text-zinc-400"> • {currentRadio.name}</span>
+                  </>
+                ) : (
+                  <span>{currentRadio.tags ? currentRadio.tags.split(',')[0] : 'Online Radio'}</span>
+                )}
+              </div>
               <div className="flex items-center space-x-1.5 mt-1">
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-mono border border-emerald-500/25 flex items-center space-x-1.5 font-normal">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />

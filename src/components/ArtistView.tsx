@@ -32,6 +32,7 @@ interface ArtistViewProps {
   lastfmApiKey: string;
   streamPort?: number;
   onViewAlbum?: (albumName: string, artistName: string) => void;
+  backLabel?: string;
 }
 
 // 1. Grid Card for each Artist with Picture from Deezer/Wikipedia/Last.fm
@@ -103,6 +104,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({
   lastfmApiKey,
   streamPort = 45321,
   onViewAlbum,
+  backLabel,
 }) => {
   const [artistBio, setArtistBio] = useState<ArtistInfo | null>(null);
   const [loadingBio, setLoadingBio] = useState(false);
@@ -207,7 +209,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({
           className="text-sm text-zinc-400 hover:text-white flex items-center space-x-2 transition-colors duration-150"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Artists</span>
+          <span>{backLabel || 'Back to Artists'}</span>
         </button>
 
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
