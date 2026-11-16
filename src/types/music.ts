@@ -113,6 +113,7 @@ export type ArtSource = 'itunes' | 'lastfm' | 'jiosaavn';
 export type TrackSortField = 'title' | 'artist' | 'album' | 'duration' | 'date_added' | 'track_number';
 
 export interface AppSettings {
+  defaultStartingPage?: ViewMode;
   musicFolders: string[];
   theme: ThemeId;
   fontFamily: string;

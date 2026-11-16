@@ -32,6 +32,7 @@ import { MetadataService } from './services/metadataService';
 import { getCoverUrl } from './utils/cover';
 
 const DEFAULT_SETTINGS: AppSettings = {
+  defaultStartingPage: 'home',
   musicFolders: [],
   theme: 'feishin',
   fontFamily: 'Inter',
@@ -95,6 +96,7 @@ export function App() {
     isDanger?: boolean;
   } | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [isTotallyFullscreen, setIsTotallyFullscreen] = useState(false);
 
   const showToast = useCallback((text: string, type: 'success' | 'info' = 'success') => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -270,6 +272,15 @@ export function App() {
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
+          if (parsed.defaultStartingPage) {
+            setCurrentView(parsed.defaultStartingPage);
+            setNavHistory([parsed.defaultStartingPage]);
+            setNavHistoryIndex(0);
+          }
+          if (parsed.discordClientId === '1306646875971485777') {
+            parsed.discordClientId = DEFAULT_SETTINGS.discordClientId;
+            TauriBridge.setDiscordClientId(DEFAULT_SETTINGS.discordClientId).catch(() => {});
+          }
           setSettings((prev) => ({ ...prev, ...parsed }));
           if (isTauri()) {
             if (parsed.startMaximized === false) {
@@ -340,6 +351,32 @@ export function App() {
       TauriBridge.setDiscordClientId(newPartial.discordClientId).catch(() => {});
     }
   };
+
+  const handleToggleTotallyFullscreen = useCallback(() => {
+    setIsTotallyFullscreen((prev) => {
+      const next = !prev;
+      if (next) {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } else {
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      if (!document.fullscreenElement && isTotallyFullscreen) {
+        setIsTotallyFullscreen(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, [isTotallyFullscreen]);
 
   // Stop active radio stream polling
   const stopRadioPolling = useCallback(() => {
@@ -1080,20 +1117,22 @@ export function App() {
       {/* 2. Main Center Body */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar */}
-        <Sidebar
-          currentView={currentView}
-          onSelectView={navigateToView}
-          playlists={playlists}
-          selectedPlaylistId={selectedPlaylistId}
-          onSelectPlaylist={handleSelectPlaylist}
-          onOpenCreatePlaylist={handleOpenCreatePlaylist}
-          onRequestDeletePlaylist={handleRequestDeletePlaylist}
-          onOpenFolderPicker={handleScanFolder}
-          totalTracksCount={tracks.length}
-          radioStationsCount={radioStations.length}
-          isRadioPlaying={currentRadio !== null && isPlaying}
-          isScanning={isScanning}
-        />
+        {currentView !== 'visualizer' && (
+          <Sidebar
+            currentView={currentView}
+            onSelectView={navigateToView}
+            playlists={playlists}
+            selectedPlaylistId={selectedPlaylistId}
+            onSelectPlaylist={handleSelectPlaylist}
+            onOpenCreatePlaylist={handleOpenCreatePlaylist}
+            onRequestDeletePlaylist={handleRequestDeletePlaylist}
+            onOpenFolderPicker={handleScanFolder}
+            totalTracksCount={tracks.length}
+            radioStationsCount={radioStations.length}
+            isRadioPlaying={currentRadio !== null && isPlaying}
+            isScanning={isScanning}
+          />
+        )}
 
         {/* Center Content Views */}
         <main className="flex-1 flex flex-col overflow-hidden bg-[var(--bg-color)]">
@@ -1159,10 +1198,27 @@ export function App() {
               }
               visualizerMode={settings.visualizerMode}
               onChangeVisualizerMode={(m) => handleUpdateSettings({ visualizerMode: m })}
-              onClose={() => handleNavigateBack()}
+              onClose={() => {
+                if (isTotallyFullscreen) {
+                  if (document.fullscreenElement) {
+                    document.exitFullscreen().catch(() => {});
+                  }
+                  setIsTotallyFullscreen(false);
+                }
+                handleNavigateBack();
+              }}
               onTogglePlay={handlePlayPause}
+              onPrevious={handlePrevious}
+              onNext={handleNext}
+              onSeek={(sec) => audioEngine.seek(sec)}
+              volume={volume}
+              onVolumeChange={handleVolumeChange}
+              isMuted={isMuted}
+              onToggleMute={handleToggleMute}
               currentTime={currentTime}
               duration={duration}
+              isTotallyFullscreen={isTotallyFullscreen}
+              onToggleTotallyFullscreen={handleToggleTotallyFullscreen}
             />
           ) : currentView === 'tracks' || currentView === 'favorites' || currentView === 'playlist' ? (
             <div className="flex-1 flex flex-col h-full overflow-hidden">

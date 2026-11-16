@@ -16,8 +16,9 @@ import {
   HardDrive,
   Sparkles,
   ArrowUpDown,
+  LayoutTemplate,
 } from 'lucide-react';
-import { AppSettings, ArtSource, ThemeId, VisualizerMode, TableDensity, TrackSortField } from '../types/music';
+import { AppSettings, ArtSource, ThemeId, VisualizerMode, TableDensity, TrackSortField, ViewMode } from '../types/music';
 import { TauriBridge } from '../services/tauriBridge';
 
 interface SettingsViewProps {
@@ -448,6 +449,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <FolderOpen className="w-4 h-4" />
                     <span>{isScanning ? 'Scanning in progress...' : 'Scan Music Folder'}</span>
                   </button>
+                </div>
+              </div>
+
+              <div className="border-t border-[var(--border-color)] pt-6 space-y-3">
+                <div className="flex items-center space-x-2">
+                  <LayoutTemplate className="w-4 h-4 text-[var(--accent-color)]" />
+                  <h2 className="text-base font-medium text-white">Default Starting Sidebar Page</h2>
+                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Choose which sidebar view opens automatically when MusicBox starts up.
+                </p>
+                <div className="max-w-xs pt-1">
+                  <select
+                    value={settings.defaultStartingPage || 'home'}
+                    onChange={(e) => onUpdateSettings({ defaultStartingPage: e.target.value as ViewMode })}
+                    className="w-full bg-[var(--surface-color)] border border-[var(--border-color)] rounded-md px-3 py-2 text-sm text-white outline-none focus:border-[var(--accent-color)] cursor-pointer"
+                  >
+                    <option value="home">Home (Default)</option>
+                    <option value="tracks">Tracks</option>
+                    <option value="albums">Albums</option>
+                    <option value="artists">Artists</option>
+                    <option value="album_artists">Album Artists</option>
+                    <option value="genres">Genres</option>
+                    <option value="folders">Folders</option>
+                    <option value="radio">Radio Stations</option>
+                    <option value="favorites">Favorites</option>
+                  </select>
                 </div>
               </div>
 

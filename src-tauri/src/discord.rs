@@ -29,7 +29,7 @@ impl DiscordManager {
 
     pub fn set_client_id(&self, app_id: &str) {
         let trimmed = app_id.trim();
-        let target_id = if trimmed.is_empty() {
+        let target_id = if trimmed.is_empty() || trimmed == "1306646875971485777" {
             DEFAULT_DISCORD_APP_ID
         } else {
             trimmed
@@ -237,5 +237,29 @@ impl DiscordManager {
         if let Some(client) = client_lock.as_mut() {
             let _ = client.clear_activity();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_update_presence() {
+        let dm = DiscordManager::new();
+        dm.update_presence(
+            "Test Song",
+            "Test Artist",
+            "Test Album",
+            Some(2024),
+            180.0,
+            10.0,
+            Some("https://raw.githubusercontent.com/cbladeOfficial/MusicBox/main/public/app-icon.png"),
+            true,
+            None,
+        );
+        let client_lock = dm.client.lock().unwrap();
+        println!("Client connected? {}", client_lock.is_some());
+        assert!(client_lock.is_some());
     }
 }
