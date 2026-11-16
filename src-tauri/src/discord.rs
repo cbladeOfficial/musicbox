@@ -94,22 +94,32 @@ impl DiscordManager {
 
         let mut client_lock = self.client.lock().unwrap();
         if let Some(client) = client_lock.as_mut() {
-            let state_str = if let Some(y) = year {
-                if y > 0 {
-                    format!("{} - {} ({})", title, artist, y)
+            let state_str = if !album.is_empty() {
+                if let Some(y) = year {
+                    if y > 0 {
+                        format!("{} • {} ({})", artist, album, y)
+                    } else {
+                        format!("{} • {}", artist, album)
+                    }
                 } else {
-                    format!("{} - {}", title, artist)
+                    format!("{} • {}", artist, album)
                 }
-            } else if !album.is_empty() {
-                format!("{} - {} • {}", title, artist, album)
             } else {
-                format!("{} - {}", title, artist)
+                artist.to_string()
             };
 
             let now = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_secs() as i64;
+
+            let safe_title: String = if title.chars().count() > 128 {
+                let mut s: String = title.chars().take(125).collect();
+                s.push_str("...");
+                s
+            } else {
+                title.to_string()
+            };
 
             let safe_state: String = if state_str.chars().count() > 128 {
                 let mut s: String = state_str.chars().take(125).collect();
@@ -119,11 +129,10 @@ impl DiscordManager {
                 state_str
             };
 
-            // In Discord IPC, ActivityType::Listening and status_display_type cause
-            // Discord to reject/close the IPC pipe for 3rd-party client IDs.
-            // We set details to "Listening to MusicBox" so Discord shows it prominently.
             let mut act = activity::Activity::new()
-                .details("Listening to MusicBox")
+                .name("MusicBox")
+                .activity_type(activity::ActivityType::Listening)
+                .details(&safe_title)
                 .state(&safe_state);
 
             if is_playing && duration_secs > 0.0 {
@@ -190,11 +199,27 @@ impl DiscordManager {
                 _ => station_name,
             };
 
+            let safe_song = if song.chars().count() > 128 {
+                let mut s: String = song.chars().take(125).collect();
+                s.push_str("...");
+                s
+            } else {
+                song.to_string()
+            };
+
             let state_str = match artist {
                 Some(a) if !a.trim().is_empty() && a != "Live Radio" => {
-                    format!("{} - {} • Radio: {}", song, a.trim(), station_name)
+                    format!("{} • Radio: {}", a.trim(), station_name)
                 }
-                _ => format!("{} • Radio: {}", song, station_name),
+                _ => format!("Radio: {}", station_name),
+            };
+
+            let safe_state: String = if state_str.chars().count() > 128 {
+                let mut s: String = state_str.chars().take(125).collect();
+                s.push_str("...");
+                s
+            } else {
+                state_str
             };
 
             let now = SystemTime::now()
@@ -203,8 +228,10 @@ impl DiscordManager {
                 .as_secs() as i64;
 
             let mut act = activity::Activity::new()
-                .details("Listening to MusicBox (Radio)")
-                .state(&state_str);
+                .name("MusicBox")
+                .activity_type(activity::ActivityType::Listening)
+                .details(&safe_song)
+                .state(&safe_state);
 
             if is_playing {
                 act = act.timestamps(activity::Timestamps::new().start(now));
