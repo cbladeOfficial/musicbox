@@ -58,16 +58,23 @@ const TrackThumbnail: React.FC<{
 }> = ({ src, fallbackSrc, size, alt = '' }) => {
   const [currentSrc, setCurrentSrc] = useState<string | undefined>(src || fallbackSrc);
   const [hasError, setHasError] = useState(false);
+  const retryRef = useRef(0);
 
   useEffect(() => {
     setCurrentSrc(src || fallbackSrc);
     setHasError(false);
+    retryRef.current = 0;
   }, [src, fallbackSrc]);
 
   const handleError = () => {
     if (fallbackSrc && currentSrc !== fallbackSrc) {
       setCurrentSrc(fallbackSrc);
       setHasError(false);
+    } else if (retryRef.current < 2 && currentSrc) {
+      retryRef.current += 1;
+      setTimeout(() => {
+        setHasError(false);
+      }, 300);
     } else {
       setHasError(true);
     }
@@ -78,14 +85,15 @@ const TrackThumbnail: React.FC<{
       className={`${size} rounded-md overflow-hidden bg-zinc-900 border border-white/10 flex-shrink-0 flex items-center justify-center shadow-sm relative`}
     >
       <Disc3 className="w-4 h-4 text-zinc-600 absolute pointer-events-none" />
-      {currentSrc && !hasError && (
+      {currentSrc && (
         <img
           src={currentSrc}
           alt={alt}
           loading="lazy"
           decoding="async"
-          className="w-full h-full object-cover relative z-10"
+          className={`w-full h-full object-cover relative z-10 transition-opacity duration-150 ${hasError ? 'opacity-0' : 'opacity-100'}`}
           onError={handleError}
+          onLoad={() => setHasError(false)}
         />
       )}
     </div>
@@ -303,7 +311,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                   ) : (
                     <>
                       <span className="group-hover:hidden">
-                        {track.track_number || idx + 1}
+                        {track.track_number ? track.track_number : '-'}
                       </span>
                       <button
                         onClick={() => onPlayTrack(track)}

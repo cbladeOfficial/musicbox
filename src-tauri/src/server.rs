@@ -168,40 +168,39 @@ fn handle_request(request: tiny_http::Request) {
         let mime = get_mime_type(&decoded_path);
 
         // Fast path for images (album art / thumbnails):
-        // Read into memory and send in a dedicated thread with HTTP Cache-Control and keep-alive
-        // so worker threads are never blocked by heavy thumbnail bursts.
+        // Read into memory and send with HTTP Cache-Control and CORS headers.
+        // Handled directly on the worker thread pool to preserve HTTP/1.1 pipelined
+        // socket ordering and prevent concurrent write socket corruption in WebView2.
         if mime.starts_with("image/") {
-            let file_path_owned = file_path.to_path_buf();
-            thread::spawn(move || {
-                let mut file = match File::open(&file_path_owned) {
-                    Ok(f) => f,
-                    Err(_) => {
-                        let _ = request.respond(Response::empty(500));
-                        return;
-                    }
-                };
-
-                let mut buffer = Vec::with_capacity(file_len.min(5 * 1024 * 1024) as usize);
-                if file.read_to_end(&mut buffer).is_ok() {
-                    let resp = Response::new(
-                        StatusCode(200),
-                        vec![
-                            Header::from_bytes(&b"Content-Type"[..], mime.as_bytes()).unwrap(),
-                            Header::from_bytes(&b"Content-Length"[..], buffer.len().to_string().as_bytes()).unwrap(),
-                            Header::from_bytes(&b"Accept-Ranges"[..], &b"bytes"[..]).unwrap(),
-                            Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..]).unwrap(),
-                            Header::from_bytes(&b"Cache-Control"[..], &b"public, max-age=604800, immutable"[..]).unwrap(),
-                            Header::from_bytes(&b"Connection"[..], &b"keep-alive"[..]).unwrap(),
-                        ],
-                        &buffer[..],
-                        Some(buffer.len()),
-                        None,
-                    );
+            let mut file = match File::open(file_path) {
+                Ok(f) => f,
+                Err(_) => {
+                    let mut resp = Response::empty(404);
+                    resp.add_header(Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..]).unwrap());
                     let _ = request.respond(resp);
-                } else {
-                    let _ = request.respond(Response::empty(500));
+                    return;
                 }
-            });
+            };
+
+            let mut buffer = Vec::with_capacity(file_len as usize);
+            if file.read_to_end(&mut buffer).is_ok() {
+                let resp = Response::new(
+                    StatusCode(200),
+                    vec![
+                        Header::from_bytes(&b"Content-Type"[..], mime.as_bytes()).unwrap(),
+                        Header::from_bytes(&b"Content-Length"[..], buffer.len().to_string().as_bytes()).unwrap(),
+                        Header::from_bytes(&b"Accept-Ranges"[..], &b"bytes"[..]).unwrap(),
+                        Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..]).unwrap(),
+                        Header::from_bytes(&b"Cache-Control"[..], &b"public, max-age=604800, immutable"[..]).unwrap(),
+                    ],
+                    &buffer[..],
+                    Some(buffer.len()),
+                    None,
+                );
+                let _ = request.respond(resp);
+            } else {
+                let _ = request.respond(Response::empty(500));
+            }
             return;
         }
 

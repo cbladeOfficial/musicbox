@@ -109,6 +109,32 @@ fn extract_all_album_artists(tag: &lofty::tag::Tag) -> Option<String> {
     }
 }
 
+fn parse_filename_artist_title(stem: &str) -> Option<(String, String)> {
+    let parts: Vec<&str> = stem.split(" - ").map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+    if parts.len() == 2 {
+        let p0 = parts[0];
+        let p1 = parts[1];
+        let is_number = p0.chars().all(|c| c.is_ascii_digit() || c == '.');
+        if is_number {
+            return None;
+        }
+        return Some((p0.to_string(), p1.to_string()));
+    } else if parts.len() >= 3 {
+        let p0 = parts[0];
+        let is_number = p0.chars().all(|c| c.is_ascii_digit() || c == '.');
+        if is_number {
+            let artist = parts[1].to_string();
+            let title = parts[2..].join(" - ");
+            return Some((artist, title));
+        } else {
+            let artist = parts[0].to_string();
+            let title = parts[1..].join(" - ");
+            return Some((artist, title));
+        }
+    }
+    None
+}
+
 pub fn scan_file(path: &Path, cache_dir: &Path) -> Option<TrackMetadata> {
     let ext = path.extension()?.to_str()?.to_lowercase();
     if !is_supported_audio(&ext) {
@@ -132,89 +158,134 @@ pub fn scan_file(path: &Path, cache_dir: &Path) -> Option<TrackMetadata> {
     let mut sample_rate = None;
     let mut cover_path = None;
 
-    if let Ok(tagged_file) = Probe::open(path).and_then(|p| p.read()) {
+    let parse_options = lofty::config::ParseOptions::new()
+        .parsing_mode(lofty::config::ParsingMode::Relaxed);
+
+    if let Ok(tagged_file) = Probe::open(path)
+        .map(|p| p.options(parse_options))
+        .and_then(|p| p.read())
+    {
         let properties = tagged_file.properties();
         duration = properties.duration().as_secs_f64();
         bitrate = properties.audio_bitrate();
         sample_rate = properties.sample_rate();
 
-        if let Some(tag) = tagged_file.primary_tag().or_else(|| tagged_file.first_tag()) {
-            if let Some(t) = tag.title() {
-                let trimmed = t.trim();
-                if !trimmed.is_empty() {
-                    title = trimmed.to_string();
-                }
+        // Check primary tag first, then check all tags to fill in any missing fields
+        let mut tags_to_check: Vec<&lofty::tag::Tag> = Vec::new();
+        if let Some(primary) = tagged_file.primary_tag() {
+            tags_to_check.push(primary);
+        }
+        for t in tagged_file.tags() {
+            if !tags_to_check.iter().any(|existing| std::ptr::eq(*existing, t)) {
+                tags_to_check.push(t);
             }
-            if let Some(all_artists) = extract_all_artists(tag) {
-                artist = all_artists;
-            } else if let Some(a) = tag.artist() {
-                let trimmed = a.trim();
-                if !trimmed.is_empty() {
-                    artist = trimmed.to_string();
-                }
-            }
-            if let Some(al) = tag.album() {
-                let trimmed = al.trim();
-                if !trimmed.is_empty() {
-                    album = trimmed.to_string();
-                }
-            }
-            if let Some(g) = tag.genre() {
-                let trimmed = g.trim();
-                if !trimmed.is_empty() {
-                    genre = Some(trimmed.to_string());
-                }
-            }
-            if let Some(all_aa) = extract_all_album_artists(tag) {
-                album_artist = Some(all_aa);
-            } else if let Some(aa) = tag.get_string(ItemKey::AlbumArtist) {
-                let trimmed = aa.trim();
-                if !trimmed.is_empty() {
-                    album_artist = Some(trimmed.to_string());
-                }
-            }
-            track_number = tag.track();
-            disc_number = tag.disk();
-            year = tag
-                .get_string(ItemKey::Year)
-                .or_else(|| tag.get_string(ItemKey::RecordingDate))
-                .and_then(|s| {
-                    let digits: String = s.chars().filter(|c| c.is_ascii_digit()).take(4).collect();
-                    digits.parse::<u32>().ok()
-                });
+        }
 
-            // Check embedded pictures (hash by actual image bytes to prevent cross-song collision)
-            if let Some(pic) = tag.pictures().first() {
-                let pic_hash = hash_bytes(pic.data());
-                let covers_dir = cache_dir.join("covers");
-                let _ = fs::create_dir_all(&covers_dir);
-                let ext_name = match pic.mime_type() {
-                    Some(lofty::picture::MimeType::Png) => "png",
-                    _ => "jpg",
-                };
-                let target_cover = covers_dir.join(format!("{}.{}", pic_hash, ext_name));
-                if !target_cover.exists() {
-                    let _ = fs::write(&target_cover, pic.data());
-                }
-                cover_path = Some(target_cover.to_string_lossy().to_string());
-            }
-
-            // Fallback: check parent directory for local cover art file
-            if cover_path.is_none() {
-                if let Some(parent) = path.parent() {
-                    for name in &[
-                        "cover.jpg", "cover.png", "cover.jpeg",
-                        "folder.jpg", "folder.png", "folder.jpeg",
-                        "album.jpg", "album.png", "album.jpeg",
-                        "front.jpg", "front.png", "front.jpeg",
-                    ] {
-                        let candidate = parent.join(name);
-                        if candidate.is_file() {
-                            cover_path = Some(candidate.to_string_lossy().to_string());
-                            break;
-                        }
+        for tag in tags_to_check {
+            if title == file_stem {
+                if let Some(t) = tag.title() {
+                    let trimmed = t.trim();
+                    if !trimmed.is_empty() {
+                        title = trimmed.to_string();
                     }
                 }
+            }
+            if artist == "Unknown Artist" {
+                if let Some(all_artists) = extract_all_artists(tag) {
+                    artist = all_artists;
+                } else if let Some(a) = tag.artist() {
+                    let trimmed = a.trim();
+                    if !trimmed.is_empty() {
+                        artist = trimmed.to_string();
+                    }
+                }
+            }
+            if album == "Unknown Album" {
+                if let Some(al) = tag.album() {
+                    let trimmed = al.trim();
+                    if !trimmed.is_empty() {
+                        album = trimmed.to_string();
+                    }
+                }
+            }
+            if genre.is_none() {
+                if let Some(g) = tag.genre() {
+                    let trimmed = g.trim();
+                    if !trimmed.is_empty() {
+                        genre = Some(trimmed.to_string());
+                    }
+                }
+            }
+            if album_artist.is_none() {
+                if let Some(all_aa) = extract_all_album_artists(tag) {
+                    album_artist = Some(all_aa);
+                } else if let Some(aa) = tag.get_string(ItemKey::AlbumArtist) {
+                    let trimmed = aa.trim();
+                    if !trimmed.is_empty() {
+                        album_artist = Some(trimmed.to_string());
+                    }
+                }
+            }
+            if track_number.is_none() {
+                track_number = tag.track();
+            }
+            if disc_number.is_none() {
+                disc_number = tag.disk();
+            }
+            if year.is_none() {
+                year = tag
+                    .get_string(ItemKey::Year)
+                    .or_else(|| tag.get_string(ItemKey::RecordingDate))
+                    .and_then(|s| {
+                        let digits: String = s.chars().filter(|c| c.is_ascii_digit()).take(4).collect();
+                        digits.parse::<u32>().ok()
+                    });
+            }
+
+            // Check embedded pictures (hash by actual image bytes to prevent cross-song collision)
+            if cover_path.is_none() {
+                if let Some(pic) = tag.pictures().first() {
+                    let pic_hash = hash_bytes(pic.data());
+                    let covers_dir = cache_dir.join("covers");
+                    let _ = fs::create_dir_all(&covers_dir);
+                    let ext_name = match pic.mime_type() {
+                        Some(lofty::picture::MimeType::Png) => "png",
+                        _ => "jpg",
+                    };
+                    let target_cover = covers_dir.join(format!("{}.{}", pic_hash, ext_name));
+                    if !target_cover.exists() {
+                        let _ = fs::write(&target_cover, pic.data());
+                    }
+                    cover_path = Some(target_cover.to_string_lossy().to_string());
+                }
+            }
+        }
+    }
+
+    // Fallback: check parent directory for local cover art file
+    if cover_path.is_none() {
+        if let Some(parent) = path.parent() {
+            for name in &[
+                "cover.jpg", "cover.png", "cover.jpeg",
+                "folder.jpg", "folder.png", "folder.jpeg",
+                "album.jpg", "album.png", "album.jpeg",
+                "front.jpg", "front.png", "front.jpeg",
+            ] {
+                let candidate = parent.join(name);
+                if candidate.is_file() {
+                    cover_path = Some(candidate.to_string_lossy().to_string());
+                    break;
+                }
+            }
+        }
+    }
+
+    // Intelligent fallback from filename if artist is still Unknown Artist
+    if artist == "Unknown Artist" {
+        if let Some((art, tit)) = parse_filename_artist_title(&file_stem) {
+            artist = art;
+            if title == file_stem {
+                title = tit;
             }
         }
     }

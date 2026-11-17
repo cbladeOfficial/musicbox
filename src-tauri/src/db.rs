@@ -525,3 +525,57 @@ pub fn refresh_all_track_artists(conn: &Connection, cache_dir: &std::path::Path)
         }
     }
 }
+
+pub fn repair_unknown_tracks(conn: &Connection, cache_dir: &std::path::Path) {
+    let mut stmt = match conn.prepare(
+        "SELECT id, path FROM tracks WHERE artist = 'Unknown Artist' OR album = 'Unknown Album' OR track_number IS NULL OR cover_path IS NULL"
+    ) {
+        Ok(s) => s,
+        Err(_) => return,
+    };
+
+    let rows: Vec<(i64, String)> = stmt
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+        .ok()
+        .map(|iter| iter.filter_map(|r| r.ok()).collect())
+        .unwrap_or_default();
+
+    for (id, path_str) in rows {
+        let p = std::path::Path::new(&path_str);
+        if p.is_file() {
+            if let Some(meta) = crate::scanner::scan_file(p, cache_dir) {
+                let _ = conn.execute(
+                    "UPDATE tracks SET 
+                        title = ?1,
+                        artist = ?2,
+                        album = ?3,
+                        album_artist = ?4,
+                        track_number = ?5,
+                        disc_number = ?6,
+                        year = ?7,
+                        genre = ?8,
+                        duration = ?9,
+                        bitrate = ?10,
+                        sample_rate = ?11,
+                        cover_path = COALESCE(?12, cover_path)
+                     WHERE id = ?13",
+                    params![
+                        meta.title,
+                        meta.artist,
+                        meta.album,
+                        meta.album_artist,
+                        meta.track_number,
+                        meta.disc_number,
+                        meta.year,
+                        meta.genre,
+                        meta.duration,
+                        meta.bitrate,
+                        meta.sample_rate,
+                        meta.cover_path,
+                        id
+                    ],
+                );
+            }
+        }
+    }
+}

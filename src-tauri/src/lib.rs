@@ -45,6 +45,12 @@ pub fn run() {
                 let _ = db::set_setting(&conn, "all_artists_migrated_v2", "true");
             }
 
+            // Automatically repair any tracks with unknown metadata or missing track numbers
+            if db::get_setting(&conn, "relaxed_metadata_repaired_v1").ok().flatten().is_none() {
+                db::repair_unknown_tracks(&conn, &app_data_dir);
+                let _ = db::set_setting(&conn, "relaxed_metadata_repaired_v1", "true");
+            }
+
             // Check if user configured startMaximized (defaults to true)
             let start_maximized = db::get_setting(&conn, "user_settings")
                 .ok()
