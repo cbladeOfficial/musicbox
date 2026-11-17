@@ -461,7 +461,7 @@ export function App() {
       }
 
       // Resolve initial cached cover art synchronously if already saved
-      const initialCover = MetadataService.getCachedCoverArt(track.artist, track.album, track.title);
+      const initialCover = getCoverUrl(track.cover_path, streamPort) || MetadataService.getCachedCoverArt(track.artist, track.album, track.title);
       setResolvedCoverArt(initialCover || undefined);
 
       // Update Discord Rich Presence immediately (with cached cover if available)

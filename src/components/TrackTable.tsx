@@ -57,15 +57,24 @@ const TrackThumbnail: React.FC<{
 }> = ({ src, fallbackSrc, size, alt = '' }) => {
   const [currentSrc, setCurrentSrc] = useState<string | undefined>(src || fallbackSrc);
   const [hasError, setHasError] = useState(false);
+  const retryRef = useRef(0);
 
   useEffect(() => {
     setCurrentSrc(src || fallbackSrc);
     setHasError(false);
+    retryRef.current = 0;
   }, [src, fallbackSrc]);
 
   const handleError = () => {
     if (fallbackSrc && currentSrc !== fallbackSrc) {
       setCurrentSrc(fallbackSrc);
+      setHasError(false);
+    } else if (retryRef.current < 2 && src) {
+      retryRef.current += 1;
+      setTimeout(() => {
+        setCurrentSrc(src);
+        setHasError(false);
+      }, 200);
     } else {
       setHasError(true);
     }
@@ -79,7 +88,7 @@ const TrackThumbnail: React.FC<{
         <img
           src={currentSrc}
           alt={alt}
-          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover"
           onError={handleError}
         />
@@ -264,9 +273,11 @@ export const TrackTable: React.FC<TrackTableProps> = ({
           sortedTracks.map((track, idx) => {
             const isCurrent = currentTrackId === track.id;
             const cachedCover = MetadataService.getCachedCoverArt(track.artist, track.album, track.title);
-            const coverSrc = isCurrent && resolvedCoverArt
-              ? resolvedCoverArt
-              : (cachedCover || getCoverUrl(track.cover_path, streamPort, cachedCover || undefined));
+            const coverSrc = getCoverUrl(
+              track.cover_path,
+              streamPort,
+              isCurrent ? (resolvedCoverArt || cachedCover || undefined) : (cachedCover || undefined)
+            );
             const fallbackSrc = cachedCover || undefined;
 
             return (
