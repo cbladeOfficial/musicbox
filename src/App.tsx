@@ -303,6 +303,17 @@ export function App() {
     loadPlaylists();
     loadRadioStations();
 
+    // Restore persistent volume from SQLite settings
+    TauriBridge.loadSetting('volume').then((val) => {
+      if (val !== null && val !== undefined) {
+        const parsed = parseFloat(val);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) {
+          setVolume(parsed);
+          audioEngine.setVolume(parsed);
+        }
+      }
+    }).catch(() => {});
+
     TauriBridge.loadSetting('user_settings').then((saved) => {
       if (saved) {
         try {
@@ -474,6 +485,7 @@ export function App() {
           duration: track.duration,
           position: 0,
           coverUrl: initialCover || undefined,
+          coverPath: track.cover_path || undefined,
           isPlaying: true,
           clientId: settings.discordClientId,
         }).catch(() => {});
@@ -500,6 +512,7 @@ export function App() {
               duration: track.duration,
               position: audioEngine.getCurrentTime(),
               coverUrl: onlineCover,
+              coverPath: track.cover_path || undefined,
               isPlaying: true,
               clientId: settings.discordClientId,
             }).catch(() => {});
@@ -637,6 +650,7 @@ export function App() {
           duration: currentTrack.duration,
           position: audioEngine.getCurrentTime(),
           coverUrl: resolvedCoverArt,
+          coverPath: currentTrack.cover_path || undefined,
           isPlaying: playing,
           clientId: settings.discordClientId,
         }).catch(() => {});
@@ -666,6 +680,7 @@ export function App() {
             duration: currentTrack.duration,
             position: 0,
             coverUrl: resolvedCoverArt,
+            coverPath: currentTrack.cover_path || undefined,
             isPlaying: false,
             clientId: settings.discordClientId,
           }).catch(() => {});
@@ -699,6 +714,7 @@ export function App() {
             duration: currentTrack.duration,
             position: 0,
             coverUrl: resolvedCoverArt,
+            coverPath: currentTrack.cover_path || undefined,
             isPlaying: false,
             clientId: settings.discordClientId,
           }).catch(() => {});
@@ -756,6 +772,7 @@ export function App() {
     try {
       localStorage.setItem('musicbox_volume', clamped.toString());
     } catch {}
+    TauriBridge.saveSetting('volume', clamped.toString()).catch(() => {});
   };
 
   const handleToggleMute = () => {

@@ -1,6 +1,10 @@
 use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
 use std::sync::Mutex;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const DEFAULT_DISCORD_APP_ID: &str = "1176718791388975124";
 
@@ -20,10 +24,85 @@ fn url_encode(s: &str) -> String {
     encoded
 }
 
+// Upload local embedded cover to temporary online storage (1 day retention)
+// so Discord RPC displays the exact local cover without API mismatch.
+fn upload_cover_to_temp_storage(file_path: &Path) -> Option<String> {
+    let mut file = File::open(file_path).ok()?;
+    let mut file_bytes = Vec::new();
+    file.read_to_end(&mut file_bytes).ok()?;
+    if file_bytes.is_empty() {
+        return None;
+    }
+
+    let mut config = ureq::config::Config::builder();
+    config = config.timeout_global(Some(Duration::from_secs(8)));
+    let agent: ureq::Agent = config.build().into();
+
+    let boundary = "----MusicBoxBoundary123456789";
+    let content_type = format!("multipart/form-data; boundary={}", boundary);
+
+    // 1. Primary: Uguu.se (auto-deletes after 24 hours, zero registration, public image CDN)
+    let mut uguu_body = Vec::with_capacity(file_bytes.len() + 512);
+    uguu_body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
+    uguu_body.extend_from_slice(b"Content-Disposition: form-data; name=\"files[]\"; filename=\"cover.jpg\"\r\n");
+    uguu_body.extend_from_slice(b"Content-Type: image/jpeg\r\n\r\n");
+    uguu_body.extend_from_slice(&file_bytes);
+    uguu_body.extend_from_slice(format!("\r\n--{}--\r\n", boundary).as_bytes());
+
+    if let Ok(mut resp) = agent
+        .post("https://uguu.se/upload")
+        .header("Content-Type", &content_type)
+        .header("User-Agent", "MusicBox/1.0")
+        .send(&uguu_body)
+    {
+        if let Ok(json_str) = resp.body_mut().read_to_string() {
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                if let Some(url) = val["files"][0]["url"].as_str() {
+                    return Some(url.to_string());
+                }
+            }
+        }
+    }
+
+    // 2. Fallback: Freeimage.host (instant public direct image CDN)
+    let mut fbody = Vec::with_capacity(file_bytes.len() + 1024);
+    fbody.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
+    fbody.extend_from_slice(b"Content-Disposition: form-data; name=\"key\"\r\n\r\n6d207e02198a847aa98d0a2a901485a5\r\n");
+    fbody.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
+    fbody.extend_from_slice(b"Content-Disposition: form-data; name=\"action\"\r\n\r\nupload\r\n");
+    fbody.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
+    fbody.extend_from_slice(b"Content-Disposition: form-data; name=\"format\"\r\n\r\njson\r\n");
+    fbody.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
+    fbody.extend_from_slice(b"Content-Disposition: form-data; name=\"source\"; filename=\"cover.jpg\"\r\n");
+    fbody.extend_from_slice(b"Content-Type: image/jpeg\r\n\r\n");
+    fbody.extend_from_slice(&file_bytes);
+    fbody.extend_from_slice(format!("\r\n--{}--\r\n", boundary).as_bytes());
+
+    if let Ok(mut resp) = agent
+        .post("https://freeimage.host/api/1/upload")
+        .header("Content-Type", &content_type)
+        .header("User-Agent", "MusicBox/1.0")
+        .send(&fbody)
+    {
+        if let Ok(json_str) = resp.body_mut().read_to_string() {
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                if let Some(url) = val["image"]["url"].as_str() {
+                    return Some(url.to_string());
+                }
+            }
+        }
+    }
+
+    None
+}
+
 pub struct DiscordManager {
     client: Mutex<Option<DiscordIpcClient>>,
     enabled: Mutex<bool>,
     current_app_id: Mutex<String>,
+    // cover_path -> (online_url, upload_timestamp_secs)
+    temp_cover_cache: Mutex<HashMap<String, (String, u64)>>,
+    active_cover_path: Mutex<Option<String>>,
 }
 
 impl DiscordManager {
@@ -32,6 +111,8 @@ impl DiscordManager {
             client: Mutex::new(None),
             enabled: Mutex::new(true),
             current_app_id: Mutex::new(DEFAULT_DISCORD_APP_ID.to_string()),
+            temp_cover_cache: Mutex::new(HashMap::new()),
+            active_cover_path: Mutex::new(None),
         }
     }
 
@@ -90,6 +171,7 @@ impl DiscordManager {
         duration_secs: f64,
         position_secs: f64,
         cover_url: Option<&str>,
+        cover_path: Option<&str>,
         is_playing: bool,
         custom_app_id: Option<&str>,
     ) {
@@ -140,6 +222,49 @@ impl DiscordManager {
                 .duration_since(UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_secs() as i64;
+
+            // Resolve 100% accurate album art from local embedded cover if available:
+            // Upload to temporary storage (24h retention), reuse on loop, re-upload if looping > 24h,
+            // and clean up active song reference on song change.
+            let mut effective_cover_url: Option<String> = None;
+
+            if let Some(cpath) = cover_path {
+                let trimmed = cpath.trim();
+                if !trimmed.is_empty() {
+                    let p = Path::new(trimmed);
+                    if p.is_file() {
+                        let mut active = self.active_cover_path.lock().unwrap();
+                        let mut cache = self.temp_cover_cache.lock().unwrap();
+                        let now_secs = now as u64;
+
+                        // Song changed: update active track reference
+                        if active.as_deref() != Some(trimmed) {
+                            *active = Some(trimmed.to_string());
+                        }
+
+                        let mut needs_upload = true;
+                        if let Some((url, timestamp)) = cache.get(trimmed) {
+                            // If on loop within 24 hours (86400s), reuse existing temporary URL
+                            if now_secs.saturating_sub(*timestamp) < 86400 {
+                                effective_cover_url = Some(url.clone());
+                                needs_upload = false;
+                            }
+                        }
+
+                        if needs_upload {
+                            if let Some(uploaded_url) = upload_cover_to_temp_storage(p) {
+                                cache.insert(trimmed.to_string(), (uploaded_url.clone(), now_secs));
+                                effective_cover_url = Some(uploaded_url);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Fallback to online cover_url if local artwork is not embedded or upload failed
+            if effective_cover_url.is_none() {
+                effective_cover_url = cover_url.map(|s| s.to_string());
+            }
 
             let safe_title: String = if title.chars().count() > 128 {
                 let mut s: String = title.chars().take(125).collect();
@@ -254,9 +379,9 @@ impl DiscordManager {
             };
             assets = assets.small_image(small_image_url).small_text(small_text);
 
-            if let Some(url) = cover_url {
+            if let Some(ref url) = effective_cover_url {
                 if url.starts_with("http://") || url.starts_with("https://") {
-                    assets = assets.large_image(url).large_text(&safe_album_display).large_url(&album_url);
+                    assets = assets.large_image(url.as_str()).large_text(&safe_album_display).large_url(&album_url);
                 } else if self.is_default_app() {
                     assets = assets.large_image("spotube-logo-foreground").large_text(&safe_album_display).large_url(&album_url);
                 } else {
@@ -436,6 +561,7 @@ mod tests {
             180.0,
             10.0,
             Some("https://raw.githubusercontent.com/cbladeOfficial/MusicBox/main/public/app-icon.png"),
+            None,
             true,
             None,
         );

@@ -168,6 +168,7 @@ pub fn update_presence(
     duration: f64,
     position: f64,
     cover_url: Option<String>,
+    cover_path: Option<String>,
     is_playing: bool,
     client_id: Option<String>,
     state: State<'_, AppState>,
@@ -180,6 +181,7 @@ pub fn update_presence(
         duration,
         position,
         cover_url.as_deref(),
+        cover_path.as_deref(),
         is_playing,
         client_id.as_deref(),
     );

@@ -475,9 +475,10 @@ export const Visualizer: React.FC<VisualizerProps> = ({
   return (
     <div
       ref={containerRef}
+      style={{ width: '100%', height: isFullSpace ? '100%' : `${height}px` }}
       className={`w-full flex items-center justify-center transition-colors overflow-hidden ${
         isFullSpace
-          ? 'h-full w-full flex-1 relative bg-black/95'
+          ? 'h-full w-full relative bg-black/95'
           : 'bg-[var(--surface-color)]/60 border-t border-[var(--border-color)] px-4 py-1.5'
       }`}
     >

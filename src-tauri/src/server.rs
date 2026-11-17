@@ -168,34 +168,41 @@ fn handle_request(request: tiny_http::Request) {
         let mime = get_mime_type(&decoded_path);
 
         // Fast path for images (album art / thumbnails):
-        // Read into memory and send with HTTP Cache-Control so WebView2 caches thumbnails locally.
+        // Read into memory and send in a dedicated thread with HTTP Cache-Control and keep-alive
+        // so worker threads are never blocked by heavy thumbnail bursts.
         if mime.starts_with("image/") {
-            let mut file = match File::open(file_path) {
-                Ok(f) => f,
-                Err(_) => {
-                    let _ = request.respond(Response::empty(500));
-                    return;
-                }
-            };
+            let file_path_owned = file_path.to_path_buf();
+            thread::spawn(move || {
+                let mut file = match File::open(&file_path_owned) {
+                    Ok(f) => f,
+                    Err(_) => {
+                        let _ = request.respond(Response::empty(500));
+                        return;
+                    }
+                };
 
-            let mut buffer = Vec::with_capacity(file_len.min(5 * 1024 * 1024) as usize);
-            if file.read_to_end(&mut buffer).is_ok() {
-                let resp = Response::new(
-                    StatusCode(200),
-                    vec![
-                        Header::from_bytes(&b"Content-Type"[..], mime.as_bytes()).unwrap(),
-                        Header::from_bytes(&b"Content-Length"[..], buffer.len().to_string().as_bytes()).unwrap(),
-                        Header::from_bytes(&b"Accept-Ranges"[..], &b"bytes"[..]).unwrap(),
-                        Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..]).unwrap(),
-                        Header::from_bytes(&b"Cache-Control"[..], &b"public, max-age=604800, immutable"[..]).unwrap(),
-                    ],
-                    &buffer[..],
-                    Some(buffer.len()),
-                    None,
-                );
-                let _ = request.respond(resp);
-                return;
-            }
+                let mut buffer = Vec::with_capacity(file_len.min(5 * 1024 * 1024) as usize);
+                if file.read_to_end(&mut buffer).is_ok() {
+                    let resp = Response::new(
+                        StatusCode(200),
+                        vec![
+                            Header::from_bytes(&b"Content-Type"[..], mime.as_bytes()).unwrap(),
+                            Header::from_bytes(&b"Content-Length"[..], buffer.len().to_string().as_bytes()).unwrap(),
+                            Header::from_bytes(&b"Accept-Ranges"[..], &b"bytes"[..]).unwrap(),
+                            Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..]).unwrap(),
+                            Header::from_bytes(&b"Cache-Control"[..], &b"public, max-age=604800, immutable"[..]).unwrap(),
+                            Header::from_bytes(&b"Connection"[..], &b"keep-alive"[..]).unwrap(),
+                        ],
+                        &buffer[..],
+                        Some(buffer.len()),
+                        None,
+                    );
+                    let _ = request.respond(resp);
+                } else {
+                    let _ = request.respond(Response::empty(500));
+                }
+            });
+            return;
         }
 
         // For audio streams, extract range header and stream in a dedicated thread
@@ -224,7 +231,7 @@ pub fn start_stream_server() -> u16 {
     SERVER_PORT.store(port, Ordering::SeqCst);
 
     let server = Arc::new(server);
-    for _ in 0..6 {
+    for _ in 0..16 {
         let server_clone = Arc::clone(&server);
         thread::spawn(move || {
             for request in server_clone.incoming_requests() {

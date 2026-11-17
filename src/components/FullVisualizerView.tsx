@@ -236,7 +236,7 @@ export const FullVisualizerView: React.FC<FullVisualizerViewProps> = ({
 
       {/* 2. Full-Space Visualizer Canvas Background */}
       <div
-        className="absolute inset-0 z-0 cursor-pointer"
+        className="absolute inset-0 z-0 cursor-pointer w-full h-full flex flex-col"
         onDoubleClick={onToggleTotallyFullscreen}
         title="Double-click to toggle totally fullscreen"
       >

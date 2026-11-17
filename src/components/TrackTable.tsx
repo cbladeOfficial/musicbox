@@ -57,24 +57,16 @@ const TrackThumbnail: React.FC<{
 }> = ({ src, fallbackSrc, size, alt = '' }) => {
   const [currentSrc, setCurrentSrc] = useState<string | undefined>(src || fallbackSrc);
   const [hasError, setHasError] = useState(false);
-  const retryRef = useRef(0);
 
   useEffect(() => {
     setCurrentSrc(src || fallbackSrc);
     setHasError(false);
-    retryRef.current = 0;
   }, [src, fallbackSrc]);
 
   const handleError = () => {
     if (fallbackSrc && currentSrc !== fallbackSrc) {
       setCurrentSrc(fallbackSrc);
       setHasError(false);
-    } else if (retryRef.current < 2 && src) {
-      retryRef.current += 1;
-      setTimeout(() => {
-        setCurrentSrc(src);
-        setHasError(false);
-      }, 200);
     } else {
       setHasError(true);
     }
@@ -82,18 +74,18 @@ const TrackThumbnail: React.FC<{
 
   return (
     <div
-      className={`${size} rounded-md overflow-hidden bg-zinc-900 border border-white/10 flex-shrink-0 flex items-center justify-center shadow-sm`}
+      className={`${size} rounded-md overflow-hidden bg-zinc-900 border border-white/10 flex-shrink-0 flex items-center justify-center shadow-sm relative`}
     >
-      {currentSrc && !hasError ? (
+      <Disc3 className="w-4 h-4 text-zinc-600 absolute pointer-events-none" />
+      {currentSrc && !hasError && (
         <img
           src={currentSrc}
           alt={alt}
+          loading="lazy"
           decoding="async"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover relative z-10"
           onError={handleError}
         />
-      ) : (
-        <Disc3 className="w-4 h-4 text-zinc-500" />
       )}
     </div>
   );

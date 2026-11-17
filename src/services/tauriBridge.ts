@@ -137,6 +137,7 @@ export const TauriBridge = {
     duration: number;
     position: number;
     coverUrl?: string;
+    coverPath?: string;
     isPlaying: boolean;
     clientId?: string;
   }): Promise<void> {
@@ -149,6 +150,7 @@ export const TauriBridge = {
       duration: params.duration,
       position: params.position,
       coverUrl: params.coverUrl ?? null,
+      coverPath: params.coverPath ?? null,
       isPlaying: params.isPlaying,
       clientId: params.clientId ?? null,
     });
