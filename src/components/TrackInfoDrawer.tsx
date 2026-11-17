@@ -27,18 +27,38 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
   const [artistInfo, setArtistInfo] = useState<ArtistInfo | null>(null);
   const [albumInfo, setAlbumInfo] = useState<AlbumInfo | null>(null);
   const [loading, setLoading] = useState(false);
-  const [onlineCover, setOnlineCover] = useState<string | undefined>(coverArtUrl);
+  const [onlineCover, setOnlineCover] = useState<string | undefined>(() => {
+    if (coverArtUrl) return coverArtUrl;
+    if (currentTrack) {
+      return (
+        MetadataService.getCachedCoverArt(
+          currentTrack.artist,
+          currentTrack.album,
+          currentTrack.title
+        ) || undefined
+      );
+    }
+    return undefined;
+  });
+  const [triedOnlineFallback, setTriedOnlineFallback] = useState(false);
   const [imgError, setImgError] = useState(false);
 
-  // Sync or resolve album art first immediately
+  // Sync or resolve album art first immediately so cover displays on frame 1
   useEffect(() => {
     if (!currentTrack) return;
     setImgError(false);
+    setTriedOnlineFallback(false);
 
-    if (coverArtUrl) {
-      setOnlineCover(coverArtUrl);
-    } else {
-      // Immediately resolve cover art online if not already cached
+    const cached = MetadataService.getCachedCoverArt(
+      currentTrack.artist,
+      currentTrack.album,
+      currentTrack.title
+    );
+    const initialCover = coverArtUrl || cached || undefined;
+    setOnlineCover(initialCover);
+
+    // If no cover is available yet, immediately resolve online cover art
+    if (!initialCover) {
       MetadataService.resolveCoverArt(
         currentTrack.artist,
         currentTrack.album,
@@ -53,7 +73,7 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
         })
         .catch(() => {});
     }
-  }, [currentTrack, coverArtUrl]);
+  }, [currentTrack, coverArtUrl, lastfmApiKey]);
 
   useEffect(() => {
     if (!currentTrack || !isOpen) return;
@@ -75,8 +95,19 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
   if (!isOpen || !currentTrack) return null;
 
   const resolvedArt = onlineCover || coverArtUrl || albumInfo?.coverUrl;
-  const coverSrc = getCoverUrl(currentTrack.cover_path, streamPort, resolvedArt);
+  const localCover = currentTrack.cover_path
+    ? getCoverUrl(currentTrack.cover_path, streamPort)
+    : undefined;
+  const coverSrc = triedOnlineFallback ? resolvedArt : (localCover || resolvedArt);
   const fileSizeMb = (currentTrack.file_size / (1024 * 1024)).toFixed(2);
+
+  const handleImageError = () => {
+    if (!triedOnlineFallback && resolvedArt && coverSrc !== resolvedArt) {
+      setTriedOnlineFallback(true);
+    } else {
+      setImgError(true);
+    }
+  };
 
   return (
     <aside className="w-96 h-full bg-[#0d0f14]/95 backdrop-blur-md border-l border-white/10 flex flex-col z-30 select-none shadow-2xl overflow-y-auto flex-shrink-0 animate-fadeIn">
@@ -111,7 +142,7 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
                 src={coverSrc}
                 alt={currentTrack.album}
                 className="w-full h-full object-cover transition-opacity duration-200"
-                onError={() => setImgError(true)}
+                onError={handleImageError}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-zinc-600 bg-zinc-900">
@@ -127,10 +158,10 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
         </div>
 
         {/* Technical Specs */}
-        <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/10 text-xs shadow-sm">
-          <div className="flex items-center space-x-2 text-[var(--accent-color)] font-semibold text-xs mb-1">
+        <div className="space-y-3.5 p-4 rounded-xl bg-white/[0.03] border border-white/10 text-xs shadow-sm">
+          <div className="flex items-center space-x-2 text-[var(--accent-color)] font-semibold text-xs pb-1.5 border-b border-white/5">
             <Cpu className="w-4 h-4" />
-            <span>Audio Specifications</span>
+            <span className="tracking-wide">Audio Specifications</span>
           </div>
 
           <div className="grid grid-cols-2 gap-2.5 text-xs">

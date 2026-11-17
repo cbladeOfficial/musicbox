@@ -74,11 +74,28 @@ export const Visualizer: React.FC<VisualizerProps> = ({
   const particlesRef = useRef<Particle[]>([]);
 
   // Track dynamic dimensions
-  const [containerWidth, setContainerWidth] = useState<number>(800);
-  const [containerHeight, setContainerHeight] = useState<number>(height);
+  const [containerWidth, setContainerWidth] = useState<number>(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 800
+  );
+  const [containerHeight, setContainerHeight] = useState<number>(() =>
+    isFullSpace ? (typeof window !== 'undefined' ? window.innerHeight : 600) : height
+  );
 
   useEffect(() => {
     if (!containerRef.current) return;
+
+    const updateSize = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      if (rect.width > 0) setContainerWidth(Math.floor(rect.width));
+      if (isFullSpace && rect.height > 0) {
+        setContainerHeight(Math.floor(rect.height));
+      } else if (!isFullSpace) {
+        setContainerHeight(height);
+      }
+    };
+    updateSize();
+
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         if (entry.contentRect.width > 0) {
@@ -90,14 +107,19 @@ export const Visualizer: React.FC<VisualizerProps> = ({
       }
     });
     observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, [isFullSpace]);
+    window.addEventListener('resize', updateSize);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateSize);
+    };
+  }, [isFullSpace, height]);
 
   const effectiveHeight = isFullSpace ? containerHeight : height;
 
   // Initialize particles once
   useEffect(() => {
-    const count = isFullSpace ? 110 : 55;
+    const count = isFullSpace ? 120 : 55;
     const pts: Particle[] = [];
     for (let i = 0; i < count; i++) {
       pts.push({
@@ -136,7 +158,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({
 
     const render = () => {
       const w = containerWidth;
-      const h = height;
+      const h = effectiveHeight;
       ctx.clearRect(0, 0, w, h);
 
       // Fetch real audio data
@@ -178,45 +200,44 @@ export const Visualizer: React.FC<VisualizerProps> = ({
       // 1. Classic Spectrum Bars with Falling Peak Caps
       // -------------------------------------------------------------
       if (mode === 'bars') {
-        const barCount = 48;
-        const totalGap = 3 * (barCount - 1);
+        const barCount = isFullSpace ? 64 : 48;
+        const totalGap = (isFullSpace ? 4 : 3) * (barCount - 1);
         const barWidth = Math.max(3, (w - totalGap) / barCount);
         let x = 0;
 
         for (let i = 0; i < barCount; i++) {
-          // Logarithmic distribution to emphasize punchy bass & warm mids
           const logIdx = Math.min(bufferLength - 1, Math.floor(Math.pow(i / barCount, 1.4) * bufferLength));
           const val = freqData[logIdx] / 255;
-          const barHeight = Math.max(2, val * (h - 8));
+          const maxH = isFullSpace ? h * 0.72 : h - 8;
+          const barHeight = Math.max(3, val * maxH);
 
           // Peak cap gravity
           if (barHeight > peaksRef.current[i]) {
             peaksRef.current[i] = barHeight;
           } else {
-            peaksRef.current[i] = Math.max(2, peaksRef.current[i] - 1.2);
+            peaksRef.current[i] = Math.max(2, peaksRef.current[i] - (isFullSpace ? 3.5 : 1.2));
           }
 
           // Bar gradient
           const grad = ctx.createLinearGradient(0, h, 0, h - barHeight);
           grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.25)`);
-          grad.addColorStop(0.6, hex);
+          grad.addColorStop(0.5, hex);
           grad.addColorStop(1, '#ffffff');
 
           ctx.fillStyle = grad;
-          // Smooth rounded top
           ctx.beginPath();
-          const radius = Math.min(2, barWidth / 2);
+          const radius = Math.min(isFullSpace ? 4 : 2, barWidth / 2);
           ctx.roundRect(x, h - barHeight, barWidth, barHeight, [radius, radius, 0, 0]);
           ctx.fill();
 
           // Peak Cap dot
-          const peakY = Math.max(2, h - peaksRef.current[i] - 3);
+          const peakY = Math.max(2, h - peaksRef.current[i] - (isFullSpace ? 5 : 3));
           ctx.fillStyle = '#ffffff';
           ctx.beginPath();
-          ctx.roundRect(x, peakY, barWidth, 2, 1);
+          ctx.roundRect(x, peakY, barWidth, isFullSpace ? 3 : 2, 1);
           ctx.fill();
 
-          x += barWidth + 3;
+          x += barWidth + (isFullSpace ? 4 : 3);
         }
       }
 
@@ -224,16 +245,17 @@ export const Visualizer: React.FC<VisualizerProps> = ({
       // 2. Dual Symmetrical Mirrored Spectrum
       // -------------------------------------------------------------
       else if (mode === 'mirror-bars') {
-        const barCount = 48;
+        const barCount = isFullSpace ? 64 : 48;
         const midY = h / 2;
-        const totalGap = 3 * (barCount - 1);
+        const totalGap = (isFullSpace ? 4 : 3) * (barCount - 1);
         const barWidth = Math.max(3, (w - totalGap) / barCount);
         let x = 0;
 
         for (let i = 0; i < barCount; i++) {
           const logIdx = Math.min(bufferLength - 1, Math.floor(Math.pow(i / barCount, 1.3) * bufferLength));
           const val = freqData[logIdx] / 255;
-          const halfBar = Math.max(1.5, val * (midY - 4));
+          const maxHalf = isFullSpace ? midY * 0.75 : midY - 4;
+          const halfBar = Math.max(2, val * maxHalf);
 
           const grad = ctx.createLinearGradient(0, midY - halfBar, 0, midY + halfBar);
           grad.addColorStop(0, '#ffffff');
@@ -242,15 +264,15 @@ export const Visualizer: React.FC<VisualizerProps> = ({
 
           ctx.fillStyle = grad;
           ctx.beginPath();
-          ctx.roundRect(x, midY - halfBar, barWidth, halfBar * 2, 2);
+          ctx.roundRect(x, midY - halfBar, barWidth, halfBar * 2, isFullSpace ? 3 : 2);
           ctx.fill();
 
-          x += barWidth + 3;
+          x += barWidth + (isFullSpace ? 4 : 3);
         }
 
         // Center horizon line
-        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.4)`;
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.45)`;
+        ctx.lineWidth = isFullSpace ? 1.5 : 1;
         ctx.beginPath();
         ctx.moveTo(0, midY);
         ctx.lineTo(w, midY);
@@ -261,26 +283,26 @@ export const Visualizer: React.FC<VisualizerProps> = ({
       // 3. Oscilloscope Neon Waveform
       // -------------------------------------------------------------
       else if (mode === 'wave') {
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = isFullSpace ? 3.5 : 2.5;
         ctx.strokeStyle = hex;
         ctx.shadowColor = hex;
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = isFullSpace ? 16 : 10;
 
         ctx.beginPath();
         const sliceWidth = w / (bufferLength - 1);
+        const waveAmp = isFullSpace ? h * 0.32 : h * 0.45;
         let x = 0;
 
         for (let i = 0; i < bufferLength; i++) {
           const v = waveData[i] / 128.0;
-          const y = (v * h) / 2;
+          const y = h / 2 + (v - 1.0) * waveAmp;
 
           if (i === 0) {
             ctx.moveTo(x, y);
           } else {
-            // Cubic bezier smoothing between points
             const prevX = (i - 1) * sliceWidth;
             const prevV = waveData[i - 1] / 128.0;
-            const prevY = (prevV * h) / 2;
+            const prevY = h / 2 + (prevV - 1.0) * waveAmp;
             const cX = (prevX + x) / 2;
             ctx.bezierCurveTo(cX, prevY, cX, y, x, y);
           }
@@ -309,8 +331,10 @@ export const Visualizer: React.FC<VisualizerProps> = ({
         rotationRef.current += 0.006;
         const rot = rotationRef.current;
 
-        const baseRadius = Math.max(14, Math.min(cx, cy) * 0.5 + bassRatio * 6);
-        const bars = 48;
+        const baseRadius = isFullSpace
+          ? Math.max(65, Math.min(cx, cy) * 0.32 + bassRatio * 20)
+          : Math.max(14, Math.min(cx, cy) * 0.5 + bassRatio * 6);
+        const bars = isFullSpace ? 64 : 48;
 
         // Inner pulsing core
         ctx.beginPath();
@@ -318,14 +342,15 @@ export const Visualizer: React.FC<VisualizerProps> = ({
         ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.18 + bassRatio * 0.4})`;
         ctx.fill();
         ctx.strokeStyle = hex;
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = isFullSpace ? 2.5 : 1.5;
         ctx.stroke();
 
         // Outer radial beams
         for (let i = 0; i < bars; i++) {
           const angle = (i * 2 * Math.PI) / bars + rot;
           const val = freqData[i % bufferLength] / 255;
-          const barLen = Math.max(3, val * (h * 0.42));
+          const maxBeam = isFullSpace ? Math.min(w, h) * 0.28 : h * 0.42;
+          const barLen = Math.max(4, val * maxBeam);
 
           const x1 = cx + Math.cos(angle) * baseRadius;
           const y1 = cy + Math.sin(angle) * baseRadius;
@@ -333,7 +358,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({
           const y2 = cy + Math.sin(angle) * (baseRadius + barLen);
 
           ctx.strokeStyle = val > 0.65 ? '#ffffff' : hex;
-          ctx.lineWidth = 2;
+          ctx.lineWidth = isFullSpace ? 3 : 2;
           ctx.beginPath();
           ctx.moveTo(x1, y1);
           ctx.lineTo(x2, y2);
@@ -349,24 +374,27 @@ export const Visualizer: React.FC<VisualizerProps> = ({
         const t = phaseRef.current;
 
         const layers = [
-          { color: 'rgba(0, 240, 255, 0.45)', speed: 1.0, freq: 0.015, amp: 0.45 + bassRatio * 0.5 },
-          { color: `rgba(${r}, ${g}, ${b}, 0.55)`, speed: 1.4, freq: 0.022, amp: 0.4 + avgEnergy * 0.4 },
-          { color: 'rgba(168, 85, 247, 0.45)', speed: 0.8, freq: 0.018, amp: 0.35 + avgEnergy * 0.35 },
+          { color: 'rgba(0, 240, 255, 0.55)', speed: 1.0, freq: isFullSpace ? 0.004 : 0.015, amp: 0.45 + bassRatio * 0.5 },
+          { color: `rgba(${r}, ${g}, ${b}, 0.65)`, speed: 1.4, freq: isFullSpace ? 0.006 : 0.022, amp: 0.4 + avgEnergy * 0.4 },
+          { color: 'rgba(168, 85, 247, 0.55)', speed: 0.8, freq: isFullSpace ? 0.005 : 0.018, amp: 0.35 + avgEnergy * 0.35 },
         ];
+
+        const ribbonHeight = isFullSpace ? h * 0.28 : h * 0.45;
+        const step = isFullSpace ? 8 : 12;
 
         for (const lyr of layers) {
           ctx.beginPath();
           ctx.moveTo(0, h / 2);
-          for (let x = 0; x <= w; x += 12) {
+          for (let x = 0; x <= w; x += step) {
             const freqVal = (freqData[Math.floor((x / w) * (bufferLength - 1))] / 255) * 0.5;
             const y =
               h / 2 +
-              Math.sin(x * lyr.freq + t * lyr.speed) * (h * lyr.amp * 0.45 + freqVal * (h * 0.35)) +
-              Math.cos(x * 0.008 + t * 0.5) * 6;
+              Math.sin(x * lyr.freq + t * lyr.speed) * (ribbonHeight * lyr.amp + freqVal * (ribbonHeight * 0.7)) +
+              Math.cos(x * (isFullSpace ? 0.003 : 0.008) + t * 0.5) * (isFullSpace ? 14 : 6);
             ctx.lineTo(x, y);
           }
           ctx.strokeStyle = lyr.color;
-          ctx.lineWidth = 2.5;
+          ctx.lineWidth = isFullSpace ? 3.5 : 2.5;
           ctx.stroke();
         }
       }
@@ -381,7 +409,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({
           const p = pts[i];
           // React to bass kick
           if (bassRatio > 0.4) {
-            p.vy -= bassRatio * 0.35;
+            p.vy -= bassRatio * (isFullSpace ? 0.8 : 0.35);
           }
 
           p.x += p.vx * (1 + avgEnergy * 1.5);
@@ -390,7 +418,7 @@ export const Visualizer: React.FC<VisualizerProps> = ({
           // Drag
           p.vy *= 0.96;
           // Gentle float back towards center
-          p.vy += (h / 2 - p.y) * 0.004;
+          p.vy += (h / 2 - p.y) * (isFullSpace ? 0.0015 : 0.004);
 
           // Wrap around edges
           if (p.x < 0) p.x = w;
@@ -399,21 +427,22 @@ export const Visualizer: React.FC<VisualizerProps> = ({
           if (p.y > h - 2) p.y = 4;
 
           // Draw particle
-          const pSize = Math.max(1, p.size * (1 + avgEnergy * 1.2));
+          const pSize = Math.max(1.2, p.size * (1 + avgEnergy * 1.3));
           ctx.beginPath();
           ctx.arc(p.x, p.y, pSize, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${Math.min(1, p.alpha + avgEnergy * 0.5)})`;
           ctx.fill();
 
           // Connect close particles with constellation lines
+          const maxDist = isFullSpace ? 110 : 65;
           for (let j = i + 1; j < pts.length; j++) {
             const p2 = pts[j];
             const dx = p.x - p2.x;
             const dy = p.y - p2.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 65) {
-              ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${0.25 * (1 - dist / 65)})`;
-              ctx.lineWidth = 1;
+            if (dist < maxDist) {
+              ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${0.28 * (1 - dist / maxDist)})`;
+              ctx.lineWidth = isFullSpace ? 1.5 : 1;
               ctx.beginPath();
               ctx.moveTo(p.x, p.y);
               ctx.lineTo(p2.x, p2.y);
@@ -448,14 +477,14 @@ export const Visualizer: React.FC<VisualizerProps> = ({
       ref={containerRef}
       className={`w-full flex items-center justify-center transition-colors overflow-hidden ${
         isFullSpace
-          ? 'h-full flex-1 relative bg-black/95'
+          ? 'h-full w-full flex-1 relative bg-black/95'
           : 'bg-[var(--surface-color)]/60 border-t border-[var(--border-color)] px-4 py-1.5'
       }`}
     >
       <canvas
         ref={canvasRef}
         style={{ width: '100%', height: isFullSpace ? '100%' : `${height}px` }}
-        className="w-full block"
+        className="w-full h-full block"
       />
     </div>
   );

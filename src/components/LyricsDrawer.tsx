@@ -62,27 +62,34 @@ export const LyricsDrawer: React.FC<LyricsDrawerProps> = ({
   if (!isOpen) return null;
 
   return (
-    <aside className="w-84 h-full bg-[var(--surface-color)]/95 backdrop-blur-md border-l border-[var(--border-color)] flex flex-col z-30 select-none shadow-xl flex-shrink-0 animate-fadeIn">
-      {/* Drawer Header */}
-      <div className="h-12 border-b border-[var(--border-color)] px-4 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Mic2 className="w-4 h-4 text-[var(--accent-color)]" />
-          <span className="text-sm font-medium text-[var(--text-main)]">
-            Lyrics
-          </span>
-          {lyrics?.synced && !preferPlain && (
-            <span className="text-xs px-2 py-0.5 rounded bg-[var(--accent-color)]/15 text-[var(--accent-color)] font-medium border border-[var(--accent-color)]/20">
-              Synced
-            </span>
-          )}
+    <aside className="w-96 h-full bg-[#0d0f14]/95 backdrop-blur-md border-l border-white/10 flex flex-col z-30 select-none shadow-2xl flex-shrink-0 animate-fadeIn">
+      {/* Spacious Drawer Header matching Track Info & Queue Drawers */}
+      <div className="h-16 border-b border-white/10 px-5 flex items-center justify-between sticky top-0 bg-[#0d0f14]/95 backdrop-blur-md z-10 flex-shrink-0">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 rounded-lg bg-[var(--accent-color)]/15 border border-[var(--accent-color)]/20 flex items-center justify-center">
+            <Mic2 className="w-4 h-4 text-[var(--accent-color)]" />
+          </div>
+          <div className="flex flex-col">
+            <div className="flex items-center space-x-2">
+              <span className="text-[14px] font-semibold text-white tracking-wide">
+                Lyrics
+              </span>
+              {lyrics?.synced && !preferPlain && (
+                <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-[var(--accent-color)]/20 text-[var(--accent-color)] font-bold border border-[var(--accent-color)]/30">
+                  Synced
+                </span>
+              )}
+            </div>
+            <span className="text-[11px] text-zinc-400">Karaoke words & translation</span>
+          </div>
         </div>
 
-        <div className="flex items-center space-x-1">
+        <div className="flex items-center space-x-1.5">
           {lyrics?.plain && (
             <button
               onClick={() => setPreferPlain(!preferPlain)}
               title={preferPlain ? 'View Synced Karaoke' : 'View Plain Text'}
-              className="p-1.5 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)] transition-colors"
+              className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
             >
               <FileText className="w-4 h-4" />
             </button>
@@ -100,63 +107,67 @@ export const LyricsDrawer: React.FC<LyricsDrawerProps> = ({
               }
             }}
             title="Reload lyrics from LRCLIB"
-            className="p-1.5 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)] transition-colors"
+            className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-hover)] transition-colors"
+            title="Close lyrics"
+            className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Lyrics Content */}
+      {/* Lyrics Content with comfortable breathing room */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-6 space-y-4 text-center font-medium"
+        className="flex-1 overflow-y-auto p-6 space-y-6 text-center font-medium"
       >
         {loading ? (
-          <div className="h-full flex flex-col items-center justify-center text-sm text-[var(--text-muted)] space-y-2.5">
-            <Loader2 className="w-6 h-6 animate-spin text-[var(--accent-color)]" />
-            <span>Finding lyrics on LRCLIB...</span>
+          <div className="h-full flex flex-col items-center justify-center space-y-3 text-zinc-400">
+            <Loader2 className="w-8 h-8 animate-spin text-[var(--accent-color)]" />
+            <span className="text-xs">Searching LRCLIB for synced lyrics...</span>
           </div>
         ) : !lyrics ? (
-          <div className="h-full flex flex-col items-center justify-center text-sm text-[var(--text-muted)] space-y-2.5">
-            <Music2 className="w-8 h-8 opacity-30 stroke-1" />
-            <span>No lyrics found for this track</span>
-            <span className="text-xs opacity-70">
-              {currentTrack?.title} - {currentTrack?.artist}
-            </span>
+          <div className="h-full flex flex-col items-center justify-center space-y-3 text-zinc-400">
+            <Music2 className="w-12 h-12 stroke-1 opacity-40 text-zinc-500" />
+            <p className="text-sm font-medium text-zinc-200">No lyrics available</p>
+            <p className="text-xs text-zinc-400 max-w-xs">
+              No synced or plain lyrics found for "{currentTrack?.title}" on LRCLIB.
+            </p>
           </div>
-        ) : preferPlain || !lyrics.synced ? (
-          <div className="whitespace-pre-line text-sm text-[var(--text-main)] leading-loose select-text font-sans opacity-90">
-            {lyrics.plain || 'No plain text lyrics available.'}
+        ) : lyrics.synced && !preferPlain ? (
+          <div className="space-y-4 py-8">
+            {lyrics.lines.map((line, idx) => {
+              const isActive = idx === activeIndex;
+              const isPast = idx < activeIndex;
+
+              return (
+                <div
+                  key={idx}
+                  ref={isActive ? activeLineRef : null}
+                  onClick={() => onSeek(line.time)}
+                  className={`cursor-pointer transition-all duration-300 py-1 px-3 rounded-lg ${
+                    isActive
+                      ? 'text-white font-bold text-xl scale-105 filter drop-shadow'
+                      : isPast
+                      ? 'text-zinc-400 text-base opacity-75 hover:opacity-100'
+                      : 'text-zinc-400 text-base opacity-50 hover:opacity-90'
+                  }`}
+                >
+                  {line.text}
+                </div>
+              );
+            })}
           </div>
         ) : (
-          lyrics.lines.map((line, idx) => {
-            const isActive = idx === activeIndex;
-            const isPast = idx < activeIndex;
-            return (
-              <div
-                key={idx}
-                ref={isActive ? activeLineRef : null}
-                onClick={() => onSeek(line.time)}
-                className={`py-2 px-3.5 rounded-lg transition-all duration-300 cursor-pointer leading-relaxed text-center select-none ${
-                  isActive
-                    ? 'text-white font-bold text-lg bg-[var(--accent-color)]/20 ring-1 ring-[var(--accent-color)]/30 shadow-md scale-[1.02]'
-                    : isPast
-                    ? 'text-zinc-400 opacity-75 hover:opacity-100 hover:text-white text-sm'
-                    : 'text-zinc-500 opacity-50 hover:opacity-100 hover:text-white text-sm'
-                }`}
-              >
-                {line.text}
-              </div>
-            );
-          })
+          <div className="text-left text-sm text-zinc-200 leading-loose whitespace-pre-line p-3 select-text font-normal">
+            {lyrics.plain}
+          </div>
         )}
       </div>
     </aside>

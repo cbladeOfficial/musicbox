@@ -50,7 +50,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         if ((e.target as HTMLElement).closest('.no-drag')) return;
         onToggleMaximize();
       }}
-      className="h-11 w-full bg-[var(--sidebar-color)] border-b border-[var(--border-color)] flex items-center justify-between pl-3.5 pr-0 select-none drag-region z-50 transition-colors"
+      className="h-12 w-full bg-[var(--sidebar-color)] border-b border-[var(--border-color)] flex items-center justify-between pl-4 pr-0 select-none drag-region z-50 transition-colors"
     >
       {/* Left: Brand & Navigation History Controls */}
       <div className="flex items-center space-x-3 text-sm font-medium">

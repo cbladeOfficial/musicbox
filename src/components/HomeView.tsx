@@ -240,9 +240,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <div
                   key={album.name}
                   onClick={() => onSelectAlbum(album.name)}
-                  className="group bg-white/[0.02] hover:bg-white/[0.06] p-3 rounded-lg border border-white/5 cursor-pointer transition-colors flex flex-col justify-between"
+                  className="group bg-white/[0.03] hover:bg-white/[0.08] p-3.5 rounded-xl border border-white/5 cursor-pointer transition-all flex flex-col justify-between shadow-sm hover:shadow-md"
                 >
-                  <div className="aspect-square w-full rounded-md bg-zinc-800 relative overflow-hidden shadow-md mb-2.5 flex items-center justify-center">
+                  <div className="aspect-square w-full rounded-lg bg-zinc-800 relative overflow-hidden shadow-md mb-2.5 flex items-center justify-center">
                     <Disc3 className="w-10 h-10 text-zinc-500" />
                     {cover && (
                       <img
@@ -268,14 +268,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   </div>
 
                   <div className="min-w-0">
-                    <div className="text-xs font-semibold text-white truncate" title={album.name}>
+                    <div className="text-[13px] font-semibold text-white truncate leading-snug" title={album.name}>
                       {album.name}
                     </div>
-                    <div className="text-[11px] text-zinc-400 truncate mt-0.5" title={album.artist}>
+                    <div className="text-[12px] text-zinc-400 truncate mt-1 leading-snug" title={album.artist}>
                       {album.artist}
                     </div>
                     {album.year && (
-                      <div className="text-[10px] text-zinc-400 font-mono mt-0.5">{album.year}</div>
+                      <div className="text-[11px] text-zinc-400 font-mono mt-1">{album.year}</div>
                     )}
                   </div>
                 </div>
@@ -300,9 +300,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <div
                   key={track.id}
                   onClick={() => onPlayTrack(track)}
-                  className="group bg-white/[0.02] hover:bg-white/[0.06] p-3 rounded-lg border border-white/5 cursor-pointer transition-colors flex flex-col justify-between"
+                  className="group bg-white/[0.03] hover:bg-white/[0.08] p-3.5 rounded-xl border border-white/5 cursor-pointer transition-all flex flex-col justify-between shadow-sm hover:shadow-md"
                 >
-                  <div className="aspect-square w-full rounded-md bg-zinc-800 relative overflow-hidden shadow-md mb-2.5 flex items-center justify-center">
+                  <div className="aspect-square w-full rounded-lg bg-zinc-800 relative overflow-hidden shadow-md mb-2.5 flex items-center justify-center">
                     <Disc3 className="w-10 h-10 text-zinc-500" />
                     {cover && (
                       <img
@@ -332,13 +332,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   </div>
 
                   <div className="min-w-0">
-                    <div className="text-xs font-semibold text-white truncate" title={track.title}>
+                    <div className="text-[13px] font-semibold text-white truncate leading-snug" title={track.title}>
                       {track.title}
                     </div>
-                    <div className="text-[11px] text-zinc-400 truncate mt-0.5" title={track.artist}>
+                    <div className="text-[12px] text-zinc-400 truncate mt-1 leading-snug" title={track.artist}>
                       <ArtistLinks artists={track.artist} onSelectArtist={onSelectArtist} />
                     </div>
-                    <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                    <div className="text-[11px] text-zinc-400 font-mono mt-1">
                       {track.play_count} play{track.play_count === 1 ? '' : 's'}
                     </div>
                   </div>

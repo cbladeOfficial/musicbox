@@ -257,26 +257,26 @@ export const RadioView: React.FC<RadioViewProps> = ({
               {onlineStations.map((st) => (
                 <div
                   key={st.stationuuid}
-                  className="group flex flex-col justify-between p-3 rounded bg-[var(--surface-color)]/60 hover:bg-[var(--surface-color)] border border-[var(--border-color)]/60 hover:border-[var(--border-color)] transition-all shadow-sm"
+                  className="group flex flex-col justify-between p-4 rounded-xl bg-[var(--surface-color)] hover:bg-[var(--surface-hover)] border border-[var(--border-color)] hover:border-white/20 transition-all shadow-sm hover:shadow-lg"
                 >
-                  <div className="flex items-start space-x-3 mb-2">
-                    <div className="w-12 h-12 rounded-lg bg-[var(--surface-active)] border border-[var(--border-color)]/60 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-inner">
+                  <div className="flex items-start space-x-3.5 mb-2.5">
+                    <div className="w-14 h-14 rounded-xl bg-[var(--surface-active)] border border-[var(--border-color)] flex-shrink-0 overflow-hidden flex items-center justify-center shadow-inner">
                       <RadioStationIcon
                         favicon={st.favicon}
                         name={st.name}
-                        iconClassName="text-[var(--accent-color)] text-base"
+                        iconClassName="text-[var(--accent-color)] text-lg"
                       />
                     </div>
 
                     <div className="flex-1 truncate">
-                      <div className="font-semibold text-xs text-[var(--text-main)] truncate" title={st.name}>
+                      <div className="font-semibold text-[13.5px] text-[var(--text-main)] truncate" title={st.name}>
                         {st.name}
                       </div>
-                      <div className="text-[10px] text-[var(--text-muted)] truncate mt-0.5">
+                      <div className="text-xs text-zinc-400 truncate mt-1">
                         {st.country || 'Global Stream'}
                       </div>
                       {st.codec && (
-                        <span className="text-[9px] px-1 py-0.2 rounded bg-[var(--surface-active)] text-[var(--text-muted)] font-mono mt-1 inline-block">
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--surface-active)] text-zinc-300 font-mono mt-1.5 inline-block border border-white/5">
                           {st.codec.toUpperCase()} {st.bitrate ? `${st.bitrate}k` : ''}
                         </span>
                       )}

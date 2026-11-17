@@ -93,6 +93,48 @@ const ArtistGridCard: React.FC<{
   );
 };
 
+const ArtistAlbumItem: React.FC<{
+  alb: { name: string; year?: number; coverPath?: string; tracks: TrackRecord[] };
+  artistName: string;
+  streamPort?: number;
+  onViewAlbum?: (albumName: string, artistName: string) => void;
+}> = ({ alb, artistName, streamPort, onViewAlbum }) => {
+  const [hasError, setHasError] = useState(false);
+  const coverSrc = getCoverUrl(alb.coverPath, streamPort);
+
+  return (
+    <div
+      onClick={() => onViewAlbum && onViewAlbum(alb.name, artistName)}
+      className="flex flex-col p-3 rounded-xl bg-[var(--surface-color)] hover:bg-[var(--surface-hover)] border border-[var(--border-color)] hover:border-white/20 transition-all duration-150 cursor-pointer group shadow-sm hover:shadow-lg"
+    >
+      <div className="aspect-square w-full rounded-lg bg-zinc-900 border border-white/10 mb-2.5 overflow-hidden flex items-center justify-center shadow-md">
+        {coverSrc && !hasError ? (
+          <img
+            src={coverSrc}
+            alt={alb.name}
+            loading="lazy"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            onError={() => setHasError(true)}
+          />
+        ) : (
+          <Disc3 className="w-10 h-10 text-zinc-600 stroke-1" />
+        )}
+      </div>
+      <span
+        className="text-[13px] font-semibold text-white truncate group-hover:text-[var(--accent-color)] transition-colors leading-tight"
+        title={alb.name}
+      >
+        {alb.name}
+      </span>
+      <div className="flex items-center space-x-1.5 text-xs text-zinc-400 mt-1 font-mono tabular-nums leading-tight">
+        {alb.year ? <span>{alb.year}</span> : null}
+        {alb.year ? <span>•</span> : null}
+        <span>{alb.tracks.length} {alb.tracks.length === 1 ? 'track' : 'tracks'}</span>
+      </div>
+    </div>
+  );
+};
+
 export const ArtistView: React.FC<ArtistViewProps> = ({
   artists,
   selectedArtist,
@@ -339,43 +381,15 @@ export const ArtistView: React.FC<ArtistViewProps> = ({
             Albums & Releases ({artistAlbums.length})
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {artistAlbums.map((alb) => {
-              const coverSrc = getCoverUrl(alb.coverPath, streamPort);
-              return (
-                <div
-                  key={alb.name}
-                  onClick={() => onViewAlbum && onViewAlbum(alb.name, selectedArtist.name)}
-                  className="flex flex-col p-3 rounded-lg bg-[var(--surface-color)] hover:bg-[var(--surface-hover)] border border-[var(--border-color)] hover:border-white/20 transition-colors duration-150 cursor-pointer group shadow-sm"
-                >
-                  <div className="aspect-square w-full rounded-md bg-zinc-900 border border-white/10 mb-2.5 overflow-hidden flex items-center justify-center shadow-md">
-                    {coverSrc ? (
-                      <img
-                        src={coverSrc}
-                        alt={alb.name}
-                        loading="lazy"
-                        className="w-full h-full object-cover transition-opacity duration-150 group-hover:opacity-90"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <Disc3 className="w-10 h-10 text-zinc-600 stroke-1" />
-                    )}
-                  </div>
-                  <span
-                    className="text-[13px] font-semibold text-white truncate group-hover:text-[var(--accent-color)] transition-colors"
-                    title={alb.name}
-                  >
-                    {alb.name}
-                  </span>
-                  <div className="flex items-center space-x-1.5 text-xs text-zinc-400 mt-0.5 font-mono">
-                    {alb.year ? <span>{alb.year}</span> : null}
-                    {alb.year ? <span>•</span> : null}
-                    <span>{alb.tracks.length} {alb.tracks.length === 1 ? 'track' : 'tracks'}</span>
-                  </div>
-                </div>
-              );
-            })}
+            {artistAlbums.map((alb) => (
+              <ArtistAlbumItem
+                key={alb.name}
+                alb={alb}
+                artistName={selectedArtist.name}
+                streamPort={streamPort}
+                onViewAlbum={onViewAlbum}
+              />
+            ))}
           </div>
         </div>
       )}

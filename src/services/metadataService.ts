@@ -7,27 +7,100 @@ function stripHtml(html: string): string {
   return tmp.textContent || tmp.innerText || '';
 }
 
+// Clean query strings by removing duplicate artist names, remaster tags, and subtitle noise
+function cleanQueryTerm(term: string, artist?: string): string {
+  if (!term) return '';
+  let cleaned = term;
+  if (artist && artist.trim()) {
+    // Remove repeated artist name from the term
+    const escapedArtist = artist.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    cleaned = cleaned.replace(new RegExp(escapedArtist, 'gi'), '');
+  }
+  // Strip subtitle noise: ": A Symphony by...", "- Remastered", "(Deluxe Edition)", etc.
+  cleaned = cleaned.replace(/[:\-–—]\s*(A Symphony|Remastered|Deluxe|Special|Bonus|Anniversary|Expanded|Live|Explicit).*/i, '');
+  cleaned = cleaned.replace(/[\(\[][^\)\]]*(?:remaster|deluxe|edition|anniversary|bonus|explicit|version|live|mono|stereo)[\)\]]/gi, '');
+  return cleaned.replace(/[^\w\s\u00C0-\u024F\u0600-\u06FF\u0900-\u097F]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeForCompare(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// Verify that candidate artist from iTunes/JioSaavn/Last.fm matches the expected artist
+function isArtistMatch(expectedArtist: string, candidateArtist?: string): boolean {
+  if (!candidateArtist || !expectedArtist) return false;
+  const normExpected = normalizeForCompare(expectedArtist);
+  const normCandidate = normalizeForCompare(candidateArtist);
+  if (!normExpected || !normCandidate) return false;
+
+  // Direct containment check
+  if (normCandidate.includes(normExpected) || normExpected.includes(normCandidate)) {
+    return true;
+  }
+
+  // Multi-artist split check (e.g. "Electric Light Orchestra" matches "Electric Light Orchestra, Jeff Lynne")
+  const expectedParts = expectedArtist.split(/[,&/]/).map((p) => normalizeForCompare(p)).filter(Boolean);
+  const candidateParts = candidateArtist.split(/[,&/]/).map((p) => normalizeForCompare(p)).filter(Boolean);
+
+  for (const ep of expectedParts) {
+    for (const cp of candidateParts) {
+      if (cp.includes(ep) || ep.includes(cp)) return true;
+    }
+  }
+
+  return false;
+}
+
 export const MetadataService = {
-  // 1. iTunes Search
+  // 1. iTunes Search with Strict Artist Validation & Cleaned Album Querying
   async fetchFromItunes(artist: string, album: string, title?: string): Promise<{ coverUrl?: string; year?: number; genre?: string } | null> {
     try {
-      const query = `${artist} ${album || title || ''}`.trim();
-      const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=1`);
+      const cleanArt = artist.split(',')[0].trim();
+      const cleanAlb = cleanQueryTerm(album, cleanArt);
+      const cleanTit = cleanQueryTerm(title || '', cleanArt);
+
+      // Attempt A: Search for the Album directly (most accurate for album cover art)
+      if (cleanAlb && cleanAlb.length > 1) {
+        const albumQuery = `${cleanArt} ${cleanAlb}`.trim();
+        const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(albumQuery)}&entity=album&limit=8`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.results) && data.results.length > 0) {
+            // Find candidate where artist matches
+            const matched = data.results.find((item: any) => isArtistMatch(artist, item.artistName));
+            if (matched && matched.artworkUrl100) {
+              const coverUrl = matched.artworkUrl100.replace(/100x100bb\.jpg$/, '1000x1000bb.jpg');
+              const year = matched.releaseDate ? parseInt(matched.releaseDate.slice(0, 4), 10) : undefined;
+              return {
+                coverUrl,
+                year: Number.isFinite(year) ? year : undefined,
+                genre: matched.primaryGenreName,
+              };
+            }
+          }
+        }
+      }
+
+      // Attempt B: Search for Song with Artist + Title (or Artist + Clean Album)
+      const songQuery = cleanTit
+        ? `${cleanArt} ${cleanTit}`.trim()
+        : `${cleanArt} ${cleanAlb}`.trim();
+
+      const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(songQuery)}&entity=song&limit=8`);
       if (res.ok) {
         const data = await res.json();
-        if (data.results && data.results.length > 0) {
-          const item = data.results[0];
-          let coverUrl = item.artworkUrl100;
-          if (coverUrl) {
-            // Replace 100x100 with ultra-crisp 1000x1000 resolution
-            coverUrl = coverUrl.replace(/100x100bb\.jpg$/, '1000x1000bb.jpg');
+        if (Array.isArray(data.results) && data.results.length > 0) {
+          // Find candidate where artist matches
+          const matched = data.results.find((item: any) => isArtistMatch(artist, item.artistName));
+          if (matched && matched.artworkUrl100) {
+            const coverUrl = matched.artworkUrl100.replace(/100x100bb\.jpg$/, '1000x1000bb.jpg');
+            const year = matched.releaseDate ? parseInt(matched.releaseDate.slice(0, 4), 10) : undefined;
+            return {
+              coverUrl,
+              year: Number.isFinite(year) ? year : undefined,
+              genre: matched.primaryGenreName,
+            };
           }
-          const year = item.releaseDate ? parseInt(item.releaseDate.slice(0, 4), 10) : undefined;
-          return {
-            coverUrl,
-            year: Number.isFinite(year) ? year : undefined,
-            genre: item.primaryGenreName,
-          };
         }
       }
     } catch (e) {
@@ -36,11 +109,14 @@ export const MetadataService = {
     return null;
   },
 
-  // 2. JioSaavn Search
+  // 2. JioSaavn Search with Artist Validation
   async fetchFromJioSaavn(artist: string, album: string, title?: string): Promise<{ coverUrl?: string; year?: number } | null> {
     try {
-      const query = `${artist} ${album || title || ''}`.trim();
-      // Try reliable public Saavn endpoints
+      const cleanArt = artist.split(',')[0].trim();
+      const cleanAlb = cleanQueryTerm(album, cleanArt);
+      const cleanTit = cleanQueryTerm(title || '', cleanArt);
+      const query = `${cleanArt} ${cleanTit || cleanAlb}`.trim();
+
       const endpoints = [
         `https://saavn.dev/api/search/songs?query=${encodeURIComponent(query)}`,
         `https://saavn.me/search/songs?query=${encodeURIComponent(query)}`,
@@ -53,17 +129,23 @@ export const MetadataService = {
             const data = await res.json();
             const results = data.data?.results || data.results;
             if (Array.isArray(results) && results.length > 0) {
-              const item = results[0];
-              let coverUrl = '';
-              if (Array.isArray(item.image)) {
-                // Get highest resolution image
-                const best = item.image[item.image.length - 1];
-                coverUrl = typeof best === 'string' ? best : best.url || best.link;
-              } else if (typeof item.image === 'string') {
-                coverUrl = item.image;
+              // Find result where artist matches
+              const matched = results.find((item: any) => {
+                const itemArtist = item.primaryArtists || item.singers || item.artist || '';
+                return isArtistMatch(artist, itemArtist);
+              });
+
+              if (matched) {
+                let coverUrl = '';
+                if (Array.isArray(matched.image)) {
+                  const best = matched.image[matched.image.length - 1];
+                  coverUrl = typeof best === 'string' ? best : best.url || best.link;
+                } else if (typeof matched.image === 'string') {
+                  coverUrl = matched.image;
+                }
+                const year = matched.year ? parseInt(matched.year, 10) : undefined;
+                return { coverUrl, year: Number.isFinite(year) ? year : undefined };
               }
-              const year = item.year ? parseInt(item.year, 10) : undefined;
-              return { coverUrl, year: Number.isFinite(year) ? year : undefined };
             }
           }
         } catch {
@@ -76,19 +158,18 @@ export const MetadataService = {
     return null;
   },
 
-  // 3. Last.fm API
+  // 3. Last.fm API with Cleaned Query & Track Fallback
   async fetchFromLastfm(
     apiKey: string,
     artist: string,
     album?: string,
     title?: string
   ): Promise<{ coverUrl?: string; year?: number; bio?: string; albumSummary?: string; tags?: string[]; similar?: string[] } | null> {
-    // If user has not provided an API key, use public Last.fm read key
     const key = apiKey.trim() || 'b25b959554ed76058ac220b7b2e0a026';
     const result: { coverUrl?: string; year?: number; bio?: string; albumSummary?: string; tags?: string[]; similar?: string[] } = {};
 
     try {
-      // Fetch Artist Info
+      // A. Fetch Artist Info
       if (artist && artist !== 'Unknown Artist') {
         const url = `https://ws.audioscrobbler.com/2.0/?method=artist.getinfo&artist=${encodeURIComponent(artist)}&api_key=${key}&format=json`;
         const res = await fetch(url);
@@ -110,9 +191,10 @@ export const MetadataService = {
         }
       }
 
-      // Fetch Album Info
-      if (artist && album && album !== 'Unknown Album') {
-        const url = `https://ws.audioscrobbler.com/2.0/?method=album.getinfo&artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&api_key=${key}&format=json`;
+      // B. Fetch Album Info with Cleaned Album Term
+      const cleanAlb = album ? cleanQueryTerm(album, artist) : '';
+      if (artist && cleanAlb && cleanAlb !== 'Unknown Album') {
+        const url = `https://ws.audioscrobbler.com/2.0/?method=album.getinfo&artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(cleanAlb)}&api_key=${key}&format=json`;
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
@@ -122,6 +204,24 @@ export const MetadataService = {
             }
             if (Array.isArray(data.album.image)) {
               const img = data.album.image.find((i: { size: string }) => i.size === 'extralarge' || i.size === 'mega') || data.album.image[data.album.image.length - 1];
+              if (img && img['#text']) {
+                result.coverUrl = img['#text'];
+              }
+            }
+          }
+        }
+      }
+
+      // C. Fallback: Fetch Track Info (if album cover was not found or album was unknown)
+      if (!result.coverUrl && artist && title) {
+        const cleanTit = cleanQueryTerm(title, artist);
+        if (cleanTit) {
+          const url = `https://ws.audioscrobbler.com/2.0/?method=track.getInfo&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(cleanTit)}&api_key=${key}&format=json`;
+          const res = await fetch(url);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.track?.album?.image && Array.isArray(data.track.album.image)) {
+              const img = data.track.album.image.find((i: { size: string }) => i.size === 'extralarge' || i.size === 'mega') || data.track.album.image[data.track.album.image.length - 1];
               if (img && img['#text']) {
                 result.coverUrl = img['#text'];
               }
@@ -144,8 +244,8 @@ export const MetadataService = {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.data) && data.data.length > 0) {
-          const first = data.data[0];
-          const img = first.picture_xl || first.picture_big || first.picture_medium || first.picture;
+          const matched = data.data.find((item: any) => isArtistMatch(artist, item.name)) || data.data[0];
+          const img = matched.picture_xl || matched.picture_big || matched.picture_medium || matched.picture;
           if (img) return { imageUrl: img };
         }
       }
@@ -181,14 +281,14 @@ export const MetadataService = {
     const cached = localStorage.getItem(cacheKey);
     if (cached) return cached;
 
-    // 1. Try Deezer (highest quality musician portraits)
+    // 1. Try Deezer
     const deezer = await this.fetchArtistFromDeezer(artist);
     if (deezer?.imageUrl) {
       localStorage.setItem(cacheKey, deezer.imageUrl);
       return deezer.imageUrl;
     }
 
-    // 2. Fallback to Wikipedia REST
+    // 2. Try Wikipedia
     const wiki = await this.fetchArtistFromWikipedia(artist);
     if (wiki?.imageUrl) {
       localStorage.setItem(cacheKey, wiki.imageUrl);
@@ -198,7 +298,38 @@ export const MetadataService = {
     return null;
   },
 
-  // Multi-source Cover Art Resolver based on user priority
+  // Synchronous lookup for previously resolved & validated cover art
+  getCachedCoverArt(artist?: string, album?: string, title?: string): string | null {
+    if (!artist && !album && !title) return null;
+    const isUnknownArtist = !artist || artist.trim() === '' || artist === 'Unknown Artist';
+    const isUnknownAlbum = !album || album.trim() === '' || album === 'Unknown Album';
+    const isUnknownTitle = !title || title.trim() === '';
+    if (isUnknownArtist && (isUnknownAlbum || isUnknownTitle)) return null;
+
+    const cleanArtist = isUnknownArtist ? '' : artist.trim();
+    const cleanAlbum = isUnknownAlbum ? '' : album.trim();
+    const cleanTitle = isUnknownTitle ? '' : title.trim();
+
+    const cacheKey = `mb_art_v3_${cleanArtist.toLowerCase()}_${(cleanAlbum || cleanTitle).toLowerCase()}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) return cached;
+    } catch {}
+
+    // Fallback: Check primary artist cache key if multiple artists
+    if (cleanArtist.includes(',')) {
+      const primaryArtist = cleanArtist.split(',')[0].trim();
+      const primaryKey = `mb_art_v3_${primaryArtist.toLowerCase()}_${(cleanAlbum || cleanTitle).toLowerCase()}`;
+      try {
+        const cached = localStorage.getItem(primaryKey);
+        if (cached) return cached;
+      } catch {}
+    }
+
+    return null;
+  },
+
+  // Multi-source Cover Art Resolver based on user priority with strict artist verification
   async resolveCoverArt(
     artist: string,
     album: string,
@@ -210,7 +341,6 @@ export const MetadataService = {
     const isUnknownAlbum = !album || album.trim() === '' || album === 'Unknown Album';
     const isUnknownTitle = !title || title.trim() === '';
 
-    // If artist is unknown and no valid album/title, do not perform arbitrary search queries
     if (isUnknownArtist && (isUnknownAlbum || isUnknownTitle)) {
       return null;
     }
@@ -219,7 +349,8 @@ export const MetadataService = {
     const cleanAlbum = isUnknownAlbum ? '' : album.trim();
     const cleanTitle = isUnknownTitle ? '' : title.trim();
 
-    const cacheKey = `mb_art_${cleanArtist.toLowerCase()}_${(cleanAlbum || cleanTitle).toLowerCase()}`;
+    // Use versioned cache key to immediately purge previous incorrect lookups
+    const cacheKey = `mb_art_v3_${cleanArtist.toLowerCase()}_${(cleanAlbum || cleanTitle).toLowerCase()}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) return cached;
 
@@ -294,7 +425,6 @@ export const MetadataService = {
       } catch { /* ignore */ }
     }
 
-    // Parallel fetch from Last.fm, Deezer, and Wikipedia
     const [lastfm, image, wiki] = await Promise.all([
       this.fetchFromLastfm(apiKey, artist),
       this.fetchArtistImage(artist),
@@ -318,7 +448,6 @@ export const MetadataService = {
       return info;
     }
 
-    // Fallback: If artist has multiple artists, try primary artist
     if (artist.includes(',')) {
       return this.getArtistDetails(artist.split(',')[0].trim(), apiKey);
     }
@@ -334,16 +463,17 @@ export const MetadataService = {
       try { return JSON.parse(cached); } catch { /* ignore */ }
     }
 
-    const data = await this.fetchFromLastfm(apiKey, artist, album);
-    const itunes = await this.fetchFromItunes(artist, album);
+    const cleanAlb = cleanQueryTerm(album, artist);
+    const data = await this.fetchFromLastfm(apiKey, artist, cleanAlb || album);
+    const itunes = await this.fetchFromItunes(artist, cleanAlb || album);
 
-    if (data?.albumSummary || itunes?.year) {
+    if (data?.albumSummary || itunes?.year || itunes?.coverUrl || data?.coverUrl) {
       const info: AlbumInfo = {
         name: album,
         artist,
         summary: data?.albumSummary || 'No summary available.',
         releaseDate: itunes?.year ? itunes.year.toString() : undefined,
-        coverUrl: data?.coverUrl || itunes?.coverUrl,
+        coverUrl: itunes?.coverUrl || data?.coverUrl,
       };
       localStorage.setItem(cacheKey, JSON.stringify(info));
       return info;

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import {
   ArrowLeft,
   Disc3,
@@ -13,6 +13,9 @@ import {
   Sparkles,
   Radio as RadioIcon,
   X,
+  Shuffle,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 import { Visualizer } from './Visualizer';
 import { TrackRecord, RadioStation, RadioMetadata, VisualizerMode, LyricsData } from '../types/music';
@@ -106,14 +109,81 @@ export const FullVisualizerView: React.FC<FullVisualizerViewProps> = ({
     return lines[0].text;
   }, [lyricsData, currentTime]);
 
-  const modes: { id: VisualizerMode; label: string }[] = [
-    { id: 'bars', label: 'Bars' },
-    { id: 'mirror-bars', label: 'Mirror' },
-    { id: 'wave', label: 'Wave' },
-    { id: 'circle', label: 'Circle' },
-    { id: 'rainbow-ribbon', label: 'Ribbon' },
-    { id: 'particles', label: 'Particles' },
-  ];
+  const modes: { id: VisualizerMode; label: string }[] = useMemo(
+    () => [
+      { id: 'bars', label: 'Bars' },
+      { id: 'mirror-bars', label: 'Mirror' },
+      { id: 'wave', label: 'Wave' },
+      { id: 'circle', label: 'Circle' },
+      { id: 'rainbow-ribbon', label: 'Ribbon' },
+      { id: 'particles', label: 'Particles' },
+    ],
+    []
+  );
+
+  // Random Visualizer Shuffler state & persistence
+  const [isShuffling, setIsShuffling] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('musicbox_visualizer_shuffle') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [shuffleInterval, setShuffleInterval] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('musicbox_visualizer_shuffle_interval');
+      return saved ? parseInt(saved, 10) || 15 : 15;
+    } catch {
+      return 15;
+    }
+  });
+  const [showIntervalMenu, setShowIntervalMenu] = useState(false);
+  const intervalMenuRef = useRef<HTMLDivElement | null>(null);
+  const shuffleTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const pickRandomMode = useCallback(() => {
+    const available = modes.map((m) => m.id).filter((id) => id !== visualizerMode);
+    if (!available.length) return;
+    const next = available[Math.floor(Math.random() * available.length)];
+    onChangeVisualizerMode(next);
+  }, [modes, visualizerMode, onChangeVisualizerMode]);
+
+  // Handle auto-shuffling interval timer
+  useEffect(() => {
+    if (shuffleTimerRef.current) {
+      clearInterval(shuffleTimerRef.current);
+      shuffleTimerRef.current = null;
+    }
+
+    if (isShuffling && isPlaying) {
+      shuffleTimerRef.current = setInterval(() => {
+        const available = modes.map((m) => m.id).filter((id) => id !== visualizerMode);
+        if (available.length > 0) {
+          const next = available[Math.floor(Math.random() * available.length)];
+          onChangeVisualizerMode(next);
+        }
+      }, shuffleInterval * 1000);
+    }
+
+    return () => {
+      if (shuffleTimerRef.current) {
+        clearInterval(shuffleTimerRef.current);
+      }
+    };
+  }, [isShuffling, isPlaying, shuffleInterval, visualizerMode, modes, onChangeVisualizerMode]);
+
+  // Close interval menu on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (intervalMenuRef.current && !intervalMenuRef.current.contains(e.target as Node)) {
+        setShowIntervalMenu(false);
+      }
+    };
+    if (showIntervalMenu) {
+      window.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => window.removeEventListener('mousedown', handleClickOutside);
+  }, [showIntervalMenu]);
 
   const title = currentTrack?.title || radioNowPlaying?.title || currentRadio?.name || 'Nothing Playing';
   const artist = currentTrack?.artist || radioNowPlaying?.artist || (currentRadio ? 'Live Radio' : '');
@@ -213,24 +283,98 @@ export const FullVisualizerView: React.FC<FullVisualizerViewProps> = ({
           </button>
         </div>
 
-        {/* Visualizer Mode Switcher */}
-        <div className="flex items-center space-x-1 bg-black/60 backdrop-blur-md p-1 rounded-full border border-white/10 shadow-lg">
-          {modes.map((m) => {
-            const active = visualizerMode === m.id;
-            return (
-              <button
-                key={m.id}
-                onClick={() => onChangeVisualizerMode(m.id)}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-                  active
-                    ? 'bg-[var(--accent-color)] text-white shadow'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                {m.label}
-              </button>
-            );
-          })}
+        {/* Right Section: Visualizer Mode Switcher & Random Shuffler */}
+        <div className="flex items-center space-x-2.5">
+          {/* Visualizer Mode Switcher */}
+          <div className="flex items-center space-x-1 bg-black/60 backdrop-blur-md p-1 rounded-full border border-white/10 shadow-lg">
+            {modes.map((m) => {
+              const active = visualizerMode === m.id;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => onChangeVisualizerMode(m.id)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                    active
+                      ? 'bg-[var(--accent-color)] text-white shadow'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Random Visualisation Shuffler Button */}
+          <div ref={intervalMenuRef} className="relative flex items-center">
+            <button
+              onClick={() => {
+                const next = !isShuffling;
+                setIsShuffling(next);
+                try {
+                  localStorage.setItem('musicbox_visualizer_shuffle', String(next));
+                } catch {}
+                if (next) {
+                  pickRandomMode();
+                }
+              }}
+              className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md border transition-all active:scale-95 shadow-lg ${
+                isShuffling
+                  ? 'bg-[var(--accent-color)] border-[var(--accent-color)] text-white shadow-[0_0_15px_rgba(var(--accent-color),0.4)]'
+                  : 'bg-black/60 border-white/10 text-zinc-300 hover:text-white hover:bg-white/10'
+              }`}
+              title={
+                isShuffling
+                  ? `Visualizer Shuffle: ON (${shuffleInterval}s interval) - Click to turn off`
+                  : 'Enable Random Visualizer Shuffle'
+              }
+            >
+              <Shuffle className={`w-3.5 h-3.5 ${isShuffling ? 'animate-pulse' : ''}`} />
+              <span>Shuffle {isShuffling ? `(${shuffleInterval}s)` : ''}</span>
+            </button>
+
+            {/* Interval dropdown toggle button */}
+            <button
+              onClick={() => setShowIntervalMenu((prev) => !prev)}
+              className={`ml-1 px-1.5 py-1.5 rounded-full text-[11px] font-mono border backdrop-blur-md transition-colors ${
+                isShuffling
+                  ? 'bg-black/40 border-white/20 text-white hover:bg-black/60'
+                  : 'bg-black/60 border-white/10 text-zinc-400 hover:text-white hover:bg-white/10'
+              }`}
+              title="Change visualizer shuffle interval"
+            >
+              <ChevronDown className="w-3 h-3" />
+            </button>
+
+            {/* Interval selector menu */}
+            {showIntervalMenu && (
+              <div className="absolute top-full right-0 mt-2 z-50 bg-[#121316] border border-white/15 rounded-xl p-1.5 shadow-2xl flex flex-col space-y-1 min-w-[130px] text-xs backdrop-blur-md animate-fadeIn">
+                <div className="px-2.5 py-1 text-[10px] uppercase tracking-wider text-zinc-400 font-semibold border-b border-white/10">
+                  Shuffle Interval
+                </div>
+                {[10, 15, 30, 45, 60].map((sec) => (
+                  <button
+                    key={sec}
+                    onClick={() => {
+                      setShuffleInterval(sec);
+                      setShowIntervalMenu(false);
+                      try {
+                        localStorage.setItem('musicbox_visualizer_shuffle_interval', String(sec));
+                      } catch {}
+                    }}
+                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-colors ${
+                      shuffleInterval === sec
+                        ? 'bg-[var(--accent-color)] text-white font-semibold'
+                        : 'text-zinc-300 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <span>{sec} seconds</span>
+                    {shuffleInterval === sec && <Check className="w-3.5 h-3.5 ml-2" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

@@ -37,7 +37,7 @@ export interface TrackContextMenuProps {
   onViewAlbum?: (albumName: string, artistName?: string) => void;
   onViewArtist?: (artistName: string) => void;
   onEditTrackMetadata?: (track: TrackRecord) => void;
-  onToggleInfo?: () => void;
+  onToggleInfo?: (track?: TrackRecord) => void;
   onSetRating?: (trackId: number, rating: number) => void;
   onStartRadio?: (track: TrackRecord) => void;
   onShowToast?: (message: string) => void;
@@ -98,8 +98,8 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({
   let menuStyle: React.CSSProperties = {};
   if (anchorRect) {
     // Open upwards from bottom player bar
-    const menuWidth = 220;
-    const menuHeight = 390;
+    const menuWidth = 230;
+    const menuHeight = 410;
     const left = Math.max(12, Math.min(anchorRect.left, window.innerWidth - menuWidth - 12));
     const bottom = window.innerHeight - anchorRect.top + 8;
     menuStyle = {
@@ -109,8 +109,8 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({
       maxHeight: `${window.innerHeight - 90}px`,
     };
   } else if (x !== undefined && y !== undefined) {
-    const menuWidth = 220;
-    const menuHeight = 390;
+    const menuWidth = 230;
+    const menuHeight = 410;
     const posX = Math.max(10, Math.min(x, window.innerWidth - menuWidth - 10));
     const posY = Math.max(10, Math.min(y, window.innerHeight - menuHeight - 10));
     menuStyle = {
@@ -175,7 +175,7 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({
     <div
       ref={menuRef}
       style={menuStyle}
-      className="z-50 w-[220px] bg-[#121316] text-[#e1e3e8] border border-white/10 rounded-lg shadow-2xl py-1 text-[13px] select-none backdrop-blur-md animate-fadeIn"
+      className="z-50 w-[230px] bg-[#121316] text-[#e1e3e8] border border-white/10 rounded-xl shadow-2xl py-1.5 text-[13.5px] select-none backdrop-blur-md animate-fadeIn"
       onContextMenu={(e) => e.preventDefault()}
     >
       {/* 1. Play > */}
@@ -185,7 +185,7 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({
         onMouseLeave={() => setActiveSubmenu((cur) => (cur === 'play' ? null : cur))}
       >
         <button
-          className="w-full px-3 py-2 flex items-center justify-between hover:bg-white/10 hover:text-white transition-colors cursor-pointer text-left"
+          className="w-full px-3.5 py-2.5 flex items-center justify-between hover:bg-white/10 hover:text-white transition-colors cursor-pointer text-left"
           onClick={() => {
             onPlayTrack(track);
             onClose();
@@ -200,7 +200,7 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({
 
         {/* Play Submenu */}
         {activeSubmenu === 'play' && (
-          <div className="absolute left-full top-0 ml-1 w-44 bg-[#121316] border border-white/10 rounded-lg shadow-2xl py-1 text-[12px] z-50">
+          <div className="absolute left-full top-0 ml-1 w-48 bg-[#121316] border border-white/10 rounded-xl shadow-2xl py-1.5 text-[12.5px] z-50">
             <button
               onClick={() => {
                 onPlayTrack(track);
@@ -530,7 +530,7 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({
       {/* 11. Get info */}
       <button
         onClick={() => {
-          if (onToggleInfo) onToggleInfo();
+          if (onToggleInfo) onToggleInfo(track);
           onClose();
         }}
         className="w-full px-3 py-2 flex items-center space-x-2.5 hover:bg-white/10 hover:text-white transition-colors cursor-pointer text-left"

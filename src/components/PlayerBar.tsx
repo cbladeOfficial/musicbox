@@ -59,7 +59,7 @@ interface PlayerBarProps {
   onToggleFullVisualizer?: () => void;
   onToggleLyrics: () => void;
   onToggleQueue: () => void;
-  onToggleInfo: () => void;
+  onToggleInfo: (track?: TrackRecord) => void;
   onToggleFavorite: (id: number) => void;
   onToggleRadioFavorite?: (id: number) => void;
   onViewArtist?: (artistName: string) => void;
@@ -390,7 +390,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
                   {radioNowPlaying?.title || currentRadio.name}
                 </span>
                 <button
-                  onClick={onToggleInfo}
+                  onClick={() => onToggleInfo()}
                   title="Station details"
                   className="p-1 -my-1 rounded text-zinc-400 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
                 >
@@ -671,7 +671,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
 
           {/* Right Panel / Info Toggle Icon (PanelRightClose) */}
           <button
-            onClick={onToggleInfo}
+            onClick={() => onToggleInfo(currentTrack || undefined)}
             title="Track Information Drawer"
             className={`p-0.5 transition-colors ${
               showInfo ? 'text-blue-400 font-bold' : 'text-zinc-400 hover:text-white'

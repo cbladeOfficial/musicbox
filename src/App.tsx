@@ -186,6 +186,7 @@ export function App() {
   const [showLyrics, setShowLyrics] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [selectedInfoTrack, setSelectedInfoTrack] = useState<TrackRecord | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
 
@@ -436,7 +437,11 @@ export function App() {
         lastFmScrobbler.onTrackStart(track, settings.lastfmApiKey, settings.lastfmSecret);
       }
 
-      // Update Discord Rich Presence immediately
+      // Resolve initial cached cover art synchronously if already saved
+      const initialCover = MetadataService.getCachedCoverArt(track.artist, track.album, track.title);
+      setResolvedCoverArt(initialCover || undefined);
+
+      // Update Discord Rich Presence immediately (with cached cover if available)
       if (settings.discordRpcEnabled) {
         TauriBridge.updateDiscordPresence({
           title: track.title,
@@ -445,7 +450,7 @@ export function App() {
           year: settings.discordShowYear ? track.year : undefined,
           duration: track.duration,
           position: 0,
-          coverUrl: undefined,
+          coverUrl: initialCover || undefined,
           isPlaying: true,
           clientId: settings.discordClientId,
         }).catch(() => {});
@@ -459,21 +464,23 @@ export function App() {
         settings.artSourcePriority,
         settings.lastfmApiKey
       ).then((onlineCover) => {
-        setResolvedCoverArt(onlineCover || undefined);
+        if (onlineCover) {
+          setResolvedCoverArt(onlineCover);
 
-        // Update Discord Rich Presence with resolved online cover if available
-        if (settings.discordRpcEnabled && onlineCover) {
-          TauriBridge.updateDiscordPresence({
-            title: track.title,
-            artist: track.artist,
-            album: track.album,
-            year: settings.discordShowYear ? track.year : undefined,
-            duration: track.duration,
-            position: 0,
-            coverUrl: onlineCover,
-            isPlaying: true,
-            clientId: settings.discordClientId,
-          }).catch(() => {});
+          // Update Discord Rich Presence with resolved online cover if available
+          if (settings.discordRpcEnabled) {
+            TauriBridge.updateDiscordPresence({
+              title: track.title,
+              artist: track.artist,
+              album: track.album,
+              year: settings.discordShowYear ? track.year : undefined,
+              duration: track.duration,
+              position: audioEngine.getCurrentTime(),
+              coverUrl: onlineCover,
+              isPlaying: true,
+              clientId: settings.discordClientId,
+            }).catch(() => {});
+          }
         }
       });
     },
@@ -1496,7 +1503,12 @@ export function App() {
                 onViewAlbum={handleNavigateToAlbum}
                 onViewArtist={handleNavigateToArtist}
                 onEditTrackMetadata={handleOpenEditTrack}
-                onToggleInfo={() => setShowInfo(true)}
+                onToggleInfo={(t) => {
+                  setSelectedInfoTrack(t || currentTrack);
+                  setShowInfo(true);
+                  setShowLyrics(false);
+                  setShowQueue(false);
+                }}
                 resolvedCoverArt={resolvedCoverArt}
                 onShowToast={(msg) => showToast(msg, 'info')}
                 sortField={settings.trackSortField || 'title'}
@@ -1606,11 +1618,18 @@ export function App() {
 
         {/* Right Track Info Drawer */}
         <TrackInfoDrawer
-          currentTrack={currentTrack}
+          currentTrack={selectedInfoTrack || currentTrack}
           isOpen={showInfo}
-          onClose={() => setShowInfo(false)}
+          onClose={() => {
+            setShowInfo(false);
+            setSelectedInfoTrack(null);
+          }}
           lastfmApiKey={settings.lastfmApiKey}
-          coverArtUrl={resolvedCoverArt}
+          coverArtUrl={
+            (selectedInfoTrack ? selectedInfoTrack.id === currentTrack?.id : true)
+              ? resolvedCoverArt
+              : undefined
+          }
           streamPort={streamPort}
           onViewArtist={handleNavigateToArtist}
         />
@@ -1707,7 +1726,8 @@ export function App() {
             setShowInfo(false);
           }
         }}
-        onToggleInfo={() => {
+        onToggleInfo={(t) => {
+          setSelectedInfoTrack(t || currentTrack);
           setShowInfo(!showInfo);
           if (!showInfo) {
             setShowLyrics(false);

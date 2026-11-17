@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { TrackRecord, PlaylistRecord, TableDensity, TrackSortField } from '../types/music';
 import { getCoverUrl } from '../utils/cover';
+import { MetadataService } from '../services/metadataService';
 import { ArtistLinks } from './ArtistLinks';
 import { TrackContextMenu } from './TrackContextMenu';
 
@@ -32,7 +33,7 @@ interface TrackTableProps {
   onViewAlbum?: (albumName: string, artistName?: string) => void;
   onViewArtist?: (artistName: string) => void;
   onEditTrackMetadata?: (track: TrackRecord) => void;
-  onToggleInfo?: () => void;
+  onToggleInfo?: (track?: TrackRecord) => void;
   sortField?: TrackSortField;
   sortAsc?: boolean;
   onSortChange?: (field: TrackSortField, asc: boolean) => void;
@@ -50,26 +51,37 @@ function formatDuration(sec: number): string {
 
 const TrackThumbnail: React.FC<{
   src?: string;
+  fallbackSrc?: string;
   size: string;
   alt?: string;
-}> = ({ src, size, alt = '' }) => {
+}> = ({ src, fallbackSrc, size, alt = '' }) => {
+  const [currentSrc, setCurrentSrc] = useState<string | undefined>(src || fallbackSrc);
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
+    setCurrentSrc(src || fallbackSrc);
     setHasError(false);
-  }, [src]);
+  }, [src, fallbackSrc]);
+
+  const handleError = () => {
+    if (fallbackSrc && currentSrc !== fallbackSrc) {
+      setCurrentSrc(fallbackSrc);
+    } else {
+      setHasError(true);
+    }
+  };
 
   return (
     <div
       className={`${size} rounded-md overflow-hidden bg-zinc-900 border border-white/10 flex-shrink-0 flex items-center justify-center shadow-sm`}
     >
-      {src && !hasError ? (
+      {currentSrc && !hasError ? (
         <img
-          src={src}
+          src={currentSrc}
           alt={alt}
           loading="lazy"
           className="w-full h-full object-cover"
-          onError={() => setHasError(true)}
+          onError={handleError}
         />
       ) : (
         <Disc3 className="w-4 h-4 text-zinc-500" />
@@ -251,10 +263,11 @@ export const TrackTable: React.FC<TrackTableProps> = ({
         ) : (
           sortedTracks.map((track, idx) => {
             const isCurrent = currentTrackId === track.id;
-            // For active track: prioritize resolvedCoverArt, fallback to getCoverUrl
+            const cachedCover = MetadataService.getCachedCoverArt(track.artist, track.album, track.title);
             const coverSrc = isCurrent && resolvedCoverArt
               ? resolvedCoverArt
-              : getCoverUrl(track.cover_path, streamPort);
+              : (cachedCover || getCoverUrl(track.cover_path, streamPort, cachedCover || undefined));
+            const fallbackSrc = cachedCover || undefined;
 
             return (
               <div
@@ -297,6 +310,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
                 <div className="flex-1 flex items-center space-x-3 truncate pr-3">
                   <TrackThumbnail
                     src={coverSrc}
+                    fallbackSrc={fallbackSrc}
                     size={thumbnailSize}
                     alt={track.album}
                   />
