@@ -749,8 +749,21 @@ export function App() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if user is currently typing in an input or textarea
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+      const target = e.target as HTMLElement | null;
+      const isInput =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable);
+
+      if (e.key === 'Tab') {
+        if (!isInput) {
+          e.preventDefault();
+        }
+        return;
+      }
+
+      if (isInput) return;
 
       if (e.code === 'Space') {
         e.preventDefault();
