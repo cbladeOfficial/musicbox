@@ -9,7 +9,7 @@ import {
   Sparkles,
   Heart,
 } from 'lucide-react';
-import { TrackRecord } from '../types/music';
+import { TrackRecord, AlbumArtMode } from '../types/music';
 import { getCoverUrl } from '../utils/cover';
 import { ArtistLinks } from './ArtistLinks';
 
@@ -20,6 +20,7 @@ interface HomeViewProps {
   onSelectArtist: (artistName: string) => void;
   onSelectGenre: (genreName: string) => void;
   streamPort?: number;
+  albumArtMode?: AlbumArtMode;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -29,6 +30,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onSelectArtist,
   onSelectGenre,
   streamPort,
+  albumArtMode = 'local_and_online',
 }) => {
   // Time-based greeting
   const greeting = useMemo(() => {
@@ -141,7 +143,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   // Helper for cover image URL
   const resolveCover = (track?: TrackRecord) => {
     if (!track?.cover_path) return undefined;
-    return getCoverUrl(track.cover_path, streamPort);
+    return getCoverUrl(track.cover_path, streamPort, undefined, albumArtMode);
   };
 
   // Genre gradient colors

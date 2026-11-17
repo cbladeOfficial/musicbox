@@ -11,7 +11,7 @@ import {
   Music2,
   ChevronDown,
 } from 'lucide-react';
-import { TrackRecord, PlaylistRecord, TableDensity, TrackSortField } from '../types/music';
+import { TrackRecord, PlaylistRecord, TableDensity, TrackSortField, AlbumArtMode } from '../types/music';
 import { getCoverUrl } from '../utils/cover';
 import { MetadataService } from '../services/metadataService';
 import { ArtistLinks } from './ArtistLinks';
@@ -23,6 +23,7 @@ interface TrackTableProps {
   isPlaying: boolean;
   density: TableDensity;
   streamPort: number;
+  albumArtMode?: AlbumArtMode;
   onPlayTrack: (track: TrackRecord) => void;
   onPlayNext?: (track: TrackRecord) => void;
   onToggleFavorite: (id: number) => void;
@@ -97,6 +98,7 @@ export const TrackTable: React.FC<TrackTableProps> = ({
   isPlaying,
   density,
   streamPort,
+  albumArtMode = 'local_and_online',
   onPlayTrack,
   onPlayNext,
   onToggleFavorite,
@@ -264,13 +266,17 @@ export const TrackTable: React.FC<TrackTableProps> = ({
         ) : (
           sortedTracks.map((track, idx) => {
             const isCurrent = currentTrackId === track.id;
-            const cachedCover = MetadataService.getCachedCoverArt(track.artist, track.album, track.title);
+            const hasLocalCover = Boolean(track.cover_path && track.cover_path.trim());
+            const cachedCover = (albumArtMode === 'local_and_online' && !hasLocalCover)
+              ? MetadataService.getCachedCoverArt(track.artist, track.album, track.title)
+              : null;
             const coverSrc = getCoverUrl(
               track.cover_path,
               streamPort,
-              isCurrent ? (resolvedCoverArt || cachedCover || undefined) : (cachedCover || undefined)
+              isCurrent ? (resolvedCoverArt || cachedCover || undefined) : (cachedCover || undefined),
+              albumArtMode
             );
-            const fallbackSrc = cachedCover || undefined;
+            const fallbackSrc = (albumArtMode === 'local_and_online' && !hasLocalCover) ? (cachedCover || undefined) : undefined;
 
             return (
               <div

@@ -17,8 +17,9 @@ import {
   Sparkles,
   ArrowUpDown,
   LayoutTemplate,
+  Image as ImageIcon,
 } from 'lucide-react';
-import { AppSettings, ArtSource, ThemeId, VisualizerMode, TableDensity, TrackSortField, ViewMode } from '../types/music';
+import { AppSettings, ArtSource, ThemeId, VisualizerMode, TableDensity, TrackSortField, ViewMode, AlbumArtMode } from '../types/music';
 import { TauriBridge } from '../services/tauriBridge';
 
 interface SettingsViewProps {
@@ -147,7 +148,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             }`}
           >
             <Radio className="w-4 h-4 text-[var(--accent-color)]" />
-            <span>Discord RPC</span>
+            <span>Discord & Artwork</span>
           </button>
 
           <button
@@ -562,13 +563,109 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </p>
               </div>
 
+              {/* Album Art Source & Fallback Policy */}
+              <div className="border-t border-[var(--border-color)] pt-6 space-y-4">
+                <div className="flex items-center space-x-2">
+                  <ImageIcon className="w-4 h-4 text-[var(--accent-color)]" />
+                  <h3 className="text-sm font-semibold text-white">
+                    Album Art Source & Fallback Policy
+                  </h3>
+                </div>
+                <p className="text-xs text-zinc-400">
+                  Controls how album art is resolved for your tracks. Embedded artwork extracted from your local audio files is always prioritized.
+                </p>
+
+                <div className="grid grid-cols-1 gap-2.5 pt-1">
+                  {[
+                    {
+                      id: 'local_and_online' as AlbumArtMode,
+                      title: 'Local First with Online Fallback (Recommended)',
+                      badge: 'Recommended',
+                      desc: 'Shows local album art only when embedded in the track. If the track has no embedded artwork, automatically falls back to online search (iTunes, Wikipedia, JioSaavn, Last.fm).',
+                    },
+                    {
+                      id: 'local_only' as AlbumArtMode,
+                      title: 'Local Embedded Only (No Online Search)',
+                      badge: 'Offline Only',
+                      desc: 'Shows local album art only when embedded in the track. If missing, disables album art entirely for that track without searching online.',
+                    },
+                    {
+                      id: 'disabled' as AlbumArtMode,
+                      title: 'Disable Album Art Entirely',
+                      badge: 'Off',
+                      desc: 'Disables all album art display across the app (Track list, Player bar, Full visualizer, Track details, and Discord RPC).',
+                    },
+                  ].map((option) => {
+                    const isSelected = (settings.albumArtMode || 'local_and_online') === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => onUpdateSettings({ albumArtMode: option.id })}
+                        className={`flex items-start justify-between p-3.5 rounded-lg border text-left transition-all ${
+                          isSelected
+                            ? 'border-[var(--accent-color)] bg-[var(--surface-active)] shadow-md ring-1 ring-[var(--accent-color)]/30'
+                            : 'border-[var(--border-color)] bg-[var(--surface-color)] hover:bg-[var(--surface-hover)]'
+                        }`}
+                      >
+                        <div className="space-y-1 pr-4">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm font-medium text-white">{option.title}</span>
+                            <span
+                              className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                                isSelected
+                                  ? 'bg-[var(--accent-color)]/20 text-[var(--accent-color)] border-[var(--accent-color)]/30'
+                                  : 'bg-white/5 text-zinc-400 border-white/10'
+                              }`}
+                            >
+                              {option.badge}
+                            </span>
+                          </div>
+                          <p className="text-xs text-zinc-400 leading-relaxed">{option.desc}</p>
+                        </div>
+                        <div
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
+                            isSelected
+                              ? 'border-[var(--accent-color)] bg-[var(--accent-color)] text-white'
+                              : 'border-zinc-500 bg-transparent'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Artwork & Metadata Priority */}
               <div className="border-t border-[var(--border-color)] pt-6 space-y-3">
-                <h3 className="text-sm font-medium text-white">
-                  Online Artwork & Metadata Priority
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-white">
+                    Online Artwork & Metadata Priority
+                  </h3>
+                  <span
+                    className={`text-[11px] font-mono px-2 py-0.5 rounded border ${
+                      settings.albumArtMode === 'disabled'
+                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                        : settings.albumArtMode === 'local_only'
+                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    }`}
+                  >
+                    {settings.albumArtMode === 'disabled'
+                      ? 'Disabled'
+                      : settings.albumArtMode === 'local_only'
+                      ? 'Fallback Inactive (Local Only)'
+                      : 'Active Fallback'}
+                  </span>
+                </div>
                 <p className="text-xs text-zinc-400">
-                  Sources are queried in order to fetch missing cover art, lyrics, and metadata.
+                  {settings.albumArtMode === 'local_and_online'
+                    ? 'Queried in order only when a track has no embedded local album art.'
+                    : settings.albumArtMode === 'local_only'
+                    ? 'Online cover art queries are disabled because "Local Embedded Only" is selected above.'
+                    : 'Online cover art queries are disabled because album art is disabled entirely.'}
                 </p>
 
                 <div className="space-y-2 pt-1">

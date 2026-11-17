@@ -10,7 +10,7 @@ import {
   Tag,
   Users,
 } from 'lucide-react';
-import { TrackRecord, ArtistInfo } from '../types/music';
+import { TrackRecord, ArtistInfo, AlbumArtMode } from '../types/music';
 import { MetadataService } from '../services/metadataService';
 import { getCoverUrl } from '../utils/cover';
 
@@ -32,6 +32,7 @@ interface ArtistViewProps {
   lastfmApiKey: string;
   streamPort?: number;
   onViewAlbum?: (albumName: string, artistName: string) => void;
+  albumArtMode?: AlbumArtMode;
   backLabel?: string;
 }
 
@@ -97,10 +98,11 @@ const ArtistAlbumItem: React.FC<{
   alb: { name: string; year?: number; coverPath?: string; tracks: TrackRecord[] };
   artistName: string;
   streamPort?: number;
+  albumArtMode?: AlbumArtMode;
   onViewAlbum?: (albumName: string, artistName: string) => void;
-}> = ({ alb, artistName, streamPort, onViewAlbum }) => {
+}> = ({ alb, artistName, streamPort, albumArtMode = 'local_and_online', onViewAlbum }) => {
   const [hasError, setHasError] = useState(false);
-  const coverSrc = getCoverUrl(alb.coverPath, streamPort);
+  const coverSrc = getCoverUrl(alb.coverPath, streamPort, undefined, albumArtMode);
 
   return (
     <div
@@ -146,6 +148,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({
   lastfmApiKey,
   streamPort = 45321,
   onViewAlbum,
+  albumArtMode = 'local_and_online',
   backLabel,
 }) => {
   const [artistBio, setArtistBio] = useState<ArtistInfo | null>(null);
@@ -387,6 +390,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({
                 alb={alb}
                 artistName={selectedArtist.name}
                 streamPort={streamPort}
+                albumArtMode={albumArtMode}
                 onViewAlbum={onViewAlbum}
               />
             ))}

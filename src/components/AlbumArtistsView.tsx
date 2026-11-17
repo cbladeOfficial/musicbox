@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Users, Disc3, Play } from 'lucide-react';
-import { TrackRecord } from '../types/music';
+import { TrackRecord, AlbumArtMode } from '../types/music';
 import { getCoverUrl } from '../utils/cover';
 
 interface AlbumArtistsViewProps {
@@ -8,6 +8,7 @@ interface AlbumArtistsViewProps {
   onSelectArtist: (artistName: string) => void;
   onPlayTracks: (tracks: TrackRecord[]) => void;
   streamPort?: number;
+  albumArtMode?: AlbumArtMode;
 }
 
 export const AlbumArtistsView: React.FC<AlbumArtistsViewProps> = ({
@@ -15,6 +16,7 @@ export const AlbumArtistsView: React.FC<AlbumArtistsViewProps> = ({
   onSelectArtist,
   onPlayTracks,
   streamPort,
+  albumArtMode = 'local_and_online',
 }) => {
   // Group by album_artist, fallback to artist
   const albumArtists = useMemo(() => {
@@ -56,7 +58,7 @@ export const AlbumArtistsView: React.FC<AlbumArtistsViewProps> = ({
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
         {albumArtists.map((aa) => {
-          const cover = getCoverUrl(aa.sampleTrack.cover_path, streamPort);
+          const cover = getCoverUrl(aa.sampleTrack.cover_path, streamPort, undefined, albumArtMode);
           return (
             <div
               key={aa.name}

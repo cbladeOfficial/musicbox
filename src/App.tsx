@@ -53,6 +53,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   discordClientId: '1176718791388975124',
   discordShowYear: true,
   artSourcePriority: ['itunes', 'wikipedia', 'jiosaavn', 'lastfm'],
+  albumArtMode: 'local_and_online',
   lastfmEnabled: true,
   lastfmApiKey: '',
   lastfmSecret: '',
@@ -330,6 +331,9 @@ export function App() {
           if (Array.isArray(parsed.artSourcePriority) && !parsed.artSourcePriority.includes('wikipedia')) {
             parsed.artSourcePriority.splice(1, 0, 'wikipedia');
           }
+          if (!parsed.albumArtMode) {
+            parsed.albumArtMode = 'local_and_online';
+          }
           setSettings((prev) => ({ ...prev, ...parsed }));
           if (isTauri()) {
             if (parsed.startMaximized === false) {
@@ -471,11 +475,21 @@ export function App() {
         lastFmScrobbler.onTrackStart(track, settings.lastfmApiKey, settings.lastfmSecret);
       }
 
-      // Resolve initial cached cover art synchronously if already saved
-      const initialCover = getCoverUrl(track.cover_path, streamPort) || MetadataService.getCachedCoverArt(track.artist, track.album, track.title);
+      // Check if local embedded cover exists
+      const hasLocalCover = Boolean(track.cover_path && track.cover_path.trim());
+
+      // Resolve initial cover art (shows local embedded art only if present; cached online only if mode permits)
+      const initialCover = getCoverUrl(
+        track.cover_path,
+        streamPort,
+        settings.albumArtMode === 'local_and_online' && !hasLocalCover
+          ? (MetadataService.getCachedCoverArt(track.artist, track.album, track.title) || undefined)
+          : undefined,
+        settings.albumArtMode
+      );
       setResolvedCoverArt(initialCover || undefined);
 
-      // Update Discord Rich Presence immediately (with cached cover if available)
+      // Update Discord Rich Presence immediately
       if (settings.discordRpcEnabled) {
         TauriBridge.updateDiscordPresence({
           title: track.title,
@@ -484,41 +498,43 @@ export function App() {
           year: settings.discordShowYear ? track.year : undefined,
           duration: track.duration,
           position: 0,
-          coverUrl: initialCover || undefined,
-          coverPath: track.cover_path || undefined,
+          coverUrl: settings.albumArtMode !== 'disabled' ? (initialCover || undefined) : undefined,
+          coverPath: settings.albumArtMode !== 'disabled' && hasLocalCover ? (track.cover_path || undefined) : undefined,
           isPlaying: true,
           clientId: settings.discordClientId,
         }).catch(() => {});
       }
 
-      // Resolve online cover art (iTunes / JioSaavn / Last.fm)
-      MetadataService.resolveCoverArt(
-        track.artist,
-        track.album,
-        track.title,
-        settings.artSourcePriority,
-        settings.lastfmApiKey
-      ).then((onlineCover) => {
-        if (onlineCover) {
-          setResolvedCoverArt(onlineCover);
+      // Fallback to online search ONLY when track has no local embedded artwork AND setting allows online fallback
+      if (!hasLocalCover && settings.albumArtMode === 'local_and_online') {
+        MetadataService.resolveCoverArt(
+          track.artist,
+          track.album,
+          track.title,
+          settings.artSourcePriority,
+          settings.lastfmApiKey
+        ).then((onlineCover) => {
+          if (onlineCover) {
+            setResolvedCoverArt(onlineCover);
 
-          // Update Discord Rich Presence with resolved online cover if available
-          if (settings.discordRpcEnabled) {
-            TauriBridge.updateDiscordPresence({
-              title: track.title,
-              artist: track.artist,
-              album: track.album,
-              year: settings.discordShowYear ? track.year : undefined,
-              duration: track.duration,
-              position: audioEngine.getCurrentTime(),
-              coverUrl: onlineCover,
-              coverPath: track.cover_path || undefined,
-              isPlaying: true,
-              clientId: settings.discordClientId,
-            }).catch(() => {});
+            // Update Discord Rich Presence with resolved online cover
+            if (settings.discordRpcEnabled) {
+              TauriBridge.updateDiscordPresence({
+                title: track.title,
+                artist: track.artist,
+                album: track.album,
+                year: settings.discordShowYear ? track.year : undefined,
+                duration: track.duration,
+                position: audioEngine.getCurrentTime(),
+                coverUrl: onlineCover,
+                coverPath: undefined,
+                isPlaying: true,
+                clientId: settings.discordClientId,
+              }).catch(() => {});
+            }
           }
-        }
-      });
+        });
+      }
     },
     [streamPort, settings, stopRadioPolling]
   );
@@ -642,6 +658,8 @@ export function App() {
           clientId: settings.discordClientId,
         }).catch(() => {});
       } else if (currentTrack && settings.discordRpcEnabled) {
+        const hasLocal = Boolean(currentTrack.cover_path && currentTrack.cover_path.trim());
+        const canShowArt = settings.albumArtMode !== 'disabled';
         TauriBridge.updateDiscordPresence({
           title: currentTrack.title,
           artist: currentTrack.artist,
@@ -649,8 +667,8 @@ export function App() {
           year: settings.discordShowYear ? currentTrack.year : undefined,
           duration: currentTrack.duration,
           position: audioEngine.getCurrentTime(),
-          coverUrl: resolvedCoverArt,
-          coverPath: currentTrack.cover_path || undefined,
+          coverUrl: canShowArt && !hasLocal && settings.albumArtMode === 'local_and_online' ? resolvedCoverArt : undefined,
+          coverPath: canShowArt && hasLocal ? (currentTrack.cover_path || undefined) : undefined,
           isPlaying: playing,
           clientId: settings.discordClientId,
         }).catch(() => {});
@@ -672,6 +690,8 @@ export function App() {
         audioEngine.seek(0);
         setCurrentTime(0);
         if (currentTrack && settings.discordRpcEnabled) {
+          const hasLocal = Boolean(currentTrack.cover_path && currentTrack.cover_path.trim());
+          const canShowArt = settings.albumArtMode !== 'disabled';
           TauriBridge.updateDiscordPresence({
             title: currentTrack.title,
             artist: currentTrack.artist,
@@ -679,8 +699,8 @@ export function App() {
             year: settings.discordShowYear ? currentTrack.year : undefined,
             duration: currentTrack.duration,
             position: 0,
-            coverUrl: resolvedCoverArt,
-            coverPath: currentTrack.cover_path || undefined,
+            coverUrl: canShowArt && !hasLocal && settings.albumArtMode === 'local_and_online' ? resolvedCoverArt : undefined,
+            coverPath: canShowArt && hasLocal ? (currentTrack.cover_path || undefined) : undefined,
             isPlaying: false,
             clientId: settings.discordClientId,
           }).catch(() => {});
@@ -706,6 +726,8 @@ export function App() {
         audioEngine.seek(0);
         setCurrentTime(0);
         if (currentTrack && settings.discordRpcEnabled) {
+          const hasLocal = Boolean(currentTrack.cover_path && currentTrack.cover_path.trim());
+          const canShowArt = settings.albumArtMode !== 'disabled';
           TauriBridge.updateDiscordPresence({
             title: currentTrack.title,
             artist: currentTrack.artist,
@@ -713,8 +735,8 @@ export function App() {
             year: settings.discordShowYear ? currentTrack.year : undefined,
             duration: currentTrack.duration,
             position: 0,
-            coverUrl: resolvedCoverArt,
-            coverPath: currentTrack.cover_path || undefined,
+            coverUrl: canShowArt && !hasLocal && settings.albumArtMode === 'local_and_online' ? resolvedCoverArt : undefined,
+            coverPath: canShowArt && hasLocal ? (currentTrack.cover_path || undefined) : undefined,
             isPlaying: false,
             clientId: settings.discordClientId,
           }).catch(() => {});
@@ -1386,6 +1408,7 @@ export function App() {
             <HomeView
               tracks={tracks}
               streamPort={streamPort}
+              albumArtMode={settings.albumArtMode}
               onPlayTrack={handlePlayTrack}
               onSelectAlbum={(albName) => handleNavigateToAlbum(albName)}
               onSelectArtist={(artName) => handleNavigateToArtist(artName)}
@@ -1445,6 +1468,7 @@ export function App() {
                   }
                 }}
                 streamPort={streamPort}
+                albumArtMode={settings.albumArtMode}
               />
             )
           ) : currentView === 'visualizer' ? (
@@ -1454,10 +1478,7 @@ export function App() {
               radioNowPlaying={radioNowPlaying}
               isPlaying={isPlaying}
               accentColor={settings.customAccentColor}
-              coverUrl={
-                resolvedCoverArt ||
-                getCoverUrl(currentTrack?.cover_path, streamPort)
-              }
+              coverUrl={getCoverUrl(currentTrack?.cover_path, streamPort, resolvedCoverArt, settings.albumArtMode)}
               visualizerMode={settings.visualizerMode}
               onChangeVisualizerMode={(m) => handleUpdateSettings({ visualizerMode: m })}
               onClose={() => {
@@ -1552,6 +1573,7 @@ export function App() {
                 isPlaying={isPlaying}
                 density={settings.tableDensity}
                 streamPort={streamPort}
+                albumArtMode={settings.albumArtMode}
                 onPlayTrack={handlePlayTrack}
                 onPlayNext={(t) => setQueue((prev) => [t, ...prev])}
                 onToggleFavorite={handleToggleFavorite}
@@ -1627,6 +1649,7 @@ export function App() {
               <AlbumDetailView
                 album={selectedAlbum}
                 streamPort={streamPort}
+                albumArtMode={settings.albumArtMode}
                 onBack={() => setSelectedAlbum(null)}
                 onPlayTrack={handlePlayTrack}
                 onPlayAlbum={handlePlayAlbum}
@@ -1638,6 +1661,7 @@ export function App() {
               <AlbumGrid
                 albums={albumGroups}
                 streamPort={streamPort}
+                albumArtMode={settings.albumArtMode}
                 onSelectAlbum={(alb) => setSelectedAlbum(alb)}
                 onPlayAlbum={handlePlayAlbum}
               />
@@ -1646,6 +1670,7 @@ export function App() {
             <ArtistView
               artists={artistGroups}
               selectedArtist={selectedArtist}
+              albumArtMode={settings.albumArtMode}
               onSelectArtist={(art) => setSelectedArtist(art)}
               onBackToArtists={() => setSelectedArtist(null)}
               onPlayTrack={handlePlayTrack}
@@ -1684,6 +1709,7 @@ export function App() {
             setSelectedInfoTrack(null);
           }}
           lastfmApiKey={settings.lastfmApiKey}
+          albumArtMode={settings.albumArtMode}
           coverArtUrl={
             (selectedInfoTrack ? selectedInfoTrack.id === currentTrack?.id : true)
               ? resolvedCoverArt
@@ -1738,6 +1764,7 @@ export function App() {
         showQueue={showQueue}
         showInfo={showInfo}
         streamPort={streamPort}
+        albumArtMode={settings.albumArtMode}
         onPlayPause={handlePlayPause}
         onPrevious={handlePrevious}
         onNext={handleNext}

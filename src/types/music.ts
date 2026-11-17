@@ -112,6 +112,8 @@ export type ArtSource = 'itunes' | 'wikipedia' | 'lastfm' | 'jiosaavn';
 
 export type TrackSortField = 'title' | 'artist' | 'album' | 'duration' | 'date_added' | 'track_number';
 
+export type AlbumArtMode = 'local_and_online' | 'local_only' | 'disabled';
+
 export interface AppSettings {
   defaultStartingPage?: ViewMode;
   musicFolders: string[];
@@ -128,6 +130,7 @@ export interface AppSettings {
   discordClientId: string;
   discordShowYear: boolean;
   artSourcePriority: ArtSource[];
+  albumArtMode: AlbumArtMode;
   lastfmEnabled: boolean;
   lastfmApiKey: string;
   lastfmSecret: string;

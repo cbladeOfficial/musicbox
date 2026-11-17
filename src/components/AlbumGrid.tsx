@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Play, Disc3 } from 'lucide-react';
-import { TrackRecord } from '../types/music';
+import { TrackRecord, AlbumArtMode } from '../types/music';
 import { getCoverUrl } from '../utils/cover';
 
 export interface AlbumItem {
@@ -15,6 +15,7 @@ export interface AlbumItem {
 interface AlbumGridProps {
   albums: AlbumItem[];
   streamPort: number;
+  albumArtMode?: AlbumArtMode;
   onSelectAlbum: (album: AlbumItem) => void;
   onPlayAlbum: (album: AlbumItem) => void;
 }
@@ -22,11 +23,12 @@ interface AlbumGridProps {
 const AlbumCard: React.FC<{
   album: AlbumItem;
   streamPort: number;
+  albumArtMode?: AlbumArtMode;
   onSelect: () => void;
   onPlay: () => void;
-}> = ({ album, streamPort, onSelect, onPlay }) => {
+}> = ({ album, streamPort, albumArtMode = 'local_and_online', onSelect, onPlay }) => {
   const [hasError, setHasError] = useState(false);
-  const coverSrc = getCoverUrl(album.coverPath, streamPort);
+  const coverSrc = getCoverUrl(album.coverPath, streamPort, undefined, albumArtMode);
 
   return (
     <div
@@ -89,6 +91,7 @@ const AlbumCard: React.FC<{
 export const AlbumGrid: React.FC<AlbumGridProps> = ({
   albums,
   streamPort,
+  albumArtMode = 'local_and_online',
   onSelectAlbum,
   onPlayAlbum,
 }) => {
@@ -110,6 +113,7 @@ export const AlbumGrid: React.FC<AlbumGridProps> = ({
             key={`${album.artist}_${album.name}`}
             album={album}
             streamPort={streamPort}
+            albumArtMode={albumArtMode}
             onSelect={() => onSelectAlbum(album)}
             onPlay={() => onPlayAlbum(album)}
           />

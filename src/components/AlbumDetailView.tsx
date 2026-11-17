@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Play, Shuffle, Disc3, Clock, Sparkles, ArrowLeft, Volume2 } from 'lucide-react';
 import { AlbumItem } from './AlbumGrid';
-import { TrackRecord, AlbumInfo } from '../types/music';
+import { TrackRecord, AlbumInfo, AlbumArtMode } from '../types/music';
 import { MetadataService } from '../services/metadataService';
 import { getCoverUrl } from '../utils/cover';
 import { ArtistLinks } from './ArtistLinks';
@@ -9,6 +9,7 @@ import { ArtistLinks } from './ArtistLinks';
 interface AlbumDetailViewProps {
   album: AlbumItem;
   streamPort: number;
+  albumArtMode?: AlbumArtMode;
   onBack: () => void;
   onPlayTrack: (track: TrackRecord) => void;
   onPlayAlbum: (album: AlbumItem, shuffle?: boolean) => void;
@@ -20,6 +21,7 @@ interface AlbumDetailViewProps {
 export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
   album,
   streamPort,
+  albumArtMode = 'local_and_online',
   onBack,
   onPlayTrack,
   onPlayAlbum,
@@ -54,7 +56,13 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
 
   const totalDuration = album.tracks.reduce((acc, t) => acc + (t.duration || 0), 0);
   const mins = Math.floor(totalDuration / 60);
-  const coverSrc = getCoverUrl(album.coverPath, streamPort, albumInfo?.coverUrl);
+  const hasLocal = Boolean(album.coverPath && album.coverPath.trim());
+  const coverSrc = getCoverUrl(
+    album.coverPath,
+    streamPort,
+    hasLocal ? undefined : albumInfo?.coverUrl,
+    albumArtMode
+  );
 
   return (
     <div className="flex-1 h-full overflow-y-auto bg-[var(--bg-color)] p-6 space-y-7 select-none animate-fadeIn">

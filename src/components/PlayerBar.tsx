@@ -22,7 +22,7 @@ import {
   SlidersHorizontal,
   PanelRightClose,
 } from 'lucide-react';
-import { TrackRecord, RadioStation, RadioMetadata, VisualizerMode, PlaylistRecord } from '../types/music';
+import { TrackRecord, RadioStation, RadioMetadata, VisualizerMode, PlaylistRecord, AlbumArtMode } from '../types/music';
 import { getCoverUrl } from '../utils/cover';
 import { RadioStationIcon } from './RadioStationIcon';
 import { ArtistLinks } from './ArtistLinks';
@@ -46,6 +46,7 @@ interface PlayerBarProps {
   isFullVisualizer?: boolean;
   streamPort: number;
   coverArtUrl?: string;
+  albumArtMode?: AlbumArtMode;
   onPlayPause: () => void;
   onPrevious: () => void;
   onNext: () => void;
@@ -111,6 +112,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   isFullVisualizer = false,
   streamPort,
   coverArtUrl,
+  albumArtMode = 'local_and_online',
   onPlayPause,
   onPrevious,
   onNext,
@@ -221,7 +223,13 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
 
   const displayTime = isSeeking ? seekVal : currentTime;
   const progressPercent = duration > 0 ? (displayTime / duration) * 100 : 0;
-  const resolvedCover = getCoverUrl(currentTrack?.cover_path, streamPort, coverArtUrl);
+  const hasLocalCover = Boolean(currentTrack?.cover_path && currentTrack.cover_path.trim());
+  const resolvedCover = getCoverUrl(
+    currentTrack?.cover_path,
+    streamPort,
+    hasLocalCover ? undefined : coverArtUrl,
+    albumArtMode
+  );
 
   const handleOpenAlbum = () => {
     if (currentTrack && onViewAlbum) {

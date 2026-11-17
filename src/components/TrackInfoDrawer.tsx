@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { X, Disc3, Info, Sparkles, Folder, Calendar, Cpu, Tag } from 'lucide-react';
-import { TrackRecord, ArtistInfo, AlbumInfo } from '../types/music';
+import { TrackRecord, ArtistInfo, AlbumInfo, AlbumArtMode } from '../types/music';
 import { MetadataService } from '../services/metadataService';
 import { getCoverUrl, formatBitrate } from '../utils/cover';
 import { ArtistLinks } from './ArtistLinks';
@@ -11,6 +11,7 @@ interface TrackInfoDrawerProps {
   onClose: () => void;
   lastfmApiKey: string;
   coverArtUrl?: string;
+  albumArtMode?: AlbumArtMode;
   streamPort: number;
   onViewArtist?: (artistName: string) => void;
 }
@@ -21,6 +22,7 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
   onClose,
   lastfmApiKey,
   coverArtUrl,
+  albumArtMode = 'local_and_online',
   streamPort,
   onViewArtist,
 }) => {
@@ -54,11 +56,14 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
       currentTrack.album,
       currentTrack.title
     );
-    const initialCover = coverArtUrl || cached || undefined;
+    const hasLocal = Boolean(currentTrack.cover_path && currentTrack.cover_path.trim());
+    const initialCover = (!hasLocal && albumArtMode === 'local_and_online')
+      ? (coverArtUrl || cached || undefined)
+      : undefined;
     setOnlineCover(initialCover);
 
-    // If no cover is available yet, immediately resolve online cover art
-    if (!initialCover) {
+    // Only fallback to online search if track has NO local embedded cover AND setting allows online fallback
+    if (!hasLocal && !initialCover && albumArtMode === 'local_and_online') {
       MetadataService.resolveCoverArt(
         currentTrack.artist,
         currentTrack.album,
@@ -73,7 +78,7 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
         })
         .catch(() => {});
     }
-  }, [currentTrack, coverArtUrl, lastfmApiKey]);
+  }, [currentTrack, coverArtUrl, lastfmApiKey, albumArtMode]);
 
   useEffect(() => {
     if (!currentTrack || !isOpen) return;
@@ -85,20 +90,23 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
     ]).then(([artist, album]) => {
       setArtistInfo(artist);
       setAlbumInfo(album);
-      if (album?.coverUrl && !onlineCover && !coverArtUrl) {
+      if (album?.coverUrl && !onlineCover && !coverArtUrl && albumArtMode === 'local_and_online' && !currentTrack.cover_path) {
         setOnlineCover(album.coverUrl);
       }
       setLoading(false);
     });
-  }, [currentTrack, isOpen, lastfmApiKey, onlineCover, coverArtUrl]);
+  }, [currentTrack, isOpen, lastfmApiKey, onlineCover, coverArtUrl, albumArtMode]);
 
   if (!isOpen || !currentTrack) return null;
 
-  const resolvedArt = onlineCover || coverArtUrl || albumInfo?.coverUrl;
-  const localCover = currentTrack.cover_path
-    ? getCoverUrl(currentTrack.cover_path, streamPort)
+  const hasLocal = Boolean(currentTrack.cover_path && currentTrack.cover_path.trim());
+  const localCover = hasLocal
+    ? getCoverUrl(currentTrack.cover_path, streamPort, undefined, albumArtMode)
     : undefined;
-  const coverSrc = triedOnlineFallback ? resolvedArt : (localCover || resolvedArt);
+  const resolvedArt = (!hasLocal && albumArtMode === 'local_and_online')
+    ? (onlineCover || coverArtUrl || albumInfo?.coverUrl)
+    : undefined;
+  const coverSrc = localCover || resolvedArt;
   const fileSizeMb = (currentTrack.file_size / (1024 * 1024)).toFixed(2);
 
   const handleImageError = () => {
