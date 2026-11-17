@@ -75,9 +75,29 @@ export function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(0.8);
+  const [volume, setVolume] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('musicbox_volume');
+        if (saved !== null) {
+          const parsed = parseFloat(saved);
+          if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) {
+            return parsed;
+          }
+        }
+      } catch {}
+    }
+    return 0.8;
+  });
   const [isMuted, setIsMuted] = useState(false);
-  const [isShuffle, setIsShuffle] = useState(false);
+  const [isShuffle, setIsShuffle] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return localStorage.getItem('musicbox_shuffle') === 'true';
+      } catch {}
+    }
+    return false;
+  });
   const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('musicbox_repeat_mode');
@@ -722,11 +742,20 @@ export function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentTrack, isPlaying, volume]);
 
+  // Synchronize AudioEngine volume with saved state on mount
+  useEffect(() => {
+    audioEngine.setVolume(volume);
+  }, []);
+
   // Volume & Mute handling
   const handleVolumeChange = (vol: number) => {
-    setVolume(vol);
+    const clamped = Math.max(0, Math.min(1, vol));
+    setVolume(clamped);
     setIsMuted(false);
-    audioEngine.setVolume(vol);
+    audioEngine.setVolume(clamped);
+    try {
+      localStorage.setItem('musicbox_volume', clamped.toString());
+    } catch {}
   };
 
   const handleToggleMute = () => {
@@ -737,6 +766,16 @@ export function App() {
       audioEngine.setVolume(0);
       setIsMuted(true);
     }
+  };
+
+  const handleToggleShuffle = () => {
+    setIsShuffle((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('musicbox_shuffle', String(next));
+      } catch {}
+      return next;
+    });
   };
 
   const handlePlayPause = useCallback(() => {
@@ -1689,7 +1728,7 @@ export function App() {
         onSeek={(time) => audioEngine.seek(time)}
         onVolumeChange={handleVolumeChange}
         onToggleMute={handleToggleMute}
-        onToggleShuffle={() => setIsShuffle(!isShuffle)}
+        onToggleShuffle={handleToggleShuffle}
         onToggleRepeat={() => {
           const modes: ('off' | 'all' | 'one')[] = ['off', 'all', 'one'];
           const next = modes[(modes.indexOf(repeatMode) + 1) % modes.length];

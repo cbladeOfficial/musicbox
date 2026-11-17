@@ -18,6 +18,24 @@ class AudioEngine {
     this.audio.crossOrigin = 'anonymous';
     this.audio.preload = 'auto';
 
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('musicbox_volume');
+        if (saved !== null) {
+          const parsed = parseFloat(saved);
+          if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) {
+            this.audio.volume = parsed;
+          } else {
+            this.audio.volume = 0.8;
+          }
+        } else {
+          this.audio.volume = 0.8;
+        }
+      } catch {
+        this.audio.volume = 0.8;
+      }
+    }
+
     this.audio.addEventListener('timeupdate', () => {
       if (this.onTimeUpdate) {
         this.onTimeUpdate(this.audio.currentTime, this.audio.duration || 0);

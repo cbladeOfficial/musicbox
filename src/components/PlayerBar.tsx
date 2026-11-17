@@ -253,9 +253,6 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
     const rect = volumeTrackRef.current.getBoundingClientRect();
     const pos = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     onVolumeChange(pos);
-    if (isMuted && pos > 0) {
-      onToggleMute();
-    }
   };
 
   const handleVolumePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -285,7 +282,6 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
     const delta = e.deltaY < 0 ? 0.05 : -0.05;
     const nextVol = Math.max(0, Math.min(1, (isMuted ? 0 : volume) + delta));
     onVolumeChange(nextVol);
-    if (isMuted && nextVol > 0) onToggleMute();
   };
 
   return (
