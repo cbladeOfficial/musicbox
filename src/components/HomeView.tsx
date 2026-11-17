@@ -115,6 +115,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
       } else {
         const entry = albumMap.get(alb)!;
         entry.count += 1;
+        if (!entry.year && t.year) {
+          entry.year = t.year;
+        }
         if (!entry.sampleTrack.cover_path && t.cover_path) {
           entry.sampleTrack = t;
         }
@@ -242,7 +245,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <div
                   key={album.name}
                   onClick={() => onSelectAlbum(album.name)}
-                  className="group bg-white/[0.03] hover:bg-white/[0.08] p-3.5 rounded-xl border border-white/5 cursor-pointer transition-all flex flex-col justify-between shadow-sm hover:shadow-md"
+                  className="group bg-white/[0.03] hover:bg-white/[0.08] p-3.5 rounded-xl border border-white/5 cursor-pointer transition-all flex flex-col shadow-sm hover:shadow-md"
                 >
                   <div className="aspect-square w-full rounded-lg bg-zinc-800 relative overflow-hidden shadow-md mb-2.5 flex items-center justify-center">
                     <Disc3 className="w-10 h-10 text-zinc-500" />
@@ -276,9 +279,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <div className="text-[12px] text-zinc-400 truncate mt-1 leading-snug" title={album.artist}>
                       {album.artist}
                     </div>
-                    {album.year && (
-                      <div className="text-[11px] text-zinc-400 font-mono mt-1">{album.year}</div>
-                    )}
+                    <div className="text-[11px] text-zinc-400 font-mono mt-1 flex items-center space-x-1.5 tabular-nums">
+                      {album.year ? <span>{album.year}</span> : null}
+                      {album.year ? <span>•</span> : null}
+                      <span>{album.count} {album.count === 1 ? 'track' : 'tracks'}</span>
+                    </div>
                   </div>
                 </div>
               );
@@ -302,7 +307,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <div
                   key={track.id}
                   onClick={() => onPlayTrack(track)}
-                  className="group bg-white/[0.03] hover:bg-white/[0.08] p-3.5 rounded-xl border border-white/5 cursor-pointer transition-all flex flex-col justify-between shadow-sm hover:shadow-md"
+                  className="group bg-white/[0.03] hover:bg-white/[0.08] p-3.5 rounded-xl border border-white/5 cursor-pointer transition-all flex flex-col shadow-sm hover:shadow-md"
                 >
                   <div className="aspect-square w-full rounded-lg bg-zinc-800 relative overflow-hidden shadow-md mb-2.5 flex items-center justify-center">
                     <Disc3 className="w-10 h-10 text-zinc-500" />
@@ -366,7 +371,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <div
                   key={track.id}
                   onClick={() => onPlayTrack(track)}
-                  className="group bg-white/[0.02] hover:bg-white/[0.06] p-3 rounded-lg border border-white/5 cursor-pointer transition-colors flex flex-col justify-between"
+                  className="group bg-white/[0.02] hover:bg-white/[0.06] p-3 rounded-lg border border-white/5 cursor-pointer transition-colors flex flex-col"
                 >
                   <div className="aspect-square w-full rounded-md bg-zinc-800 relative overflow-hidden shadow-md mb-2.5 flex items-center justify-center">
                     <Disc3 className="w-10 h-10 text-zinc-500" />

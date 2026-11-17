@@ -63,7 +63,7 @@ export const AlbumArtistsView: React.FC<AlbumArtistsViewProps> = ({
             <div
               key={aa.name}
               onClick={() => onSelectArtist(aa.name)}
-              className="group bg-white/[0.02] hover:bg-white/[0.06] p-3 rounded-lg border border-white/5 cursor-pointer transition-colors flex flex-col justify-between"
+              className="group bg-white/[0.02] hover:bg-white/[0.06] p-3 rounded-lg border border-white/5 cursor-pointer transition-colors flex flex-col"
             >
               <div className="aspect-square w-full rounded-md bg-zinc-800 relative overflow-hidden shadow-md mb-2.5 flex items-center justify-center">
                 <Users className="w-10 h-10 text-zinc-500" />
