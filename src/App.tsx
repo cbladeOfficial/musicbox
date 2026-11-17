@@ -52,7 +52,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   discordRpcEnabled: true,
   discordClientId: '1176718791388975124',
   discordShowYear: true,
-  artSourcePriority: ['itunes', 'jiosaavn', 'lastfm'],
+  artSourcePriority: ['itunes', 'wikipedia', 'jiosaavn', 'lastfm'],
   lastfmEnabled: true,
   lastfmApiKey: '',
   lastfmSecret: '',
@@ -295,6 +295,9 @@ export function App() {
           if (parsed.discordClientId === '1306646875971485777') {
             parsed.discordClientId = DEFAULT_SETTINGS.discordClientId;
             TauriBridge.setDiscordClientId(DEFAULT_SETTINGS.discordClientId).catch(() => {});
+          }
+          if (Array.isArray(parsed.artSourcePriority) && !parsed.artSourcePriority.includes('wikipedia')) {
+            parsed.artSourcePriority.splice(1, 0, 'wikipedia');
           }
           setSettings((prev) => ({ ...prev, ...parsed }));
           if (isTauri()) {

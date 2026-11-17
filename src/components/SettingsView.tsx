@@ -70,6 +70,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const sourceLabels: Record<ArtSource, { name: string; desc: string }> = {
     itunes: { name: 'Apple Music / iTunes API', desc: '1000x1000 HD artwork and verified release dates' },
+    wikipedia: { name: 'Wikipedia REST API', desc: 'Canonical official album cover art and releases' },
     jiosaavn: { name: 'JioSaavn API', desc: 'Accurate regional and international metadata' },
     lastfm: { name: 'Last.fm API', desc: 'Community tags, artist bios, and album summaries' },
   };

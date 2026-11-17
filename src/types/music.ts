@@ -108,7 +108,7 @@ export type VisualizerMode =
 
 export type ThemeId = 'feishin' | 'amoled' | 'nord' | 'catppuccin' | 'cyberpunk';
 
-export type ArtSource = 'itunes' | 'lastfm' | 'jiosaavn';
+export type ArtSource = 'itunes' | 'wikipedia' | 'lastfm' | 'jiosaavn';
 
 export type TrackSortField = 'title' | 'artist' | 'album' | 'duration' | 'date_added' | 'track_number';
 
