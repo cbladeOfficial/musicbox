@@ -30,6 +30,7 @@ interface FullVisualizerViewProps {
   visualizerMode: VisualizerMode;
   onChangeVisualizerMode: (mode: VisualizerMode) => void;
   onClose: () => void;
+  onMakeShorter?: () => void;
   onTogglePlay: () => void;
   onPrevious?: () => void;
   onNext?: () => void;
@@ -55,6 +56,7 @@ export const FullVisualizerView: React.FC<FullVisualizerViewProps> = ({
   visualizerMode,
   onChangeVisualizerMode,
   onClose,
+  onMakeShorter,
   onTogglePlay,
   onPrevious,
   onNext,
@@ -220,6 +222,17 @@ export const FullVisualizerView: React.FC<FullVisualizerViewProps> = ({
     <div
       onMouseMove={resetHideTimer}
       onClick={resetHideTimer}
+      onContextMenu={(e) => {
+        const target = e.target as HTMLElement;
+        if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT') {
+          e.preventDefault();
+          if (onMakeShorter) {
+            onMakeShorter();
+          } else {
+            onClose();
+          }
+        }
+      }}
       className={`select-none transition-all duration-300 bg-black ${
         isTotallyFullscreen
           ? 'fixed inset-0 z-50 w-screen h-screen flex flex-col justify-between overflow-hidden animate-fadeIn'
@@ -238,7 +251,15 @@ export const FullVisualizerView: React.FC<FullVisualizerViewProps> = ({
       <div
         className="absolute inset-0 z-0 cursor-pointer w-full h-full flex flex-col"
         onDoubleClick={onToggleTotallyFullscreen}
-        title="Double-click to toggle totally fullscreen"
+        onContextMenu={(e) => {
+          e.preventDefault();
+          if (onMakeShorter) {
+            onMakeShorter();
+          } else {
+            onClose();
+          }
+        }}
+        title="Double-click to toggle totally fullscreen • Right-click to make shorter"
       >
         <Visualizer
           mode={visualizerMode === 'off' ? 'bars' : visualizerMode}
@@ -263,6 +284,17 @@ export const FullVisualizerView: React.FC<FullVisualizerViewProps> = ({
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Exit Visualizer</span>
           </button>
+
+          {onMakeShorter && (
+            <button
+              onClick={onMakeShorter}
+              className="flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-medium backdrop-blur-md border border-white/10 transition-colors shadow-lg active:scale-95"
+              title="Make Visualizer Shorter (Bottom Strip)"
+            >
+              <Minimize2 className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+              <span>Make Shorter</span>
+            </button>
+          )}
 
           <button
             onClick={onToggleTotallyFullscreen}

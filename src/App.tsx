@@ -142,6 +142,12 @@ export function App() {
   }, []);
 
   const navigateToView = useCallback((v: ViewMode) => {
+    if (v === 'visualizer') {
+      setIsTotallyFullscreen(false);
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
     setCurrentView(v);
     setSelectedPlaylistId(null);
     setSelectedAlbum(null);
@@ -1503,6 +1509,18 @@ export function App() {
                 }
                 handleNavigateBack();
               }}
+              onMakeShorter={() => {
+                if (isTotallyFullscreen) {
+                  if (document.fullscreenElement) {
+                    document.exitFullscreen().catch(() => {});
+                  }
+                  setIsTotallyFullscreen(false);
+                }
+                if (settings.visualizerMode === 'off') {
+                  handleUpdateSettings({ visualizerMode: 'bars' });
+                }
+                handleNavigateBack();
+              }}
               onTogglePlay={handlePlayPause}
               onPrevious={handlePrevious}
               onNext={handleNext}
@@ -1751,12 +1769,41 @@ export function App() {
 
       {/* 3. Audio Visualizer Canvas */}
       {currentView !== 'visualizer' && (
-        <Visualizer
-          mode={settings.visualizerMode}
-          isPlaying={isPlaying}
-          accentColor="var(--accent-color)"
-          height={settings.visualizerHeight}
-        />
+        <div
+          onClick={() => {
+            setIsTotallyFullscreen(false);
+            if (document.fullscreenElement) {
+              document.exitFullscreen().catch(() => {});
+            }
+            if (settings.visualizerMode === 'off') {
+              handleUpdateSettings({ visualizerMode: 'bars' });
+            }
+            navigateToView('visualizer');
+          }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            const modes: VisualizerMode[] = [
+              'bars',
+              'mirror-bars',
+              'wave',
+              'circle',
+              'rainbow-ribbon',
+              'particles',
+              'off',
+            ];
+            const next = modes[(modes.indexOf(settings.visualizerMode) + 1) % modes.length];
+            handleUpdateSettings({ visualizerMode: next });
+          }}
+          className="cursor-pointer"
+          title="Click for fullscreen visualizer • Right-click to change style"
+        >
+          <Visualizer
+            mode={settings.visualizerMode}
+            isPlaying={isPlaying}
+            accentColor="var(--accent-color)"
+            height={settings.visualizerHeight}
+          />
+        </div>
       )}
 
       {/* 4. Feishin Bottom Player Bar */}
@@ -1792,23 +1839,46 @@ export function App() {
           setRepeatMode(next);
         }}
         onToggleVisualizer={() => {
-          const modes: VisualizerMode[] = [
-            'bars',
-            'mirror-bars',
-            'wave',
-            'circle',
-            'rainbow-ribbon',
-            'particles',
-            'off',
-          ];
-          const next = modes[(modes.indexOf(settings.visualizerMode) + 1) % modes.length];
-          handleUpdateSettings({ visualizerMode: next });
-        }}
-        onToggleFullVisualizer={() => {
+          // Left-click on visualizer button: regular fullscreen by default (not totally fullscreen view)
           if (currentView === 'visualizer') {
             handleNavigateBack();
           } else {
+            setIsTotallyFullscreen(false);
+            if (document.fullscreenElement) {
+              document.exitFullscreen().catch(() => {});
+            }
+            if (settings.visualizerMode === 'off') {
+              handleUpdateSettings({ visualizerMode: 'bars' });
+            }
             navigateToView('visualizer');
+          }
+        }}
+        onToggleFullVisualizer={() => {
+          // Right-click: make the visualizer shorter as the current default
+          if (currentView === 'visualizer') {
+            if (isTotallyFullscreen) {
+              if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {});
+              }
+              setIsTotallyFullscreen(false);
+            }
+            if (settings.visualizerMode === 'off') {
+              handleUpdateSettings({ visualizerMode: 'bars' });
+            }
+            handleNavigateBack();
+          } else {
+            // In normal view: toggle / cycle shorter visualizer
+            const modes: VisualizerMode[] = [
+              'bars',
+              'mirror-bars',
+              'wave',
+              'circle',
+              'rainbow-ribbon',
+              'particles',
+              'off',
+            ];
+            const next = modes[(modes.indexOf(settings.visualizerMode) + 1) % modes.length];
+            handleUpdateSettings({ visualizerMode: next });
           }
         }}
         onToggleLyrics={() => {

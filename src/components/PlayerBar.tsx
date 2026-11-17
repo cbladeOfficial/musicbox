@@ -684,14 +684,18 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
             <PanelRightClose className="w-4 h-4" />
           </button>
 
-          {/* SEPARATE VISUALIZER BUTTON (Preserved as explicitly requested) */}
+          {/* SEPARATE VISUALIZER BUTTON */}
           <button
             onClick={onToggleVisualizer}
             onContextMenu={(e) => {
               e.preventDefault();
               if (onToggleFullVisualizer) onToggleFullVisualizer();
             }}
-            title={`Visualizer: ${VISUALIZER_LABELS[visualizerMode]} (Right-click for full screen)`}
+            title={
+              isFullVisualizer
+                ? 'Exit Fullscreen Visualizer (Right-click for bottom visualizer)'
+                : `Visualizer: ${VISUALIZER_LABELS[visualizerMode]} (Click for fullscreen, Right-click for bottom visualizer)`
+            }
             className={`p-0.5 transition-colors ${
               visualizerMode !== 'off' || isFullVisualizer
                 ? 'text-blue-400 font-bold'
