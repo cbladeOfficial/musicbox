@@ -8,7 +8,7 @@ fn url_encode(s: &str) -> String {
     let mut encoded = String::with_capacity(s.len() * 2);
     for b in s.bytes() {
         match b {
-            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' | b',' => {
                 encoded.push(b as char);
             }
             b' ' => encoded.push('+'),
@@ -157,24 +157,25 @@ impl DiscordManager {
                 state_str
             };
 
-            let primary_artist = artist.split(',').next().unwrap_or(artist).trim();
-            let safe_primary_artist = if primary_artist.is_empty() || primary_artist == "Unknown Artist" {
-                ""
-            } else {
-                primary_artist
-            };
+            let clean_artist = artist
+                .split(',')
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty() && *s != "Unknown Artist")
+                .collect::<Vec<_>>()
+                .join(", ");
+            let safe_artist = clean_artist.as_str();
 
-            let search_query = if !safe_primary_artist.is_empty() {
-                format!("{} {}", title, safe_primary_artist)
+            let search_query = if !safe_artist.is_empty() {
+                format!("{} {}", title, safe_artist)
             } else {
                 title.to_string()
             };
 
             // 1. Song Title Link (Last.fm track page with JioSaavn fallback)
-            let track_url = if !safe_primary_artist.is_empty() {
+            let track_url = if !safe_artist.is_empty() {
                 format!(
                     "https://www.last.fm/music/{}/_/{}",
-                    url_encode(safe_primary_artist),
+                    url_encode(safe_artist),
                     url_encode(title)
                 )
             } else {
@@ -185,10 +186,10 @@ impl DiscordManager {
             };
 
             // 2. Artist Link (Last.fm artist page with JioSaavn fallback)
-            let artist_url = if !safe_primary_artist.is_empty() {
+            let artist_url = if !safe_artist.is_empty() {
                 format!(
                     "https://www.last.fm/music/{}",
-                    url_encode(safe_primary_artist)
+                    url_encode(safe_artist)
                 )
             } else {
                 format!(
@@ -198,10 +199,10 @@ impl DiscordManager {
             };
 
             // 3. Album Link (Last.fm album page with JioSaavn fallback)
-            let album_url = if !album.is_empty() && album != "Unknown Album" && !safe_primary_artist.is_empty() {
+            let album_url = if !album.is_empty() && album != "Unknown Album" && !safe_artist.is_empty() {
                 format!(
                     "https://www.last.fm/music/{}/{}",
-                    url_encode(safe_primary_artist),
+                    url_encode(safe_artist),
                     url_encode(album)
                 )
             } else {
