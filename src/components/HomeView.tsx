@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   Play,
   Flame,
@@ -11,7 +11,77 @@ import {
 } from 'lucide-react';
 import { TrackRecord, AlbumArtMode } from '../types/music';
 import { getCoverUrl } from '../utils/cover';
+import { MetadataService } from '../services/metadataService';
 import { ArtistLinks } from './ArtistLinks';
+
+const TopArtistCard: React.FC<{
+  artist: { name: string; count: number; plays: number; mostPlayedTrack: TrackRecord };
+  resolveCover: (track?: TrackRecord) => string | undefined;
+  onSelectArtist: (name: string) => void;
+}> = ({ artist, resolveCover, onSelectArtist }) => {
+  // 1. Initial cached artist portrait lookup
+  const [artistPic, setArtistPic] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(`mb_artist_img_${artist.name.toLowerCase()}`);
+    } catch {
+      return null;
+    }
+  });
+  const [picError, setPicError] = useState(false);
+  const [coverError, setCoverError] = useState(false);
+
+  // 2. Fetch actual artist picture if not yet in cache
+  useEffect(() => {
+    let isMounted = true;
+    if (!artistPic) {
+      MetadataService.fetchArtistImage(artist.name).then((url) => {
+        if (isMounted && url) {
+          setArtistPic(url);
+        }
+      });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [artist.name, artistPic]);
+
+  // Fallback: Album artwork of the artist's most played song
+  const mostPlayedSongCover = resolveCover(artist.mostPlayedTrack);
+  const displayImage = (!picError && artistPic) ? artistPic : (!coverError ? mostPlayedSongCover : undefined);
+
+  return (
+    <div
+      onClick={() => onSelectArtist(artist.name)}
+      className="group flex flex-col items-center p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 cursor-pointer transition-all text-center shadow-sm hover:shadow-md"
+    >
+      <div className="w-20 h-20 rounded-full bg-zinc-800 relative overflow-hidden shadow-md mb-2.5 flex items-center justify-center border-2 border-white/10 group-hover:border-[var(--accent-color)] transition-colors">
+        <Mic2 className="w-8 h-8 text-zinc-500" />
+        {displayImage && (
+          <img
+            src={displayImage}
+            alt={artist.name}
+            loading="lazy"
+            onError={() => {
+              if (displayImage === artistPic) {
+                setPicError(true);
+              } else {
+                setCoverError(true);
+              }
+            }}
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        )}
+      </div>
+      <div className="text-xs font-semibold text-white truncate w-full group-hover:text-[var(--accent-color)] transition-colors" title={artist.name}>
+        {artist.name}
+      </div>
+      <div className="text-[10px] text-zinc-400 mt-1 font-mono tabular-nums">
+        {artist.count} {artist.count === 1 ? 'track' : 'tracks'}
+        {artist.plays > 0 ? ` • ${artist.plays} ${artist.plays === 1 ? 'play' : 'plays'}` : ''}
+      </div>
+    </div>
+  );
+};
 
 interface HomeViewProps {
   tracks: TrackRecord[];
@@ -64,22 +134,55 @@ export const HomeView: React.FC<HomeViewProps> = ({
       .slice(0, 8);
   }, [tracks]);
 
-  // Top artists aggregated by track count and play count
+  // Top artists aggregated by play count and track count
   const topArtists = useMemo(() => {
-    const map = new Map<string, { name: string; count: number; plays: number; sampleTrack: TrackRecord }>();
-    tracks.forEach((t) => {
-      const art = t.artist.trim();
-      if (!art || art === 'Unknown Artist') return;
-      const existing = map.get(art) || { name: art, count: 0, plays: 0, sampleTrack: t };
-      existing.count += 1;
-      existing.plays += t.play_count;
-      if (!existing.sampleTrack.cover_path && t.cover_path) {
-        existing.sampleTrack = t;
+    const map = new Map<
+      string,
+      {
+        name: string;
+        count: number;
+        plays: number;
+        mostPlayedTrack: TrackRecord;
       }
-      map.set(art, existing);
+    >();
+
+    tracks.forEach((t) => {
+      const raw = t.artist ? t.artist.split(',') : [];
+      const artistNames = raw.map((a) => a.trim()).filter(Boolean);
+      const uniqueNames = artistNames.length > 0 ? Array.from(new Set(artistNames)) : [t.artist?.trim() || ''];
+
+      for (const art of uniqueNames) {
+        if (!art || art.toLowerCase() === 'unknown artist') continue;
+
+        const existing = map.get(art);
+        const tPlays = t.play_count || 0;
+
+        if (!existing) {
+          map.set(art, {
+            name: art,
+            count: 1,
+            plays: tPlays,
+            mostPlayedTrack: t,
+          });
+        } else {
+          existing.count += 1;
+          existing.plays += tPlays;
+
+          // For the fallback artwork: find the artist's most played track.
+          // If play counts are tied, prefer the one with cover_path.
+          const curBestPlays = existing.mostPlayedTrack.play_count || 0;
+          if (
+            tPlays > curBestPlays ||
+            (tPlays === curBestPlays && !existing.mostPlayedTrack.cover_path && t.cover_path)
+          ) {
+            existing.mostPlayedTrack = t;
+          }
+        }
+      }
     });
+
     return Array.from(map.values())
-      .sort((a, b) => b.plays * 2 + b.count - (a.plays * 2 + a.count))
+      .sort((a, b) => (b.plays * 3 + b.count) - (a.plays * 3 + a.count))
       .slice(0, 7);
   }, [tracks]);
 
@@ -143,10 +246,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
     return scored.sort((a, b) => b.score - a.score).slice(0, 8);
   }, [tracks, topArtists, topGenres]);
 
-  // Helper for cover image URL
+  // Helper for cover image URL with local and online fallback support
   const resolveCover = (track?: TrackRecord) => {
-    if (!track?.cover_path) return undefined;
-    return getCoverUrl(track.cover_path, streamPort, undefined, albumArtMode);
+    if (!track) return undefined;
+    const hasLocalCover = Boolean(track.cover_path && track.cover_path.trim());
+    const cachedOnline = (albumArtMode === 'local_and_online' && !hasLocalCover)
+      ? (MetadataService.getCachedCoverArt(track.artist, track.album, track.title) || undefined)
+      : undefined;
+    return getCoverUrl(track.cover_path, streamPort, cachedOnline, albumArtMode);
   };
 
   // Genre gradient colors
@@ -413,45 +520,23 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
       )}
 
-      {/* 6. Top Artists (Circular Avatars) */}
+      {/* 6. Most Played Artists (Circular Avatars with actual artist portraits or most played song artwork) */}
       {topArtists.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center space-x-2">
             <Mic2 className="w-4 h-4 text-[var(--accent-color)]" />
-            <h2 className="text-lg font-bold text-white tracking-tight">Top Artists</h2>
+            <h2 className="text-lg font-bold text-white tracking-tight">Most Played Artists</h2>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
-            {topArtists.map((artist) => {
-              const cover = resolveCover(artist.sampleTrack);
-              return (
-                <div
-                  key={artist.name}
-                  onClick={() => onSelectArtist(artist.name)}
-                  className="group flex flex-col items-center p-3 rounded-lg bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 cursor-pointer transition-colors text-center"
-                >
-                  <div className="w-20 h-20 rounded-full bg-zinc-800 relative overflow-hidden shadow-md mb-2 flex items-center justify-center">
-                    <Mic2 className="w-8 h-8 text-zinc-500" />
-                    {cover && (
-                      <img
-                        src={cover}
-                        alt=""
-                        onError={(e) => {
-                          (e.currentTarget as HTMLElement).style.display = 'none';
-                        }}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                    )}
-                  </div>
-                  <div className="text-xs font-semibold text-white truncate w-full" title={artist.name}>
-                    {artist.name}
-                  </div>
-                  <div className="text-[10px] text-zinc-400 mt-0.5">
-                    {artist.count} track{artist.count === 1 ? '' : 's'}
-                  </div>
-                </div>
-              );
-            })}
+            {topArtists.map((artist) => (
+              <TopArtistCard
+                key={artist.name}
+                artist={artist}
+                resolveCover={resolveCover}
+                onSelectArtist={onSelectArtist}
+              />
+            ))}
           </div>
         </div>
       )}
