@@ -28,6 +28,7 @@ import { TrackRecord, PlaylistRecord, RadioStation, RadioMetadata, ViewMode, App
 import { TauriBridge, isTauri } from './services/tauriBridge';
 import { audioEngine } from './services/audioEngine';
 import { lastFmScrobbler } from './services/lastfmScrobbler';
+import { generateSmartQueue } from './utils/smartQueue';
 import { MetadataService } from './services/metadataService';
 import { getCoverUrl } from './utils/cover';
 import {
@@ -109,6 +110,8 @@ export function App() {
     return 'off';
   });
   const [queue, setQueue] = useState<TrackRecord[]>([]);
+  const [autoQueue, setAutoQueue] = useState<TrackRecord[]>([]);
+  const recentTrackIdsRef = useRef<number[]>([]);
 
   // Navigation & Views
   const [currentView, setCurrentView] = useState<ViewMode>('home');
@@ -371,6 +374,14 @@ export function App() {
       }
     }).catch(() => {});
 
+    TauriBridge.loadSetting('shuffle').then((saved) => {
+      if (saved === 'true' || saved === 'false') {
+        const val = saved === 'true';
+        setIsShuffle(val);
+        localStorage.setItem('musicbox_shuffle', String(val));
+      }
+    }).catch(() => {});
+
     return () => {
       if (radioTimerRef.current) {
         clearInterval(radioTimerRef.current);
@@ -468,6 +479,9 @@ export function App() {
       playedFromSearchRef.current = isFromSearch;
 
       setCurrentTrack(track);
+      if (showInfo) {
+        setSelectedInfoTrack(track);
+      }
       setIsPlaying(true);
       setCurrentTime(0);
       setDuration(track.duration || 0);
@@ -600,9 +614,43 @@ export function App() {
     [settings, stopRadioPolling]
   );
 
+  // Generate smart auto-queue whenever current track changes or library loads
+  useEffect(() => {
+    if (!currentTrack || tracks.length === 0) {
+      setAutoQueue([]);
+      return;
+    }
+
+    if (!recentTrackIdsRef.current.includes(currentTrack.id)) {
+      recentTrackIdsRef.current = [...recentTrackIdsRef.current.slice(-19), currentTrack.id];
+    }
+
+    const generated = generateSmartQueue(
+      currentTrack,
+      tracks,
+      queue,
+      recentTrackIdsRef.current,
+      20
+    );
+    setAutoQueue(generated);
+  }, [currentTrack?.id, tracks, queue]);
+
+  const handleRefreshAutoQueue = useCallback(() => {
+    if (!currentTrack || tracks.length === 0) return;
+    const generated = generateSmartQueue(
+      currentTrack,
+      tracks,
+      queue,
+      recentTrackIdsRef.current,
+      20
+    );
+    setAutoQueue(generated);
+  }, [currentTrack, tracks, queue]);
+
   // PlayNext or skip track
   const handleNext = useCallback(() => {
     playedFromSearchRef.current = false;
+    // 1. Explicit user queue has items: always play user queue first
     if (queue.length > 0) {
       const nextTrack = queue[0];
       setQueue((prev) => prev.slice(1));
@@ -612,9 +660,19 @@ export function App() {
 
     if (tracks.length === 0) return;
 
+    // 2. If smart shuffle or Repeat All is active, draw from auto-generated smart queue
+    if ((isShuffle || repeatMode === 'all') && autoQueue.length > 0) {
+      const nextTrack = autoQueue[0];
+      setAutoQueue((prev) => prev.slice(1));
+      handlePlayTrack(nextTrack, false);
+      return;
+    }
+
+    // 3. Fallback shuffle: smartly pick from remaining tracks
     if (isShuffle) {
-      const randIdx = Math.floor(Math.random() * tracks.length);
-      handlePlayTrack(tracks[randIdx], false);
+      const remaining = tracks.filter((t) => t.id !== currentTrack?.id);
+      const randIdx = Math.floor(Math.random() * remaining.length);
+      handlePlayTrack(remaining[randIdx] || tracks[0], false);
     } else if (currentTrack) {
       const currentIdx = tracks.findIndex((t) => t.id === currentTrack.id);
       const nextIdx = (currentIdx + 1) % tracks.length;
@@ -622,7 +680,7 @@ export function App() {
     } else {
       handlePlayTrack(tracks[0], false);
     }
-  }, [queue, tracks, isShuffle, currentTrack, handlePlayTrack]);
+  }, [queue, tracks, isShuffle, repeatMode, autoQueue, currentTrack, handlePlayTrack]);
 
   const handlePrevious = useCallback(() => {
     playedFromSearchRef.current = false;
@@ -722,11 +780,19 @@ export function App() {
         return;
       }
 
-      // 4. Played from track list: do not change unless repeat all is chosen
+      // 4. Repeat mode logic:
+      // "it will play automatically if the user has Repeat All selected, if user has repeat one or none selected then auto queue wont play but it will be ready and viewable in queue."
       if (repeatMode === 'all') {
-        handleNext();
+        if (autoQueue.length > 0) {
+          const nextTrack = autoQueue[0];
+          setAutoQueue((prev) => prev.slice(1));
+          handlePlayTrack(nextTrack, false);
+        } else {
+          handleNext();
+        }
       } else {
-        // Repeat is off: standard media player behavior - do not change track
+        // Repeat is off / none: standard player behavior - do not change track automatically
+        // Smart auto-queue remains ready and viewable in the Queue drawer
         setIsPlaying(false);
         audioEngine.pause();
         audioEngine.seek(0);
@@ -749,7 +815,7 @@ export function App() {
         }
       }
     };
-  }, [currentTrack, currentRadio, radioNowPlaying, settings, repeatMode, resolvedCoverArt, handleNext, queue, handlePlayTrack]);
+  }, [currentTrack, currentRadio, radioNowPlaying, settings, repeatMode, resolvedCoverArt, handleNext, queue, autoQueue, handlePlayTrack]);
 
   // Keyboard navigation shortcuts
   useEffect(() => {
@@ -832,9 +898,23 @@ export function App() {
       try {
         localStorage.setItem('musicbox_shuffle', String(next));
       } catch {}
+      TauriBridge.saveSetting('shuffle', String(next)).catch(() => {});
       return next;
     });
   };
+
+  // Save shuffle state on change so it persists across app restarts in SQLite
+  useEffect(() => {
+    localStorage.setItem('musicbox_shuffle', String(isShuffle));
+    TauriBridge.saveSetting('shuffle', String(isShuffle)).catch(() => {});
+  }, [isShuffle]);
+
+  // When track details and specs drawer is open, keep it updated with the active track without reopening
+  useEffect(() => {
+    if (showInfo && currentTrack) {
+      setSelectedInfoTrack(currentTrack);
+    }
+  }, [currentTrack, showInfo]);
 
   const handlePlayPause = useCallback(() => {
     if (currentRadio) {
@@ -1753,16 +1833,29 @@ export function App() {
         {/* Right Queue Drawer */}
         <QueueDrawer
           queue={queue}
+          autoQueue={autoQueue}
           currentTrack={currentTrack}
           isOpen={showQueue}
+          repeatMode={repeatMode}
+          isShuffle={isShuffle}
           onClose={() => setShowQueue(false)}
           onPlayFromQueue={(idx) => {
             const tr = queue[idx];
             setQueue((prev) => prev.filter((_, i) => i !== idx));
             handlePlayTrack(tr);
           }}
+          onPlayFromAutoQueue={(track) => {
+            setAutoQueue((prev) => prev.filter((t) => t.id !== track.id));
+            handlePlayTrack(track);
+          }}
+          onAddAutoQueueToManualQueue={(track) => {
+            setAutoQueue((prev) => prev.filter((t) => t.id !== track.id));
+            setQueue((prev) => [...prev, track]);
+            showToast(`Added "${track.title}" to play queue`, 'info');
+          }}
           onRemoveFromQueue={(idx) => setQueue((prev) => prev.filter((_, i) => i !== idx))}
           onClearQueue={() => setQueue([])}
+          onRefreshAutoQueue={handleRefreshAutoQueue}
           onViewArtist={handleNavigateToArtist}
         />
       </div>

@@ -78,24 +78,26 @@ export const TrackInfoDrawer: React.FC<TrackInfoDrawerProps> = ({
         })
         .catch(() => {});
     }
-  }, [currentTrack, coverArtUrl, lastfmApiKey, albumArtMode]);
+  }, [currentTrack?.id, coverArtUrl, lastfmApiKey, albumArtMode]);
 
   useEffect(() => {
     if (!currentTrack || !isOpen) return;
 
     setLoading(true);
+    setArtistInfo(null);
+    setAlbumInfo(null);
     Promise.all([
       MetadataService.getArtistDetails(currentTrack.artist, lastfmApiKey),
       MetadataService.getAlbumDetails(currentTrack.artist, currentTrack.album, lastfmApiKey),
     ]).then(([artist, album]) => {
       setArtistInfo(artist);
       setAlbumInfo(album);
-      if (album?.coverUrl && !onlineCover && !coverArtUrl && albumArtMode === 'local_and_online' && !currentTrack.cover_path) {
-        setOnlineCover(album.coverUrl);
+      if (album?.coverUrl && !currentTrack.cover_path && albumArtMode === 'local_and_online') {
+        setOnlineCover((prev) => prev || album.coverUrl);
       }
       setLoading(false);
     });
-  }, [currentTrack, isOpen, lastfmApiKey, onlineCover, coverArtUrl, albumArtMode]);
+  }, [currentTrack?.id, isOpen, lastfmApiKey, albumArtMode]);
 
   if (!isOpen || !currentTrack) return null;
 
