@@ -190,9 +190,7 @@ impl DiscordManager {
             return;
         }
 
-        let mut client_lock = self.client.lock().unwrap();
-        if let Some(client) = client_lock.as_mut() {
-            // Segment 1 in Discord RPC: artist only (album removed per user request)
+        // Segment 1 in Discord RPC: artist only (album removed per user request)
             let state_str = if artist.is_empty() {
                 "Unknown Artist".to_string()
             } else {
@@ -234,7 +232,7 @@ impl DiscordManager {
                     let p = Path::new(trimmed);
                     if p.is_file() {
                         let mut active = self.active_cover_path.lock().unwrap();
-                        let mut cache = self.temp_cover_cache.lock().unwrap();
+                        let cache = self.temp_cover_cache.lock().unwrap();
                         let now_secs = now as u64;
 
                         // Song changed: update active track reference
@@ -252,7 +250,10 @@ impl DiscordManager {
                         }
 
                         if needs_upload {
+                            drop(active);
+                            drop(cache);
                             if let Some(uploaded_url) = upload_cover_to_temp_storage(p) {
+                                let mut cache = self.temp_cover_cache.lock().unwrap();
                                 cache.insert(trimmed.to_string(), (uploaded_url.clone(), now_secs));
                                 effective_cover_url = Some(uploaded_url);
                             }
@@ -393,8 +394,11 @@ impl DiscordManager {
                 assets = assets.large_image(default_icon_url).large_text(&safe_album_display).large_url(&album_url);
             }
 
-            act = act.assets(assets);
+        act = act.assets(assets);
 
+        // Only acquire client_lock for the fast IPC set_activity call
+        let mut client_lock = self.client.lock().unwrap();
+        if let Some(client) = client_lock.as_mut() {
             if client.set_activity(act).is_err() {
                 // If set_activity fails, reset connection so it reconnects on next update
                 *client_lock = None;

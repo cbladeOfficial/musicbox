@@ -10,6 +10,7 @@ interface QueueDrawerProps {
   isOpen: boolean;
   repeatMode: 'off' | 'all' | 'one';
   isShuffle: boolean;
+  activeAlbumName?: string;
   onClose: () => void;
   onPlayFromQueue: (index: number) => void;
   onPlayFromAutoQueue: (track: TrackRecord) => void;
@@ -27,6 +28,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
   isOpen,
   repeatMode,
   isShuffle,
+  activeAlbumName,
   onClose,
   onPlayFromQueue,
   onPlayFromAutoQueue,
@@ -92,11 +94,21 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
               <span className="text-xs uppercase font-semibold tracking-wider text-[var(--accent-color)]">
                 Now Playing
               </span>
-              {isShuffle && (
-                <span className="text-[10px] font-mono text-[var(--accent-color)] bg-[var(--accent-color)]/15 px-2 py-0.5 rounded border border-[var(--accent-color)]/30">
-                  Smart Shuffle On
-                </span>
-              )}
+              <div className="flex items-center space-x-1.5">
+                {activeAlbumName && (
+                  <span
+                    className="text-[10px] font-mono text-zinc-300 bg-white/10 px-2 py-0.5 rounded border border-white/15 truncate max-w-[150px]"
+                    title={`Playing from album: ${activeAlbumName}${repeatMode === 'all' ? ' (Repeating Album)' : ''}`}
+                  >
+                    Album: {activeAlbumName}
+                  </span>
+                )}
+                {isShuffle && (
+                  <span className="text-[10px] font-mono text-[var(--accent-color)] bg-[var(--accent-color)]/15 px-2 py-0.5 rounded border border-[var(--accent-color)]/30">
+                    Smart Shuffle On
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex items-center px-4 py-3.5 rounded-xl bg-[var(--accent-color)]/15 border border-[var(--accent-color)]/25 shadow-sm">
               <div className="flex-1 truncate">

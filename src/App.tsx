@@ -38,6 +38,13 @@ import {
   setupMediaSessionActions,
 } from './services/mediaSession';
 
+export interface ActivePlaybackContext {
+  type: 'album' | 'playlist' | 'artist';
+  name: string;
+  artist?: string;
+  tracks: TrackRecord[];
+}
+
 const DEFAULT_SETTINGS: AppSettings = {
   defaultStartingPage: 'home',
   musicFolders: [],
@@ -115,6 +122,31 @@ export function App() {
   const [queue, setQueue] = useState<TrackRecord[]>([]);
   const [autoQueue, setAutoQueue] = useState<TrackRecord[]>([]);
   const recentTrackIdsRef = useRef<number[]>([]);
+
+  // Active playback context (scoped album, playlist, or artist)
+  const [activeContext, setActiveContext] = useState<ActivePlaybackContext | null>(null);
+  const activeContextRef = useRef<ActivePlaybackContext | null>(null);
+  activeContextRef.current = activeContext;
+
+  // Synchronization refs for instant event handlers & avoiding race conditions
+  const isRadioActiveRef = useRef<boolean>(false);
+  const radioSessionIdRef = useRef<number>(0);
+  const currentTrackRef = useRef<TrackRecord | null>(null);
+  currentTrackRef.current = currentTrack;
+  const currentRadioRef = useRef<RadioStation | null>(null);
+  currentRadioRef.current = currentRadio;
+  const radioNowPlayingRef = useRef<RadioMetadata | null>(null);
+  radioNowPlayingRef.current = radioNowPlaying;
+  const queueRef = useRef<TrackRecord[]>(queue);
+  queueRef.current = queue;
+  const autoQueueRef = useRef<TrackRecord[]>(autoQueue);
+  autoQueueRef.current = autoQueue;
+  const isShuffleRef = useRef<boolean>(isShuffle);
+  isShuffleRef.current = isShuffle;
+  const repeatModeRef = useRef<'off' | 'all' | 'one'>(repeatMode);
+  repeatModeRef.current = repeatMode;
+  const tracksRef = useRef<TrackRecord[]>(tracks);
+  tracksRef.current = tracks;
 
   // Navigation & Views
   const initialSavedVisState = (() => {
@@ -593,7 +625,12 @@ export function App() {
 
   // Play a specific track
   const handlePlayTrack = useCallback(
-    async (track: TrackRecord, fromSearch?: boolean) => {
+    async (track: TrackRecord, fromSearch?: boolean, keepContext?: boolean) => {
+      isRadioActiveRef.current = false;
+      currentRadioRef.current = null;
+      currentTrackRef.current = track;
+      radioSessionIdRef.current += 1;
+
       stopRadioPolling();
       setCurrentRadio(null);
       setRadioNowPlaying(null);
@@ -601,6 +638,11 @@ export function App() {
 
       const isFromSearch = fromSearch !== undefined ? fromSearch : searchQueryRef.current.trim().length > 0;
       playedFromSearchRef.current = isFromSearch;
+
+      if (!keepContext && isFromSearch) {
+        setActiveContext(null);
+        activeContextRef.current = null;
+      }
 
       setCurrentTrack(track);
       if (showInfo) {
@@ -680,12 +722,19 @@ export function App() {
         });
       }
     },
-    [streamPort, settings, stopRadioPolling]
+    [streamPort, settings, stopRadioPolling, showInfo]
   );
 
   // Play an online radio station
   const handlePlayRadio = useCallback(
     async (station: RadioStation) => {
+      isRadioActiveRef.current = true;
+      currentRadioRef.current = station;
+      currentTrackRef.current = null;
+      setActiveContext(null);
+      activeContextRef.current = null;
+      const sessionId = ++radioSessionIdRef.current;
+
       stopRadioPolling();
       setCurrentTrack(null);
       setCurrentRadio(station);
@@ -698,6 +747,7 @@ export function App() {
       await audioEngine.playRadio(station.url);
 
       const updatePresence = (meta?: RadioMetadata | null, playing = true) => {
+        if (!isRadioActiveRef.current || radioSessionIdRef.current !== sessionId) return;
         if (!settings.discordRpcEnabled) return;
         TauriBridge.updateRadioPresence({
           stationName: station.name,
@@ -715,6 +765,7 @@ export function App() {
       // Fetch ICY metadata immediately
       TauriBridge.fetchRadioMetadata(station.url)
         .then((meta) => {
+          if (!isRadioActiveRef.current || radioSessionIdRef.current !== sessionId) return;
           if (meta) {
             setRadioNowPlaying(meta);
             updatePresence(meta, true);
@@ -725,7 +776,9 @@ export function App() {
       // Poll stream ICY metadata every 10 seconds
       radioTimerRef.current = setInterval(async () => {
         try {
+          if (!isRadioActiveRef.current || radioSessionIdRef.current !== sessionId) return;
           const meta = await TauriBridge.fetchRadioMetadata(station.url);
+          if (!isRadioActiveRef.current || radioSessionIdRef.current !== sessionId) return;
           if (meta) {
             setRadioNowPlaying(meta);
             updatePresence(meta, true);
@@ -786,36 +839,68 @@ export function App() {
   const handleNext = useCallback(() => {
     playedFromSearchRef.current = false;
     // 1. Explicit user queue has items: always play user queue first
-    if (queue.length > 0) {
-      const nextTrack = queue[0];
+    if (queueRef.current.length > 0) {
+      const nextTrack = queueRef.current[0];
       setQueue((prev) => prev.slice(1));
-      handlePlayTrack(nextTrack, false);
+      handlePlayTrack(nextTrack, false, true);
       return;
     }
 
-    if (tracks.length === 0) return;
+    // 2. Active album context
+    const context = activeContextRef.current;
+    if (context && context.type === 'album') {
+      const albumTracks = context.tracks;
+      if (albumTracks.length > 0) {
+        if (isShuffleRef.current) {
+          const remaining = albumTracks.filter((t) => t.id !== currentTrackRef.current?.id);
+          const next = remaining[Math.floor(Math.random() * remaining.length)] || albumTracks[0];
+          handlePlayTrack(next, false, true);
+        } else if (currentTrackRef.current) {
+          const currentIdx = albumTracks.findIndex((t) => t.id === currentTrackRef.current?.id);
+          if (currentIdx !== -1 && currentIdx + 1 < albumTracks.length) {
+            handlePlayTrack(albumTracks[currentIdx + 1], false, true);
+          } else if (repeatModeRef.current === 'all') {
+            // Loop back to start of album
+            handlePlayTrack(albumTracks[0], false, true);
+          } else {
+            // Reached end of album and repeat is off: stop gracefully
+            setIsPlaying(false);
+            audioEngine.pause();
+            audioEngine.seek(0);
+            setCurrentTime(0);
+          }
+        } else {
+          handlePlayTrack(albumTracks[0], false, true);
+        }
+        return;
+      }
+    }
 
-    // 2. If smart shuffle or Repeat All is active, draw from auto-generated smart queue
-    if ((isShuffle || repeatMode === 'all') && autoQueue.length > 0) {
-      const nextTrack = autoQueue[0];
+    if (tracksRef.current.length === 0) return;
+
+    // 3. If smart shuffle or Repeat All is active (and no album context), draw from auto-generated smart queue
+    if ((isShuffleRef.current || repeatModeRef.current === 'all') && autoQueueRef.current.length > 0) {
+      const nextTrack = autoQueueRef.current[0];
       setAutoQueue((prev) => prev.slice(1));
-      handlePlayTrack(nextTrack, false);
+      handlePlayTrack(nextTrack, false, false);
       return;
     }
 
-    // 3. Fallback shuffle: smartly pick from remaining tracks
-    if (isShuffle) {
-      const remaining = tracks.filter((t) => t.id !== currentTrack?.id);
+    // 4. Fallback shuffle: smartly pick from remaining tracks
+    const allTracks = tracksRef.current;
+    const cur = currentTrackRef.current;
+    if (isShuffleRef.current) {
+      const remaining = allTracks.filter((t) => t.id !== cur?.id);
       const randIdx = Math.floor(Math.random() * remaining.length);
-      handlePlayTrack(remaining[randIdx] || tracks[0], false);
-    } else if (currentTrack) {
-      const currentIdx = tracks.findIndex((t) => t.id === currentTrack.id);
-      const nextIdx = (currentIdx + 1) % tracks.length;
-      handlePlayTrack(tracks[nextIdx], false);
+      handlePlayTrack(remaining[randIdx] || allTracks[0], false, false);
+    } else if (cur) {
+      const currentIdx = allTracks.findIndex((t) => t.id === cur.id);
+      const nextIdx = (currentIdx + 1) % allTracks.length;
+      handlePlayTrack(allTracks[nextIdx], false, false);
     } else {
-      handlePlayTrack(tracks[0], false);
+      handlePlayTrack(allTracks[0], false, false);
     }
-  }, [queue, tracks, isShuffle, repeatMode, autoQueue, currentTrack, handlePlayTrack]);
+  }, [handlePlayTrack]);
 
   const handlePrevious = useCallback(() => {
     playedFromSearchRef.current = false;
@@ -824,14 +909,33 @@ export function App() {
       setCurrentTime(0);
       return;
     }
-    if (tracks.length === 0) return;
 
-    if (currentTrack) {
-      const currentIdx = tracks.findIndex((t) => t.id === currentTrack.id);
-      const prevIdx = (currentIdx - 1 + tracks.length) % tracks.length;
-      handlePlayTrack(tracks[prevIdx], false);
+    const cur = currentTrackRef.current;
+
+    // Active album context
+    const context = activeContextRef.current;
+    if (context && context.type === 'album') {
+      const albumTracks = context.tracks;
+      if (albumTracks.length > 0 && cur) {
+        const currentIdx = albumTracks.findIndex((t) => t.id === cur.id);
+        if (currentIdx > 0) {
+          handlePlayTrack(albumTracks[currentIdx - 1], false, true);
+        } else {
+          handlePlayTrack(albumTracks[albumTracks.length - 1], false, true);
+        }
+        return;
+      }
     }
-  }, [currentTime, tracks, currentTrack, handlePlayTrack]);
+
+    const allTracks = tracksRef.current;
+    if (allTracks.length === 0) return;
+
+    if (cur) {
+      const currentIdx = allTracks.findIndex((t) => t.id === cur.id);
+      const prevIdx = (currentIdx - 1 + allTracks.length) % allTracks.length;
+      handlePlayTrack(allTracks[prevIdx], false, false);
+    }
+  }, [currentTime, handlePlayTrack]);
 
   // Hook up AudioEngine events
   useEffect(() => {
@@ -847,27 +951,28 @@ export function App() {
 
     audioEngine.onPlayStateChange = (playing) => {
       setIsPlaying(playing);
-      if (currentRadio && settings.discordRpcEnabled) {
+      if (isRadioActiveRef.current && currentRadioRef.current && settings.discordRpcEnabled) {
         TauriBridge.updateRadioPresence({
-          stationName: currentRadio.name,
-          songTitle: radioNowPlaying?.title || currentRadio.name,
-          artist: radioNowPlaying?.artist || 'Live Radio',
-          iconUrl: currentRadio.favicon || undefined,
+          stationName: currentRadioRef.current.name,
+          songTitle: radioNowPlayingRef.current?.title || currentRadioRef.current.name,
+          artist: radioNowPlayingRef.current?.artist || 'Live Radio',
+          iconUrl: currentRadioRef.current.favicon || undefined,
           isPlaying: playing,
           clientId: settings.discordClientId,
         }).catch(() => {});
-      } else if (currentTrack && settings.discordRpcEnabled) {
-        const hasLocal = Boolean(currentTrack.cover_path && currentTrack.cover_path.trim());
+      } else if (!isRadioActiveRef.current && currentTrackRef.current && settings.discordRpcEnabled) {
+        const tr = currentTrackRef.current;
+        const hasLocal = Boolean(tr.cover_path && tr.cover_path.trim());
         const canShowArt = settings.albumArtMode !== 'disabled';
         TauriBridge.updateDiscordPresence({
-          title: currentTrack.title,
-          artist: currentTrack.artist,
-          album: currentTrack.album,
-          year: settings.discordShowYear ? currentTrack.year : undefined,
-          duration: currentTrack.duration,
+          title: tr.title,
+          artist: tr.artist,
+          album: tr.album,
+          year: settings.discordShowYear ? tr.year : undefined,
+          duration: tr.duration,
           position: audioEngine.getCurrentTime(),
           coverUrl: canShowArt && !hasLocal && settings.albumArtMode === 'local_and_online' ? resolvedCoverArt : undefined,
-          coverPath: canShowArt && hasLocal ? (currentTrack.cover_path || undefined) : undefined,
+          coverPath: canShowArt && hasLocal ? (tr.cover_path || undefined) : undefined,
           isPlaying: playing,
           clientId: settings.discordClientId,
         }).catch(() => {});
@@ -876,7 +981,7 @@ export function App() {
 
     audioEngine.onEnded = () => {
       // 1. Repeat One: replay current track from start
-      if (repeatMode === 'one' && currentTrack) {
+      if (repeatModeRef.current === 'one' && currentTrackRef.current) {
         audioEngine.seek(0);
         audioEngine.resume();
         return;
@@ -888,18 +993,19 @@ export function App() {
         audioEngine.pause();
         audioEngine.seek(0);
         setCurrentTime(0);
-        if (currentTrack && settings.discordRpcEnabled) {
-          const hasLocal = Boolean(currentTrack.cover_path && currentTrack.cover_path.trim());
+        if (currentTrackRef.current && settings.discordRpcEnabled) {
+          const tr = currentTrackRef.current;
+          const hasLocal = Boolean(tr.cover_path && tr.cover_path.trim());
           const canShowArt = settings.albumArtMode !== 'disabled';
           TauriBridge.updateDiscordPresence({
-            title: currentTrack.title,
-            artist: currentTrack.artist,
-            album: currentTrack.album,
-            year: settings.discordShowYear ? currentTrack.year : undefined,
-            duration: currentTrack.duration,
+            title: tr.title,
+            artist: tr.artist,
+            album: tr.album,
+            year: settings.discordShowYear ? tr.year : undefined,
+            duration: tr.duration,
             position: 0,
             coverUrl: canShowArt && !hasLocal && settings.albumArtMode === 'local_and_online' ? resolvedCoverArt : undefined,
-            coverPath: canShowArt && hasLocal ? (currentTrack.cover_path || undefined) : undefined,
+            coverPath: canShowArt && hasLocal ? (tr.cover_path || undefined) : undefined,
             isPlaying: false,
             clientId: settings.discordClientId,
           }).catch(() => {});
@@ -908,20 +1014,64 @@ export function App() {
       }
 
       // 3. Explicit queue: proceed through user queue items
-      if (queue.length > 0) {
-        const nextTrack = queue[0];
+      if (queueRef.current.length > 0) {
+        const nextTrack = queueRef.current[0];
         setQueue((prev) => prev.slice(1));
-        handlePlayTrack(nextTrack, false);
+        handlePlayTrack(nextTrack, false, true);
         return;
       }
 
-      // 4. Repeat mode logic:
+      // 4. Album playback context finished:
+      const context = activeContextRef.current;
+      if (context && context.type === 'album') {
+        if (repeatModeRef.current === 'all') {
+          // Loop the entire album!
+          const albumTracks = [...context.tracks];
+          if (isShuffleRef.current) {
+            albumTracks.sort(() => Math.random() - 0.5);
+          }
+          if (albumTracks.length > 0) {
+            const first = albumTracks[0];
+            setQueue(albumTracks.slice(1));
+            handlePlayTrack(first, false, true);
+            return;
+          }
+        } else {
+          // Album finished and Repeat All is off:
+          // "if an album is only played then only play the album."
+          // Gracefully stop at the end of the album without pulling from global track list or auto-queue!
+          setIsPlaying(false);
+          audioEngine.pause();
+          audioEngine.seek(0);
+          setCurrentTime(0);
+          if (currentTrackRef.current && settings.discordRpcEnabled) {
+            const tr = currentTrackRef.current;
+            const hasLocal = Boolean(tr.cover_path && tr.cover_path.trim());
+            const canShowArt = settings.albumArtMode !== 'disabled';
+            TauriBridge.updateDiscordPresence({
+              title: tr.title,
+              artist: tr.artist,
+              album: tr.album,
+              year: settings.discordShowYear ? tr.year : undefined,
+              duration: tr.duration,
+              position: 0,
+              coverUrl: canShowArt && !hasLocal && settings.albumArtMode === 'local_and_online' ? resolvedCoverArt : undefined,
+              coverPath: canShowArt && hasLocal ? (tr.cover_path || undefined) : undefined,
+              isPlaying: false,
+              clientId: settings.discordClientId,
+            }).catch(() => {});
+          }
+          return;
+        }
+      }
+
+      // 5. Repeat mode logic for general library playback:
       // "it will play automatically if the user has Repeat All selected, if user has repeat one or none selected then auto queue wont play but it will be ready and viewable in queue."
-      if (repeatMode === 'all') {
-        if (autoQueue.length > 0) {
-          const nextTrack = autoQueue[0];
+      if (repeatModeRef.current === 'all') {
+        if (autoQueueRef.current.length > 0) {
+          const nextTrack = autoQueueRef.current[0];
           setAutoQueue((prev) => prev.slice(1));
-          handlePlayTrack(nextTrack, false);
+          handlePlayTrack(nextTrack, false, false);
         } else {
           handleNext();
         }
@@ -932,25 +1082,26 @@ export function App() {
         audioEngine.pause();
         audioEngine.seek(0);
         setCurrentTime(0);
-        if (currentTrack && settings.discordRpcEnabled) {
-          const hasLocal = Boolean(currentTrack.cover_path && currentTrack.cover_path.trim());
+        if (currentTrackRef.current && settings.discordRpcEnabled) {
+          const tr = currentTrackRef.current;
+          const hasLocal = Boolean(tr.cover_path && tr.cover_path.trim());
           const canShowArt = settings.albumArtMode !== 'disabled';
           TauriBridge.updateDiscordPresence({
-            title: currentTrack.title,
-            artist: currentTrack.artist,
-            album: currentTrack.album,
-            year: settings.discordShowYear ? currentTrack.year : undefined,
-            duration: currentTrack.duration,
+            title: tr.title,
+            artist: tr.artist,
+            album: tr.album,
+            year: settings.discordShowYear ? tr.year : undefined,
+            duration: tr.duration,
             position: 0,
             coverUrl: canShowArt && !hasLocal && settings.albumArtMode === 'local_and_online' ? resolvedCoverArt : undefined,
-            coverPath: canShowArt && hasLocal ? (currentTrack.cover_path || undefined) : undefined,
+            coverPath: canShowArt && hasLocal ? (tr.cover_path || undefined) : undefined,
             isPlaying: false,
             clientId: settings.discordClientId,
           }).catch(() => {});
         }
       }
     };
-  }, [currentTrack, currentRadio, radioNowPlaying, settings, repeatMode, resolvedCoverArt, handleNext, queue, autoQueue, handlePlayTrack]);
+  }, [settings, resolvedCoverArt, handleNext, handlePlayTrack]);
 
   // Keyboard navigation shortcuts
   useEffect(() => {
@@ -1514,15 +1665,64 @@ export function App() {
     await loadPlaylists();
   };
 
-  const handlePlayAlbum = (album: AlbumItem, shuffle = false) => {
-    if (album.tracks.length === 0) return;
-    const albumTracks = [...album.tracks];
-    if (shuffle) {
-      albumTracks.sort(() => Math.random() - 0.5);
-    }
-    handlePlayTrack(albumTracks[0]);
-    setQueue(albumTracks.slice(1));
-  };
+  const handlePlayAlbum = useCallback(
+    (album: AlbumItem, shuffle = false) => {
+      if (album.tracks.length === 0) return;
+      const albumTracks = [...album.tracks];
+      if (shuffle) {
+        albumTracks.sort(() => Math.random() - 0.5);
+      }
+      const albumContext: ActivePlaybackContext = {
+        type: 'album',
+        name: album.name,
+        artist: album.artist,
+        tracks: album.tracks,
+      };
+      setActiveContext(albumContext);
+      activeContextRef.current = albumContext;
+
+      setQueue(albumTracks.slice(1));
+      handlePlayTrack(albumTracks[0], false, true);
+    },
+    [handlePlayTrack]
+  );
+
+  const handlePlayTrackInAlbum = useCallback(
+    (track: TrackRecord, album?: AlbumItem) => {
+      if (!album) {
+        handlePlayTrack(track, false, false);
+        return;
+      }
+      const albumContext: ActivePlaybackContext = {
+        type: 'album',
+        name: album.name,
+        artist: album.artist,
+        tracks: album.tracks,
+      };
+      setActiveContext(albumContext);
+      activeContextRef.current = albumContext;
+
+      const trackIdx = album.tracks.findIndex((t) => t.id === track.id);
+      const remainingTracks = trackIdx !== -1 ? album.tracks.slice(trackIdx + 1) : [];
+      setQueue(remainingTracks);
+      handlePlayTrack(track, false, true);
+    },
+    [handlePlayTrack]
+  );
+
+  const handlePlayAlbumByName = useCallback(
+    (albumName: string, artistName?: string) => {
+      const found = albumGroups.find(
+        (a) =>
+          a.name.toLowerCase() === albumName.trim().toLowerCase() &&
+          (!artistName || !a.artist || a.artist.toLowerCase() === artistName.trim().toLowerCase())
+      );
+      if (found) {
+        handlePlayAlbum(found, false);
+      }
+    },
+    [albumGroups, handlePlayAlbum]
+  );
 
   const handlePlayArtist = (artist: ArtistGroup, shuffle = false) => {
     if (artist.tracks.length === 0) return;
@@ -1530,8 +1730,16 @@ export function App() {
     if (shuffle) {
       artistTracks.sort(() => Math.random() - 0.5);
     }
-    handlePlayTrack(artistTracks[0]);
+    const artistContext: ActivePlaybackContext = {
+      type: 'artist',
+      name: artist.name,
+      tracks: artist.tracks,
+    };
+    setActiveContext(artistContext);
+    activeContextRef.current = artistContext;
+
     setQueue(artistTracks.slice(1));
+    handlePlayTrack(artistTracks[0], false, true);
   };
 
   const handleNavigateToAlbum = (albumName: string, artistName?: string) => {
@@ -1645,6 +1853,7 @@ export function App() {
               streamPort={streamPort}
               albumArtMode={settings.albumArtMode}
               onPlayTrack={handlePlayTrack}
+              onPlayAlbum={handlePlayAlbumByName}
               onSelectAlbum={(albName) => handleNavigateToAlbum(albName)}
               onSelectArtist={(artName) => handleNavigateToArtist(artName)}
               onSelectGenre={(genreName) => {
@@ -1898,7 +2107,7 @@ export function App() {
                 streamPort={streamPort}
                 albumArtMode={settings.albumArtMode}
                 onBack={() => setSelectedAlbum(null)}
-                onPlayTrack={handlePlayTrack}
+                onPlayTrack={handlePlayTrackInAlbum}
                 onPlayAlbum={handlePlayAlbum}
                 currentTrackId={currentTrack?.id}
                 lastfmApiKey={settings.lastfmApiKey}
@@ -1974,6 +2183,7 @@ export function App() {
           isOpen={showQueue}
           repeatMode={repeatMode}
           isShuffle={isShuffle}
+          activeAlbumName={activeContext?.type === 'album' ? activeContext.name : undefined}
           onClose={() => setShowQueue(false)}
           onPlayFromQueue={(idx) => {
             const tr = queue[idx];

@@ -13,7 +13,7 @@ pub mod win {
         SetWindowSubclass, TaskbarList, THBF_ENABLED, THB_FLAGS, THB_ICON, THB_TOOLTIP,
         THUMBBUTTON, IShellLinkW, ShellLink,
     };
-    use windows::Win32::UI::Shell::PropertiesSystem::IPropertyStore;
+    use windows::Win32::UI::Shell::PropertiesSystem::{IPropertyStore, SHGetPropertyStoreForWindow};
     use windows::core::Interface;
     use windows::Win32::UI::WindowsAndMessaging::{
         CreateIconIndirect, HICON, ICONINFO, WM_COMMAND, RegisterWindowMessageW,
@@ -364,10 +364,17 @@ pub mod win {
         }
 
         // Create or update Start Menu shortcut with PKEY_AppUserModel_ID
-        if let Ok(appdata) = std::env::var("APPDATA") {
-            let lnk_path = std::path::Path::new(&appdata).join(r"Microsoft\Windows\Start Menu\Programs\MusicBox.lnk");
-            if let Ok(exe_path) = std::env::current_exe() {
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Ok(appdata) = std::env::var("APPDATA") {
+                let lnk_path = std::path::Path::new(&appdata).join(r"Microsoft\Windows\Start Menu\Programs\MusicBox.lnk");
                 create_or_update_shortcut(&lnk_path, &exe_path, "com.cblade.musicbox");
+            }
+
+            if let Ok(progdata) = std::env::var("ProgramData") {
+                let lnk_path = std::path::Path::new(&progdata).join(r"Microsoft\Windows\Start Menu\Programs\MusicBox.lnk");
+                if lnk_path.exists() {
+                    create_or_update_shortcut(&lnk_path, &exe_path, "com.cblade.musicbox");
+                }
             }
         }
     }
@@ -428,8 +435,40 @@ pub mod win {
         }
     }
 
+    pub fn set_window_app_user_model_id(hwnd: HWND, aumid: &str) {
+        unsafe {
+            if let Ok(store) = SHGetPropertyStoreForWindow::<IPropertyStore>(hwnd) {
+                let app_id_key = PROPERTYKEY {
+                    fmtid: windows::core::GUID::from_values(
+                        0x9F4C2855,
+                        0x9F79,
+                        0x4B39,
+                        [0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3],
+                    ),
+                    pid: 5,
+                };
+                let wide_val: Vec<u16> = aumid.encode_utf16().chain(std::iter::once(0)).collect();
+                let bytes_len = wide_val.len() * 2;
+                let mem = windows::Win32::System::Com::CoTaskMemAlloc(bytes_len);
+                if !mem.is_null() {
+                    std::ptr::copy_nonoverlapping(wide_val.as_ptr() as *const u8, mem as *mut u8, bytes_len);
+                    let mut inner = PROPVARIANT_0_0::default();
+                    inner.vt = VT_LPWSTR;
+                    inner.Anonymous.pwszVal = windows::core::PWSTR(mem as *mut u16);
+
+                    let mut pv = PROPVARIANT::default();
+                    pv.Anonymous.Anonymous = std::mem::ManuallyDrop::new(inner);
+
+                    let _ = store.SetValue(&app_id_key, &pv);
+                    let _ = PropVariantClear(&mut pv);
+                }
+            }
+        }
+    }
+
     pub fn init_taskbar(app_handle: &AppHandle, hwnd_raw: HWND) {
         set_app_user_model_id();
+        set_window_app_user_model_id(hwnd_raw, "com.cblade.musicbox");
 
         unsafe {
             let msg = RegisterWindowMessageW(w!("TaskbarButtonCreated"));

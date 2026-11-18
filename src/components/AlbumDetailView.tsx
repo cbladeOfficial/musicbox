@@ -11,7 +11,7 @@ interface AlbumDetailViewProps {
   streamPort: number;
   albumArtMode?: AlbumArtMode;
   onBack: () => void;
-  onPlayTrack: (track: TrackRecord) => void;
+  onPlayTrack: (track: TrackRecord, album?: AlbumItem) => void;
   onPlayAlbum: (album: AlbumItem, shuffle?: boolean) => void;
   currentTrackId?: number;
   lastfmApiKey?: string;
@@ -160,7 +160,7 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
           return (
             <div
               key={t.id}
-              onDoubleClick={() => onPlayTrack(t)}
+              onDoubleClick={() => onPlayTrack(t, album)}
               className={`group flex items-center px-4 py-3 text-[14px] rounded-lg cursor-pointer transition-colors outline-none select-none ${
                 isCurrent
                   ? 'text-[var(--accent-color)] font-medium bg-[var(--accent-color)]/15 shadow-sm'
@@ -174,7 +174,7 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
                   <>
                     <span className="group-hover:hidden">{t.track_number || idx + 1}</span>
                     <button
-                      onClick={() => onPlayTrack(t)}
+                      onClick={() => onPlayTrack(t, album)}
                       className="hidden group-hover:block text-white hover:text-[var(--accent-color)] transition-colors"
                     >
                       <Play className="w-3.5 h-3.5 fill-current" />

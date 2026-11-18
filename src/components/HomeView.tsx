@@ -86,6 +86,7 @@ const TopArtistCard: React.FC<{
 interface HomeViewProps {
   tracks: TrackRecord[];
   onPlayTrack: (track: TrackRecord) => void;
+  onPlayAlbum?: (albumName: string, artistName?: string) => void;
   onSelectAlbum: (albumName: string) => void;
   onSelectArtist: (artistName: string) => void;
   onSelectGenre: (genreName: string) => void;
@@ -96,6 +97,7 @@ interface HomeViewProps {
 export const HomeView: React.FC<HomeViewProps> = ({
   tracks,
   onPlayTrack,
+  onPlayAlbum,
   onSelectAlbum,
   onSelectArtist,
   onSelectGenre,
@@ -370,7 +372,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onPlayTrack(album.sampleTrack);
+                        if (onPlayAlbum) {
+                          onPlayAlbum(album.name, album.artist);
+                        } else {
+                          onPlayTrack(album.sampleTrack);
+                        }
                       }}
                       className="absolute right-2 bottom-2 w-9 h-9 rounded-full bg-[var(--accent-color)] text-white opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105"
                       title="Play Album"
