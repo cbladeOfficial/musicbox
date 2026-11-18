@@ -274,6 +274,31 @@ export const TauriBridge = {
     return safeInvoke<void>('update_taskbar_playback_state', { isPlaying });
   },
 
+  async updateSmtcMetadata(params: {
+    title: string;
+    artist?: string;
+    album?: string;
+    coverUrl?: string | null;
+    durationSecs?: number;
+  }): Promise<void> {
+    if (!isTauri()) return;
+    return safeInvoke<void>('update_smtc_metadata', {
+      title: params.title,
+      artist: params.artist || null,
+      album: params.album || null,
+      coverUrl: params.coverUrl || null,
+      durationSecs: params.durationSecs || null,
+    });
+  },
+
+  async updateSmtcPlayback(isPlaying: boolean, positionSecs?: number): Promise<void> {
+    if (!isTauri()) return;
+    return safeInvoke<void>('update_smtc_playback', {
+      isPlaying,
+      positionSecs: positionSecs ?? null,
+    });
+  },
+
   async showInFileManager(path: string): Promise<void> {
     if (!isTauri()) return;
     return safeInvoke<void>('show_in_file_manager', { path });

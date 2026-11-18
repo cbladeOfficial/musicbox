@@ -639,7 +639,7 @@ export function App() {
       const isFromSearch = fromSearch !== undefined ? fromSearch : searchQueryRef.current.trim().length > 0;
       playedFromSearchRef.current = isFromSearch;
 
-      if (!keepContext && isFromSearch) {
+      if (!keepContext) {
         setActiveContext(null);
         activeContextRef.current = null;
       }
@@ -846,32 +846,33 @@ export function App() {
       return;
     }
 
-    // 2. Active album context
+    // 2. Active album / artist / playlist context
     const context = activeContextRef.current;
-    if (context && context.type === 'album') {
-      const albumTracks = context.tracks;
-      if (albumTracks.length > 0) {
-        if (isShuffleRef.current) {
-          const remaining = albumTracks.filter((t) => t.id !== currentTrackRef.current?.id);
-          const next = remaining[Math.floor(Math.random() * remaining.length)] || albumTracks[0];
-          handlePlayTrack(next, false, true);
-        } else if (currentTrackRef.current) {
-          const currentIdx = albumTracks.findIndex((t) => t.id === currentTrackRef.current?.id);
-          if (currentIdx !== -1 && currentIdx + 1 < albumTracks.length) {
-            handlePlayTrack(albumTracks[currentIdx + 1], false, true);
-          } else if (repeatModeRef.current === 'all') {
-            // Loop back to start of album
-            handlePlayTrack(albumTracks[0], false, true);
-          } else {
-            // Reached end of album and repeat is off: stop gracefully
-            setIsPlaying(false);
-            audioEngine.pause();
-            audioEngine.seek(0);
-            setCurrentTime(0);
-          }
-        } else {
-          handlePlayTrack(albumTracks[0], false, true);
-        }
+    if (context && context.tracks && context.tracks.length > 0) {
+      const contextTracks = context.tracks;
+      if (isShuffleRef.current) {
+        const remaining = contextTracks.filter((t) => t.id !== currentTrackRef.current?.id);
+        const next = remaining[Math.floor(Math.random() * remaining.length)] || contextTracks[0];
+        handlePlayTrack(next, false, true);
+        return;
+      }
+
+      const cur = currentTrackRef.current;
+      const currentIdx = cur ? contextTracks.findIndex((t) => t.id === cur.id) : -1;
+
+      if (currentIdx !== -1 && currentIdx + 1 < contextTracks.length) {
+        handlePlayTrack(contextTracks[currentIdx + 1], false, true);
+        return;
+      } else if (repeatModeRef.current === 'all') {
+        // Loop back to start of album
+        handlePlayTrack(contextTracks[0], false, true);
+        return;
+      } else {
+        // Reached end of album and repeat is off: stop gracefully
+        setIsPlaying(false);
+        audioEngine.pause();
+        audioEngine.seek(0);
+        setCurrentTime(0);
         return;
       }
     }
@@ -912,19 +913,19 @@ export function App() {
 
     const cur = currentTrackRef.current;
 
-    // Active album context
+    // Active album / artist / playlist context
     const context = activeContextRef.current;
-    if (context && context.type === 'album') {
-      const albumTracks = context.tracks;
-      if (albumTracks.length > 0 && cur) {
-        const currentIdx = albumTracks.findIndex((t) => t.id === cur.id);
-        if (currentIdx > 0) {
-          handlePlayTrack(albumTracks[currentIdx - 1], false, true);
-        } else {
-          handlePlayTrack(albumTracks[albumTracks.length - 1], false, true);
-        }
-        return;
+    if (context && context.tracks && context.tracks.length > 0 && cur) {
+      const contextTracks = context.tracks;
+      const currentIdx = contextTracks.findIndex((t) => t.id === cur.id);
+      if (currentIdx > 0) {
+        handlePlayTrack(contextTracks[currentIdx - 1], false, true);
+      } else if (repeatModeRef.current === 'all') {
+        handlePlayTrack(contextTracks[contextTracks.length - 1], false, true);
+      } else {
+        handlePlayTrack(contextTracks[0], false, true);
       }
+      return;
     }
 
     const allTracks = tracksRef.current;
@@ -1021,21 +1022,28 @@ export function App() {
         return;
       }
 
-      // 4. Album playback context finished:
+      // 4. Album playback context:
       const context = activeContextRef.current;
-      if (context && context.type === 'album') {
-        if (repeatModeRef.current === 'all') {
+      if (context && context.tracks && context.tracks.length > 0) {
+        const contextTracks = context.tracks;
+        if (isShuffleRef.current) {
+          const remaining = contextTracks.filter((t) => t.id !== currentTrackRef.current?.id);
+          const next = remaining[Math.floor(Math.random() * remaining.length)] || contextTracks[0];
+          handlePlayTrack(next, false, true);
+          return;
+        }
+
+        const cur = currentTrackRef.current;
+        const currentIdx = cur ? contextTracks.findIndex((t) => t.id === cur.id) : -1;
+
+        if (currentIdx !== -1 && currentIdx + 1 < contextTracks.length) {
+          // Play next track in album
+          handlePlayTrack(contextTracks[currentIdx + 1], false, true);
+          return;
+        } else if (repeatModeRef.current === 'all') {
           // Loop the entire album!
-          const albumTracks = [...context.tracks];
-          if (isShuffleRef.current) {
-            albumTracks.sort(() => Math.random() - 0.5);
-          }
-          if (albumTracks.length > 0) {
-            const first = albumTracks[0];
-            setQueue(albumTracks.slice(1));
-            handlePlayTrack(first, false, true);
-            return;
-          }
+          handlePlayTrack(contextTracks[0], false, true);
+          return;
         } else {
           // Album finished and Repeat All is off:
           // "if an album is only played then only play the album."
@@ -1283,6 +1291,7 @@ export function App() {
         artist: currentTrack.artist,
         album: currentTrack.album,
         artworkUrl: coverUrl,
+        durationSecs: currentTrack.duration,
       });
     }
   }, [currentTrack, currentRadio, radioNowPlaying, resolvedCoverArt, streamPort]);
@@ -1308,6 +1317,8 @@ export function App() {
     let unlistenPrev: (() => void) | undefined;
     let unlistenNext: (() => void) | undefined;
     let unlistenStop: (() => void) | undefined;
+    let unlistenSeek: (() => void) | undefined;
+    let unlistenSeekDelta: (() => void) | undefined;
     let isMounted = true;
 
     import('@tauri-apps/api/event').then(({ listen }) => {
@@ -1340,6 +1351,24 @@ export function App() {
         if (isMounted) unlistenStop = un;
         else un();
       });
+
+      listen('media-seek', (e: { payload: number }) => {
+        if (typeof e.payload === 'number') {
+          audioEngine.seek(e.payload);
+        }
+      }).then((un) => {
+        if (isMounted) unlistenSeek = un;
+        else un();
+      });
+
+      listen('media-seek-delta', (e: { payload: number }) => {
+        if (typeof e.payload === 'number') {
+          audioEngine.seek(Math.max(0, audioEngine.getCurrentTime() + e.payload));
+        }
+      }).then((un) => {
+        if (isMounted) unlistenSeekDelta = un;
+        else un();
+      });
     });
 
     return () => {
@@ -1348,6 +1377,8 @@ export function App() {
       unlistenPrev?.();
       unlistenNext?.();
       unlistenStop?.();
+      unlistenSeek?.();
+      unlistenSeekDelta?.();
     };
   }, [handlePlayPause, handlePrevious, handleNext, handleStop]);
 
@@ -1433,15 +1464,20 @@ export function App() {
     }
   };
 
-  // Group tracks into Albums
+  // Group tracks into Albums (properly grouping all tracks belonging to the same album)
   const albumGroups = useMemo(() => {
     const map = new Map<string, AlbumItem>();
     for (const t of tracks) {
-      const key = `${t.artist}___${t.album}`;
+      const albName = (t.album || '').trim() || 'Unknown Album';
+      const albArtist = (t.album_artist || '').trim() || (t.artist || '').trim() || 'Unknown Artist';
+      const key = albName.toLowerCase() === 'unknown album'
+        ? `${albArtist.toLowerCase()}___unknown album`
+        : albName.toLowerCase();
+
       if (!map.has(key)) {
         map.set(key, {
-          name: t.album,
-          artist: t.artist,
+          name: albName,
+          artist: albArtist,
           year: t.year,
           trackCount: 0,
           coverPath: t.cover_path,
@@ -1449,9 +1485,27 @@ export function App() {
         });
       }
       const item = map.get(key)!;
-      item.trackCount += 1;
       item.tracks.push(t);
+      if (!item.year && t.year) item.year = t.year;
+      if (!item.coverPath && t.cover_path) item.coverPath = t.cover_path;
+      if (item.artist === 'Various Artists' && albArtist && albArtist !== 'Various Artists') {
+        item.artist = albArtist;
+      }
     }
+
+    for (const item of map.values()) {
+      item.tracks.sort((a, b) => {
+        const discA = a.disc_number || 1;
+        const discB = b.disc_number || 1;
+        if (discA !== discB) return discA - discB;
+        const trackA = a.track_number || 0;
+        const trackB = b.track_number || 0;
+        if (trackA !== trackB) return trackA - trackB;
+        return a.title.localeCompare(b.title);
+      });
+      item.trackCount = item.tracks.length;
+    }
+
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [tracks]);
 
@@ -1676,12 +1730,12 @@ export function App() {
         type: 'album',
         name: album.name,
         artist: album.artist,
-        tracks: album.tracks,
+        tracks: albumTracks,
       };
       setActiveContext(albumContext);
       activeContextRef.current = albumContext;
 
-      setQueue(albumTracks.slice(1));
+      setQueue([]);
       handlePlayTrack(albumTracks[0], false, true);
     },
     [handlePlayTrack]
@@ -1702,9 +1756,7 @@ export function App() {
       setActiveContext(albumContext);
       activeContextRef.current = albumContext;
 
-      const trackIdx = album.tracks.findIndex((t) => t.id === track.id);
-      const remainingTracks = trackIdx !== -1 ? album.tracks.slice(trackIdx + 1) : [];
-      setQueue(remainingTracks);
+      setQueue([]);
       handlePlayTrack(track, false, true);
     },
     [handlePlayTrack]
@@ -1712,11 +1764,14 @@ export function App() {
 
   const handlePlayAlbumByName = useCallback(
     (albumName: string, artistName?: string) => {
-      const found = albumGroups.find(
-        (a) =>
-          a.name.toLowerCase() === albumName.trim().toLowerCase() &&
-          (!artistName || !a.artist || a.artist.toLowerCase() === artistName.trim().toLowerCase())
-      );
+      const trimmedAlbum = albumName.trim().toLowerCase();
+      const trimmedArtist = artistName ? artistName.trim().toLowerCase() : '';
+      const found =
+        albumGroups.find(
+          (a) =>
+            a.name.toLowerCase() === trimmedAlbum &&
+            (!trimmedArtist || !a.artist || a.artist.toLowerCase() === trimmedArtist)
+        ) || albumGroups.find((a) => a.name.toLowerCase() === trimmedAlbum);
       if (found) {
         handlePlayAlbum(found, false);
       }
@@ -1733,12 +1788,12 @@ export function App() {
     const artistContext: ActivePlaybackContext = {
       type: 'artist',
       name: artist.name,
-      tracks: artist.tracks,
+      tracks: artistTracks,
     };
     setActiveContext(artistContext);
     activeContextRef.current = artistContext;
 
-    setQueue(artistTracks.slice(1));
+    setQueue([]);
     handlePlayTrack(artistTracks[0], false, true);
   };
 
@@ -2184,15 +2239,19 @@ export function App() {
           repeatMode={repeatMode}
           isShuffle={isShuffle}
           activeAlbumName={activeContext?.type === 'album' ? activeContext.name : undefined}
+          activeContextTracks={activeContext?.tracks}
           onClose={() => setShowQueue(false)}
           onPlayFromQueue={(idx) => {
             const tr = queue[idx];
             setQueue((prev) => prev.filter((_, i) => i !== idx));
-            handlePlayTrack(tr);
+            handlePlayTrack(tr, false, true);
           }}
           onPlayFromAutoQueue={(track) => {
             setAutoQueue((prev) => prev.filter((t) => t.id !== track.id));
-            handlePlayTrack(track);
+            handlePlayTrack(track, false, false);
+          }}
+          onPlayTrack={(track) => {
+            handlePlayTrack(track, false, true);
           }}
           onAddAutoQueueToManualQueue={(track) => {
             setAutoQueue((prev) => prev.filter((t) => t.id !== track.id));

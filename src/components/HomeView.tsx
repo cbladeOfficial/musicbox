@@ -212,7 +212,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       if (!albumMap.has(alb)) {
         albumMap.set(alb, {
           name: alb,
-          artist: t.artist,
+          artist: (t.album_artist || t.artist || '').trim() || 'Unknown Artist',
           year: t.year,
           sampleTrack: t,
           count: 1,

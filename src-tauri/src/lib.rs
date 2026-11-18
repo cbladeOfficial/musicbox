@@ -123,6 +123,8 @@ pub fn run() {
             fetch_radio_metadata,
             update_radio_presence,
             update_taskbar_playback_state,
+            update_smtc_metadata,
+            update_smtc_playback,
             show_in_file_manager,
             updater::check_for_updates,
             updater::download_update,

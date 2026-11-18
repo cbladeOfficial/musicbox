@@ -11,9 +11,11 @@ interface QueueDrawerProps {
   repeatMode: 'off' | 'all' | 'one';
   isShuffle: boolean;
   activeAlbumName?: string;
+  activeContextTracks?: TrackRecord[];
   onClose: () => void;
   onPlayFromQueue: (index: number) => void;
   onPlayFromAutoQueue: (track: TrackRecord) => void;
+  onPlayTrack?: (track: TrackRecord) => void;
   onAddAutoQueueToManualQueue: (track: TrackRecord) => void;
   onRemoveFromQueue: (index: number) => void;
   onClearQueue: () => void;
@@ -29,9 +31,11 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
   repeatMode,
   isShuffle,
   activeAlbumName,
+  activeContextTracks,
   onClose,
   onPlayFromQueue,
   onPlayFromAutoQueue,
+  onPlayTrack,
   onAddAutoQueueToManualQueue,
   onRemoveFromQueue,
   onClearQueue,
@@ -41,6 +45,18 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
   if (!isOpen) return null;
 
   const isAutoplayActive = repeatMode === 'all';
+
+  const remainingAlbumTracks = React.useMemo(() => {
+    if (!currentTrack || !activeContextTracks || activeContextTracks.length <= 1) return [];
+    const curIdx = activeContextTracks.findIndex((t) => t.id === currentTrack.id);
+    if (curIdx === -1) return activeContextTracks;
+    const after = activeContextTracks.slice(curIdx + 1);
+    if (repeatMode === 'all') {
+      const before = activeContextTracks.slice(0, curIdx);
+      return [...after, ...before];
+    }
+    return after;
+  }, [currentTrack?.id, activeContextTracks, repeatMode]);
 
   return (
     <aside className="w-96 h-full bg-[#0d0f14]/95 backdrop-blur-md border-l border-white/10 flex flex-col z-30 select-none shadow-2xl flex-shrink-0 animate-fadeIn">
@@ -184,6 +200,62 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
             </div>
           )}
         </div>
+
+        {/* Album Up Next Section when playing an album */}
+        {activeAlbumName && activeContextTracks && activeContextTracks.length > 0 && (
+          <div className="space-y-2 pt-2 border-t border-white/5">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs uppercase font-semibold tracking-wider text-[var(--accent-color)]">
+                Next in Album ({remainingAlbumTracks.length})
+              </span>
+              {repeatMode === 'all' && (
+                <span className="text-[10px] font-mono text-zinc-400">
+                  Looping Album
+                </span>
+              )}
+            </div>
+            {remainingAlbumTracks.length === 0 ? (
+              <div className="p-3 text-center text-xs text-zinc-500 rounded-lg bg-white/[0.02] border border-white/5">
+                End of album reached
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {remainingAlbumTracks.map((track, i) => (
+                  <div
+                    key={`album_rem_${track.id}_${i}`}
+                    className="group flex items-center justify-between px-3.5 py-2 rounded-lg hover:bg-white/5 transition-colors border border-transparent hover:border-white/5"
+                  >
+                    <button
+                      onClick={() => onPlayTrack && onPlayTrack(track)}
+                      className="flex-1 text-left truncate pr-2 flex items-center space-x-3 cursor-pointer"
+                    >
+                      <span className="w-5 text-xs text-zinc-500 font-mono tabular-nums flex-shrink-0">
+                        {track.track_number || i + 1}
+                      </span>
+                      <div className="truncate">
+                        <div className="text-[13px] font-medium text-white group-hover:text-[var(--accent-color)] truncate transition-colors leading-tight">
+                          {track.title}
+                        </div>
+                        <div className="text-[11px] text-zinc-400 truncate mt-0.5 leading-tight">
+                          {track.artist}
+                        </div>
+                      </div>
+                    </button>
+                    {onPlayTrack && (
+                      <button
+                        onClick={() => onPlayTrack(track)}
+                        title="Play track now"
+                        className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Smart Auto-Queue Section (Spotify-like Recommendations) */}
         {autoQueue.length > 0 ? (

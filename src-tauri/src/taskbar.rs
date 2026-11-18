@@ -2,6 +2,7 @@
 pub mod win {
     use std::os::windows::ffi::OsStrExt;
     use std::sync::Mutex;
+    use souvlaki::{MediaControlEvent, MediaControls, MediaMetadata, MediaPlayback, MediaPosition, PlatformConfig, SeekDirection};
     use tauri::{AppHandle, Emitter};
     use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM, PROPERTYKEY};
     use windows::Win32::Graphics::Gdi::{CreateBitmap, DeleteObject, HBITMAP};
@@ -14,8 +15,7 @@ pub mod win {
         THUMBBUTTON, IShellLinkW, ShellLink,
     };
     use windows::Win32::UI::Shell::PropertiesSystem::{
-        IPropertyStore, SHGetPropertyStoreForWindow, SHGetPropertyStoreFromParsingName,
-        GPS_READWRITE,
+        IPropertyStore, SHGetPropertyStoreForWindow,
     };
     use windows::core::Interface;
     use windows::Win32::UI::WindowsAndMessaging::{
@@ -53,6 +53,7 @@ pub mod win {
     unsafe impl Sync for TaskbarState {}
 
     static TASKBAR_STATE: Mutex<Option<TaskbarState>> = Mutex::new(None);
+    pub static MEDIA_CONTROLS: Mutex<Option<MediaControls>> = Mutex::new(None);
 
     fn create_rgba_icon(draw: impl Fn(u32, u32) -> bool) -> HICON {
         let width = 16u32;
@@ -176,44 +177,39 @@ pub mod win {
                 let desc: Vec<u16> = std::ffi::OsStr::new("MusicBox").encode_wide().chain(std::iter::once(0)).collect();
                 let _ = shell_link.SetDescription(PCWSTR(desc.as_ptr()));
 
+                // Set PKEY_AppUserModel_ID directly on the IShellLink property store BEFORE saving
+                if let Ok(prop_store) = shell_link.cast::<IPropertyStore>() {
+                    let app_id_key = PROPERTYKEY {
+                        fmtid: windows::core::GUID::from_values(
+                            0x9F4C2855,
+                            0x9F79,
+                            0x4B39,
+                            [0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3],
+                        ),
+                        pid: 5,
+                    };
+
+                    let wide_val: Vec<u16> = aumid.encode_utf16().chain(std::iter::once(0)).collect();
+                    let bytes_len = wide_val.len() * 2;
+                    let mem = windows::Win32::System::Com::CoTaskMemAlloc(bytes_len);
+                    if !mem.is_null() {
+                        std::ptr::copy_nonoverlapping(wide_val.as_ptr() as *const u8, mem as *mut u8, bytes_len);
+                        let mut inner = PROPVARIANT_0_0::default();
+                        inner.vt = VT_LPWSTR;
+                        inner.Anonymous.pwszVal = windows::core::PWSTR(mem as *mut u16);
+
+                        let mut pv = PROPVARIANT::default();
+                        pv.Anonymous.Anonymous = std::mem::ManuallyDrop::new(inner);
+
+                        if prop_store.SetValue(&app_id_key, &pv).is_ok() {
+                            let _ = prop_store.Commit();
+                        }
+                        let _ = PropVariantClear(&mut pv);
+                    }
+                }
+
                 if let Ok(persist_file) = shell_link.cast::<IPersistFile>() {
                     let _ = persist_file.Save(PCWSTR(wide_lnk.as_ptr()), true);
-                }
-            }
-
-            // Stamp PKEY_AppUserModel_ID: {9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3}, 5 directly onto the saved shortcut
-            let store_res: windows::core::Result<IPropertyStore> = SHGetPropertyStoreFromParsingName(
-                PCWSTR(wide_lnk.as_ptr()),
-                None,
-                GPS_READWRITE,
-            );
-            if let Ok(store) = store_res {
-                let app_id_key = PROPERTYKEY {
-                    fmtid: windows::core::GUID::from_values(
-                        0x9F4C2855,
-                        0x9F79,
-                        0x4B39,
-                        [0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3],
-                    ),
-                    pid: 5,
-                };
-
-                let wide_val: Vec<u16> = aumid.encode_utf16().chain(std::iter::once(0)).collect();
-                let bytes_len = wide_val.len() * 2;
-                let mem = windows::Win32::System::Com::CoTaskMemAlloc(bytes_len);
-                if !mem.is_null() {
-                    std::ptr::copy_nonoverlapping(wide_val.as_ptr() as *const u8, mem as *mut u8, bytes_len);
-                    let mut inner = PROPVARIANT_0_0::default();
-                    inner.vt = VT_LPWSTR;
-                    inner.Anonymous.pwszVal = windows::core::PWSTR(mem as *mut u16);
-
-                    let mut pv = PROPVARIANT::default();
-                    pv.Anonymous.Anonymous = std::mem::ManuallyDrop::new(inner);
-
-                    if store.SetValue(&app_id_key, &pv).is_ok() {
-                        let _ = store.Commit();
-                    }
-                    let _ = PropVariantClear(&mut pv);
                 }
             }
         }
@@ -228,17 +224,19 @@ pub mod win {
             );
         }
 
-        // Set WebView2 environment arguments so child webview processes inherit the AUMID
+        // Disable WebView2's internal media key handling and SMTC service so WebView2 child processes
+        // (msedgewebview2.exe) do not register a duplicate/unknown media card with Windows Action Center.
+        // All SMTC media controls are handled natively by MusicBox.exe via souvlaki.
         let cur_args = std::env::var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS").unwrap_or_default();
-        if !cur_args.contains("--app-user-model-id=") {
-            let new_args = if cur_args.is_empty() {
-                "--app-user-model-id=msedgewebview2.exe --app-id=msedgewebview2.exe".to_string()
-            } else {
-                format!("{} --app-user-model-id=msedgewebview2.exe --app-id=msedgewebview2.exe", cur_args)
-            };
-            unsafe {
-                std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", new_args);
+        let mut final_args = cur_args;
+        if !final_args.contains("HardwareMediaKeyHandling") {
+            if !final_args.is_empty() {
+                final_args.push(' ');
             }
+            final_args.push_str("--disable-features=HardwareMediaKeyHandling,MediaSessionService");
+        }
+        unsafe {
+            std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", final_args.trim());
         }
 
         // Extract and write pristine icon.png and icon.ico to disk for Windows Action Center (SMTC)
@@ -266,8 +264,9 @@ pub mod win {
             (None, None)
         };
 
-        // Explicitly set this process's AppUserModelId to msedgewebview2.exe
-        let aumid: Vec<u16> = std::ffi::OsStr::new("msedgewebview2.exe")
+        // Explicitly set this process's AppUserModelId to com.cblade.musicbox
+        let app_id = "com.cblade.musicbox";
+        let aumid: Vec<u16> = std::ffi::OsStr::new(app_id)
             .encode_wide()
             .chain(std::iter::once(0))
             .collect();
@@ -308,7 +307,7 @@ pub mod win {
         let icon_default = icon_ico_path.as_deref().unwrap_or(&exe_path_str);
 
         // Register AUMID entries in HKCU\Software\Classes\AppUserModelId\<id>
-        for id in ["msedgewebview2.exe", "com.cblade.musicbox", "MusicBox"] {
+        for id in ["com.cblade.musicbox", "MusicBox"] {
             let key = format!("Software\\Classes\\AppUserModelId\\{}", id);
             set_reg_str(HKEY_CURRENT_USER, &key, Some("DisplayName"), "MusicBox");
             set_reg_str(HKEY_CURRENT_USER, &key, Some("IconUri"), icon_primary);
@@ -316,44 +315,44 @@ pub mod win {
             set_reg_dword(HKEY_CURRENT_USER, &key, "ShowInSettings", 1);
         }
 
-        // Register in HKCU\Software\Classes\Applications\<app>
-        for app in ["msedgewebview2.exe", "MusicBox.exe"] {
-            let key = format!("Software\\Classes\\Applications\\{}", app);
-            set_reg_str(HKEY_CURRENT_USER, &key, Some("FriendlyAppName"), "MusicBox");
-            set_reg_str(HKEY_CURRENT_USER, &key, Some("ApplicationCompany"), "BladeWorks");
-            set_reg_str(HKEY_CURRENT_USER, &key, Some("Icon"), icon_primary);
+        // Register in HKCU\Software\Classes\Applications\MusicBox.exe
+        {
+            let key = "Software\\Classes\\Applications\\MusicBox.exe";
+            set_reg_str(HKEY_CURRENT_USER, key, Some("FriendlyAppName"), "MusicBox");
+            set_reg_str(HKEY_CURRENT_USER, key, Some("ApplicationCompany"), "BladeWorks");
+            set_reg_str(HKEY_CURRENT_USER, key, Some("Icon"), icon_primary);
 
-            let def_icon_key = format!("Software\\Classes\\Applications\\{}\\DefaultIcon", app);
-            set_reg_str(HKEY_CURRENT_USER, &def_icon_key, None, icon_default);
+            let def_icon_key = "Software\\Classes\\Applications\\MusicBox.exe\\DefaultIcon";
+            set_reg_str(HKEY_CURRENT_USER, def_icon_key, None, icon_default);
         }
 
-        // Register in HKCU\Software\Classes\<app>
-        for app in ["msedgewebview2.exe", "MusicBox.exe"] {
-            let key = format!("Software\\Classes\\{}", app);
-            set_reg_str(HKEY_CURRENT_USER, &key, None, "MusicBox");
-            set_reg_str(HKEY_CURRENT_USER, &key, Some("FriendlyTypeName"), "MusicBox");
+        // Register in HKCU\Software\Classes\MusicBox
+        {
+            let key = "Software\\Classes\\MusicBox";
+            set_reg_str(HKEY_CURRENT_USER, key, None, "MusicBox");
+            set_reg_str(HKEY_CURRENT_USER, key, Some("FriendlyTypeName"), "MusicBox");
 
-            let def_icon_key = format!("Software\\Classes\\{}\\DefaultIcon", app);
-            set_reg_str(HKEY_CURRENT_USER, &def_icon_key, None, icon_default);
+            let def_icon_key = "Software\\Classes\\MusicBox\\DefaultIcon";
+            set_reg_str(HKEY_CURRENT_USER, def_icon_key, None, icon_default);
         }
 
         // Register in HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\<id>
-        for id in ["msedgewebview2.exe", "com.cblade.musicbox", "MusicBox"] {
+        for id in ["com.cblade.musicbox", "MusicBox"] {
             let key = format!("Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings\\{}", id);
             set_reg_dword(HKEY_CURRENT_USER, &key, "ShowInActionCenter", 1);
         }
 
-        // Create or update Start Menu shortcuts with PKEY_AppUserModel_ID = "msedgewebview2.exe"
+        // Create or update Start Menu shortcuts with PKEY_AppUserModel_ID = "com.cblade.musicbox"
         if let Some(ref exe_path) = exe_path_buf {
             if let Ok(appdata) = std::env::var("APPDATA") {
                 let lnk_path = std::path::Path::new(&appdata).join(r"Microsoft\Windows\Start Menu\Programs\MusicBox.lnk");
-                create_or_update_shortcut(&lnk_path, exe_path, "msedgewebview2.exe");
+                create_or_update_shortcut(&lnk_path, exe_path, "com.cblade.musicbox");
             }
 
             if let Ok(progdata) = std::env::var("ProgramData") {
                 let lnk_path = std::path::Path::new(&progdata).join(r"Microsoft\Windows\Start Menu\Programs\MusicBox.lnk");
                 if lnk_path.exists() {
-                    create_or_update_shortcut(&lnk_path, exe_path, "msedgewebview2.exe");
+                    create_or_update_shortcut(&lnk_path, exe_path, "com.cblade.musicbox");
                 }
             }
         }
@@ -448,7 +447,48 @@ pub mod win {
 
     pub fn init_taskbar(app_handle: &AppHandle, hwnd_raw: HWND) {
         set_app_user_model_id();
-        set_window_app_user_model_id(hwnd_raw, "msedgewebview2.exe");
+        set_window_app_user_model_id(hwnd_raw, "com.cblade.musicbox");
+
+        // Initialize native Windows SMTC controls via souvlaki
+        let config = PlatformConfig {
+            dbus_name: "com.cblade.musicbox",
+            display_name: "MusicBox",
+            hwnd: Some(hwnd_raw.0 as *mut std::ffi::c_void),
+        };
+
+        if let Ok(mut controls) = MediaControls::new(config) {
+            let app_handle_clone = app_handle.clone();
+            let _ = controls.attach(move |event| {
+                match event {
+                    MediaControlEvent::Play | MediaControlEvent::Pause | MediaControlEvent::Toggle => {
+                        let _ = app_handle_clone.emit("media-toggle-play", ());
+                    }
+                    MediaControlEvent::Next => {
+                        let _ = app_handle_clone.emit("media-next", ());
+                    }
+                    MediaControlEvent::Previous => {
+                        let _ = app_handle_clone.emit("media-previous", ());
+                    }
+                    MediaControlEvent::Stop => {
+                        let _ = app_handle_clone.emit("media-stop", ());
+                    }
+                    MediaControlEvent::SetPosition(pos) => {
+                        let _ = app_handle_clone.emit("media-seek", pos.0.as_secs_f64());
+                    }
+                    MediaControlEvent::SeekBy(dir, dur) => {
+                        let delta = match dir {
+                            SeekDirection::Forward => dur.as_secs_f64(),
+                            SeekDirection::Backward => -(dur.as_secs_f64()),
+                        };
+                        let _ = app_handle_clone.emit("media-seek-delta", delta);
+                    }
+                    _ => {}
+                }
+            });
+
+            let _ = controls.set_playback(MediaPlayback::Stopped);
+            *MEDIA_CONTROLS.lock().unwrap() = Some(controls);
+        }
 
         unsafe {
             let msg = RegisterWindowMessageW(w!("TaskbarButtonCreated"));
@@ -535,6 +575,59 @@ pub mod win {
                 }
             }
         }
+
+        // Also sync native SMTC playback state
+        let mut smtc_lock = match MEDIA_CONTROLS.lock() {
+            Ok(l) => l,
+            Err(_) => return,
+        };
+        if let Some(controls) = smtc_lock.as_mut() {
+            let playback = if is_playing {
+                MediaPlayback::Playing { progress: None }
+            } else {
+                MediaPlayback::Paused { progress: None }
+            };
+            let _ = controls.set_playback(playback);
+        }
+    }
+
+    pub fn update_smtc_metadata(
+        title: &str,
+        artist: Option<&str>,
+        album: Option<&str>,
+        cover_url: Option<&str>,
+        duration_secs: Option<f64>,
+    ) {
+        let mut lock = match MEDIA_CONTROLS.lock() {
+            Ok(l) => l,
+            Err(_) => return,
+        };
+        if let Some(controls) = lock.as_mut() {
+            let dur = duration_secs.and_then(|d| if d > 0.0 { Some(std::time::Duration::from_secs_f64(d)) } else { None });
+            let _ = controls.set_metadata(MediaMetadata {
+                title: Some(title),
+                artist,
+                album,
+                cover_url,
+                duration: dur,
+            });
+        }
+    }
+
+    pub fn update_smtc_playback(is_playing: bool, position_secs: Option<f64>) {
+        let mut lock = match MEDIA_CONTROLS.lock() {
+            Ok(l) => l,
+            Err(_) => return,
+        };
+        if let Some(controls) = lock.as_mut() {
+            let pos = position_secs.and_then(|s| if s >= 0.0 { Some(MediaPosition(std::time::Duration::from_secs_f64(s))) } else { None });
+            let playback = if is_playing {
+                MediaPlayback::Playing { progress: pos }
+            } else {
+                MediaPlayback::Paused { progress: pos }
+            };
+            let _ = controls.set_playback(playback);
+        }
     }
 }
 
@@ -543,4 +636,12 @@ pub mod win {
     use tauri::AppHandle;
     pub fn init_taskbar(_app_handle: &AppHandle, _hwnd: ()) {}
     pub fn update_playback_state(_is_playing: bool) {}
+    pub fn update_smtc_metadata(
+        _title: &str,
+        _artist: Option<&str>,
+        _album: Option<&str>,
+        _cover_url: Option<&str>,
+        _duration_secs: Option<f64>,
+    ) {}
+    pub fn update_smtc_playback(_is_playing: bool, _position_secs: Option<f64>) {}
 }

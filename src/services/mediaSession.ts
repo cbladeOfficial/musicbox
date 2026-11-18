@@ -3,11 +3,14 @@
  * Provides rich metadata (Title, Artist, Album, Artwork), playback status, and Action Center controls.
  */
 
+import { TauriBridge } from './tauriBridge';
+
 export interface MediaSessionMetadataParams {
   title: string;
   artist?: string;
   album?: string;
   artworkUrl?: string | null;
+  durationSecs?: number;
 }
 
 export interface MediaSessionActionCallbacks {
@@ -20,6 +23,15 @@ export interface MediaSessionActionCallbacks {
 }
 
 export function updateMediaSessionMetadata(params: MediaSessionMetadataParams) {
+  // Sync with native SMTC in Rust (MusicBox.exe)
+  TauriBridge.updateSmtcMetadata({
+    title: params.title || 'MusicBox',
+    artist: params.artist,
+    album: params.album,
+    coverUrl: params.artworkUrl,
+    durationSecs: params.durationSecs,
+  }).catch(() => {});
+
   if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
 
   const artwork: MediaImage[] = [];
@@ -50,6 +62,9 @@ export function updateMediaSessionMetadata(params: MediaSessionMetadataParams) {
 }
 
 export function updateMediaSessionPlaybackState(isPlaying: boolean) {
+  // Sync with native SMTC in Rust (MusicBox.exe)
+  TauriBridge.updateSmtcPlayback(isPlaying).catch(() => {});
+
   if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
   try {
     navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
@@ -58,7 +73,12 @@ export function updateMediaSessionPlaybackState(isPlaying: boolean) {
   }
 }
 
-export function updateMediaSessionPosition(currentTime: number, duration: number) {
+export function updateMediaSessionPosition(currentTime: number, duration: number, isPlaying = true) {
+  // Throttle SMTC position updates so we don't spam IPC every frame
+  if (Math.floor(currentTime) % 2 === 0) {
+    TauriBridge.updateSmtcPlayback(isPlaying, currentTime).catch(() => {});
+  }
+
   if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
   if (!('setPositionState' in navigator.mediaSession)) return;
   if (!duration || isNaN(duration) || !isFinite(duration) || duration <= 0) return;

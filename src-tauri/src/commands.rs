@@ -259,6 +259,28 @@ pub fn update_taskbar_playback_state(is_playing: bool) {
 }
 
 #[tauri::command]
+pub fn update_smtc_metadata(
+    title: String,
+    artist: Option<String>,
+    album: Option<String>,
+    cover_url: Option<String>,
+    duration_secs: Option<f64>,
+) {
+    crate::taskbar::win::update_smtc_metadata(
+        &title,
+        artist.as_deref(),
+        album.as_deref(),
+        cover_url.as_deref(),
+        duration_secs,
+    );
+}
+
+#[tauri::command]
+pub fn update_smtc_playback(is_playing: bool, position_secs: Option<f64>) {
+    crate::taskbar::win::update_smtc_playback(is_playing, position_secs);
+}
+
+#[tauri::command]
 pub fn get_radio_stations(state: State<'_, AppState>) -> Result<Vec<RadioStation>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     db::get_radio_stations(&db).map_err(|e| e.to_string())
