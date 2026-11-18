@@ -5,7 +5,7 @@ pub mod win {
     use tauri::{AppHandle, Emitter};
     use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM, PROPERTYKEY};
     use windows::Win32::Graphics::Gdi::{CreateBitmap, DeleteObject, HBITMAP};
-    use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER, IPersistFile, STGM};
+    use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER, IPersistFile};
     use windows::Win32::System::Com::StructuredStorage::{PROPVARIANT, PROPVARIANT_0_0, PropVariantClear};
     use windows::Win32::System::Variant::VT_LPWSTR;
     use windows::Win32::UI::Shell::{
@@ -13,7 +13,10 @@ pub mod win {
         SetWindowSubclass, TaskbarList, THBF_ENABLED, THB_FLAGS, THB_ICON, THB_TOOLTIP,
         THUMBBUTTON, IShellLinkW, ShellLink,
     };
-    use windows::Win32::UI::Shell::PropertiesSystem::{IPropertyStore, SHGetPropertyStoreForWindow};
+    use windows::Win32::UI::Shell::PropertiesSystem::{
+        IPropertyStore, SHGetPropertyStoreForWindow, SHGetPropertyStoreFromParsingName,
+        GPS_READWRITE,
+    };
     use windows::core::Interface;
     use windows::Win32::UI::WindowsAndMessaging::{
         CreateIconIndirect, HICON, ICONINFO, WM_COMMAND, RegisterWindowMessageW,
@@ -156,36 +159,35 @@ pub mod win {
                 let _ = std::fs::create_dir_all(parent);
             }
 
-            let shell_link: IShellLinkW = match CoCreateInstance(&ShellLink, None, CLSCTX_INPROC_SERVER) {
-                Ok(sl) => sl,
-                Err(_) => return,
-            };
-
-            let persist_file: IPersistFile = match shell_link.cast() {
-                Ok(pf) => pf,
-                Err(_) => return,
-            };
-
             let wide_lnk: Vec<u16> = lnk_path.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
 
-            // Load existing shortcut if present
-            if lnk_path.exists() {
-                let _ = persist_file.Load(PCWSTR(wide_lnk.as_ptr()), STGM(0));
+            // Try to remove previous shortcut in user folder so it is recreated cleanly
+            let _ = std::fs::remove_file(lnk_path);
+
+            if let Ok(shell_link) = CoCreateInstance::<_, IShellLinkW>(&ShellLink, None, CLSCTX_INPROC_SERVER) {
+                let wide_exe: Vec<u16> = exe_path.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+                let _ = shell_link.SetPath(PCWSTR(wide_exe.as_ptr()));
+                if let Some(dir) = exe_path.parent() {
+                    let wide_dir: Vec<u16> = dir.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+                    let _ = shell_link.SetWorkingDirectory(PCWSTR(wide_dir.as_ptr()));
+                }
+                let _ = shell_link.SetIconLocation(PCWSTR(wide_exe.as_ptr()), 0);
+
+                let desc: Vec<u16> = std::ffi::OsStr::new("MusicBox").encode_wide().chain(std::iter::once(0)).collect();
+                let _ = shell_link.SetDescription(PCWSTR(desc.as_ptr()));
+
+                if let Ok(persist_file) = shell_link.cast::<IPersistFile>() {
+                    let _ = persist_file.Save(PCWSTR(wide_lnk.as_ptr()), true);
+                }
             }
 
-            let wide_exe: Vec<u16> = exe_path.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
-            let _ = shell_link.SetPath(PCWSTR(wide_exe.as_ptr()));
-            if let Some(dir) = exe_path.parent() {
-                let wide_dir: Vec<u16> = dir.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
-                let _ = shell_link.SetWorkingDirectory(PCWSTR(wide_dir.as_ptr()));
-            }
-            let _ = shell_link.SetIconLocation(PCWSTR(wide_exe.as_ptr()), 0);
-
-            let desc: Vec<u16> = std::ffi::OsStr::new("MusicBox").encode_wide().chain(std::iter::once(0)).collect();
-            let _ = shell_link.SetDescription(PCWSTR(desc.as_ptr()));
-
-            // Set PKEY_AppUserModel_ID: {9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3}, 5
-            if let Ok(prop_store) = shell_link.cast::<IPropertyStore>() {
+            // Stamp PKEY_AppUserModel_ID: {9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3}, 5 directly onto the saved shortcut
+            let store_res: windows::core::Result<IPropertyStore> = SHGetPropertyStoreFromParsingName(
+                PCWSTR(wide_lnk.as_ptr()),
+                None,
+                GPS_READWRITE,
+            );
+            if let Ok(store) = store_res {
                 let app_id_key = PROPERTYKEY {
                     fmtid: windows::core::GUID::from_values(
                         0x9F4C2855,
@@ -208,14 +210,12 @@ pub mod win {
                     let mut pv = PROPVARIANT::default();
                     pv.Anonymous.Anonymous = std::mem::ManuallyDrop::new(inner);
 
-                    if prop_store.SetValue(&app_id_key, &pv).is_ok() {
-                        let _ = prop_store.Commit();
+                    if store.SetValue(&app_id_key, &pv).is_ok() {
+                        let _ = store.Commit();
                     }
                     let _ = PropVariantClear(&mut pv);
                 }
             }
-
-            let _ = persist_file.Save(PCWSTR(wide_lnk.as_ptr()), true);
         }
     }
 
@@ -232,44 +232,42 @@ pub mod win {
         let cur_args = std::env::var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS").unwrap_or_default();
         if !cur_args.contains("--app-user-model-id=") {
             let new_args = if cur_args.is_empty() {
-                "--app-user-model-id=com.cblade.musicbox --app-id=com.cblade.musicbox".to_string()
+                "--app-user-model-id=msedgewebview2.exe --app-id=msedgewebview2.exe".to_string()
             } else {
-                format!("{} --app-user-model-id=com.cblade.musicbox --app-id=com.cblade.musicbox", cur_args)
+                format!("{} --app-user-model-id=msedgewebview2.exe --app-id=msedgewebview2.exe", cur_args)
             };
             unsafe {
                 std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", new_args);
             }
         }
 
-        // Extract and write pristine icon.png to disk for Windows Action Center (SMTC)
+        // Extract and write pristine icon.png and icon.ico to disk for Windows Action Center (SMTC)
         let icon_png_bytes = include_bytes!("../icons/icon.png");
-        let icon_png_path = if let Ok(appdata) = std::env::var("APPDATA") {
+        let icon_ico_bytes = include_bytes!("../icons/icon.ico");
+        let (icon_png_path, icon_ico_path) = if let Ok(appdata) = std::env::var("APPDATA") {
             let dir = std::path::Path::new(&appdata).join("com.cblade.musicbox");
             let _ = std::fs::create_dir_all(&dir);
-            let p = dir.join("app_icon.png");
-            let needs_write = match std::fs::metadata(&p) {
-                Ok(m) => m.len() != icon_png_bytes.len() as u64,
-                Err(_) => true,
-            };
-            if needs_write {
-                let _ = std::fs::write(&p, icon_png_bytes);
-            }
+            let p_png = dir.join("app_icon.png");
+            let p_ico = dir.join("app_icon.ico");
+            let _ = std::fs::write(&p_png, icon_png_bytes);
+            let _ = std::fs::write(&p_ico, icon_ico_bytes);
 
-            // Also save to %APPDATA%\MusicBox\app_icon.png for redundancy
+            // Also save to %APPDATA%\MusicBox\ for redundancy
             let dir2 = std::path::Path::new(&appdata).join("MusicBox");
             let _ = std::fs::create_dir_all(&dir2);
-            let p2 = dir2.join("app_icon.png");
-            if !p2.exists() {
-                let _ = std::fs::write(&p2, icon_png_bytes);
-            }
+            let _ = std::fs::write(dir2.join("app_icon.png"), icon_png_bytes);
+            let _ = std::fs::write(dir2.join("app_icon.ico"), icon_ico_bytes);
 
-            Some(p.to_string_lossy().to_string())
+            (
+                Some(p_png.to_string_lossy().to_string()),
+                Some(p_ico.to_string_lossy().to_string()),
+            )
         } else {
-            None
+            (None, None)
         };
 
-        // Explicitly set this process's AppUserModelId
-        let aumid: Vec<u16> = std::ffi::OsStr::new("com.cblade.musicbox")
+        // Explicitly set this process's AppUserModelId to msedgewebview2.exe
+        let aumid: Vec<u16> = std::ffi::OsStr::new("msedgewebview2.exe")
             .encode_wide()
             .chain(std::iter::once(0))
             .collect();
@@ -277,103 +275,85 @@ pub mod win {
             let _ = SetCurrentProcessExplicitAppUserModelID(PCWSTR(aumid.as_ptr()));
         }
 
-        // Helper to register AUMID in HKCU\Software\Classes\AppUserModelId\<id>
-        fn register_aumid(aumid_str: &str, display_name: &str, icon_path: Option<&str>) {
-            let subkey_str = format!("Software\\Classes\\AppUserModelId\\{}", aumid_str);
-            let subkey: Vec<u16> = std::ffi::OsStr::new(&subkey_str)
-                .encode_wide()
-                .chain(std::iter::once(0))
-                .collect();
-
+        // Registry helper functions
+        fn set_reg_str(root: HKEY, subkey_str: &str, name_str: Option<&str>, val_str: &str) {
+            let subkey: Vec<u16> = std::ffi::OsStr::new(subkey_str).encode_wide().chain(std::iter::once(0)).collect();
             let mut hkey = HKEY::default();
-            if unsafe { RegCreateKeyW(HKEY_CURRENT_USER, PCWSTR(subkey.as_ptr()), &mut hkey) }.is_ok() {
-                let name_disp: Vec<u16> = std::ffi::OsStr::new("DisplayName").encode_wide().chain(std::iter::once(0)).collect();
-                let val_disp: Vec<u16> = std::ffi::OsStr::new(display_name).encode_wide().chain(std::iter::once(0)).collect();
-                let bytes_disp = unsafe { std::slice::from_raw_parts(val_disp.as_ptr() as *const u8, val_disp.len() * 2) };
-                let _ = unsafe { RegSetValueExW(hkey, PCWSTR(name_disp.as_ptr()), None, REG_SZ, Some(bytes_disp)) };
-
-                if let Some(icon) = icon_path {
-                    let name_icon: Vec<u16> = std::ffi::OsStr::new("IconUri").encode_wide().chain(std::iter::once(0)).collect();
-                    let val_icon: Vec<u16> = std::ffi::OsStr::new(icon).encode_wide().chain(std::iter::once(0)).collect();
-                    let bytes_icon = unsafe { std::slice::from_raw_parts(val_icon.as_ptr() as *const u8, val_icon.len() * 2) };
-                    let _ = unsafe { RegSetValueExW(hkey, PCWSTR(name_icon.as_ptr()), None, REG_SZ, Some(bytes_icon)) };
-
-                    let name_bg: Vec<u16> = std::ffi::OsStr::new("IconBackgroundColor").encode_wide().chain(std::iter::once(0)).collect();
-                    let val_bg: Vec<u16> = std::ffi::OsStr::new("00000000").encode_wide().chain(std::iter::once(0)).collect();
-                    let bytes_bg = unsafe { std::slice::from_raw_parts(val_bg.as_ptr() as *const u8, val_bg.len() * 2) };
-                    let _ = unsafe { RegSetValueExW(hkey, PCWSTR(name_bg.as_ptr()), None, REG_SZ, Some(bytes_bg)) };
-                }
-
-                let name_show: Vec<u16> = std::ffi::OsStr::new("ShowInSettings").encode_wide().chain(std::iter::once(0)).collect();
-                let val_show: u32 = 1;
-                let bytes_show = unsafe { std::slice::from_raw_parts(&val_show as *const u32 as *const u8, 4) };
-                let _ = unsafe { RegSetValueExW(hkey, PCWSTR(name_show.as_ptr()), None, REG_DWORD, Some(bytes_show)) };
-
+            if unsafe { RegCreateKeyW(root, PCWSTR(subkey.as_ptr()), &mut hkey) }.is_ok() {
+                let name_wide: Option<Vec<u16>> = name_str.map(|s| {
+                    std::ffi::OsStr::new(s).encode_wide().chain(std::iter::once(0)).collect()
+                });
+                let val_wide: Vec<u16> = std::ffi::OsStr::new(val_str).encode_wide().chain(std::iter::once(0)).collect();
+                let bytes = unsafe { std::slice::from_raw_parts(val_wide.as_ptr() as *const u8, val_wide.len() * 2) };
+                let name_ptr = name_wide.as_ref().map(|v| PCWSTR(v.as_ptr())).unwrap_or(PCWSTR(std::ptr::null()));
+                let _ = unsafe { RegSetValueExW(hkey, name_ptr, None, REG_SZ, Some(bytes)) };
                 let _ = unsafe { RegCloseKey(hkey) };
             }
         }
 
-        // Register both "com.cblade.musicbox" and "MusicBox" to catch both lookups
-        register_aumid("com.cblade.musicbox", "MusicBox", icon_png_path.as_deref());
-        register_aumid("MusicBox", "MusicBox", icon_png_path.as_deref());
-
-        // Register in HKCU\Software\Classes\Applications\MusicBox.exe
-        {
-            let subkey: Vec<u16> = std::ffi::OsStr::new("Software\\Classes\\Applications\\MusicBox.exe")
-                .encode_wide()
-                .chain(std::iter::once(0))
-                .collect();
+        fn set_reg_dword(root: HKEY, subkey_str: &str, name_str: &str, val: u32) {
+            let subkey: Vec<u16> = std::ffi::OsStr::new(subkey_str).encode_wide().chain(std::iter::once(0)).collect();
             let mut hkey = HKEY::default();
-            if unsafe { RegCreateKeyW(HKEY_CURRENT_USER, PCWSTR(subkey.as_ptr()), &mut hkey) }.is_ok() {
-                let name_friendly: Vec<u16> = std::ffi::OsStr::new("FriendlyAppName").encode_wide().chain(std::iter::once(0)).collect();
-                let val_friendly: Vec<u16> = std::ffi::OsStr::new("MusicBox").encode_wide().chain(std::iter::once(0)).collect();
-                let bytes_friendly = unsafe { std::slice::from_raw_parts(val_friendly.as_ptr() as *const u8, val_friendly.len() * 2) };
-                let _ = unsafe { RegSetValueExW(hkey, PCWSTR(name_friendly.as_ptr()), None, REG_SZ, Some(bytes_friendly)) };
-
-                let name_comp: Vec<u16> = std::ffi::OsStr::new("ApplicationCompany").encode_wide().chain(std::iter::once(0)).collect();
-                let val_comp: Vec<u16> = std::ffi::OsStr::new("BladeWorks").encode_wide().chain(std::iter::once(0)).collect();
-                let bytes_comp = unsafe { std::slice::from_raw_parts(val_comp.as_ptr() as *const u8, val_comp.len() * 2) };
-                let _ = unsafe { RegSetValueExW(hkey, PCWSTR(name_comp.as_ptr()), None, REG_SZ, Some(bytes_comp)) };
-
-                if let Some(ref icon) = icon_png_path {
-                    let name_ico: Vec<u16> = std::ffi::OsStr::new("Icon").encode_wide().chain(std::iter::once(0)).collect();
-                    let val_ico: Vec<u16> = std::ffi::OsStr::new(icon).encode_wide().chain(std::iter::once(0)).collect();
-                    let bytes_ico = unsafe { std::slice::from_raw_parts(val_ico.as_ptr() as *const u8, val_ico.len() * 2) };
-                    let _ = unsafe { RegSetValueExW(hkey, PCWSTR(name_ico.as_ptr()), None, REG_SZ, Some(bytes_ico)) };
-                }
-
+            if unsafe { RegCreateKeyW(root, PCWSTR(subkey.as_ptr()), &mut hkey) }.is_ok() {
+                let name_wide: Vec<u16> = std::ffi::OsStr::new(name_str).encode_wide().chain(std::iter::once(0)).collect();
+                let bytes = unsafe { std::slice::from_raw_parts(&val as *const u32 as *const u8, 4) };
+                let _ = unsafe { RegSetValueExW(hkey, PCWSTR(name_wide.as_ptr()), None, REG_DWORD, Some(bytes)) };
                 let _ = unsafe { RegCloseKey(hkey) };
             }
         }
 
-        // Register in HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings
-        for id in ["com.cblade.musicbox", "MusicBox"] {
-            let subkey_str = format!("Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings\\{}", id);
-            let subkey: Vec<u16> = std::ffi::OsStr::new(&subkey_str)
-                .encode_wide()
-                .chain(std::iter::once(0))
-                .collect();
-            let mut hkey = HKEY::default();
-            if unsafe { RegCreateKeyW(HKEY_CURRENT_USER, PCWSTR(subkey.as_ptr()), &mut hkey) }.is_ok() {
-                let name_show: Vec<u16> = std::ffi::OsStr::new("ShowInActionCenter").encode_wide().chain(std::iter::once(0)).collect();
-                let val_show: u32 = 1;
-                let bytes_show = unsafe { std::slice::from_raw_parts(&val_show as *const u32 as *const u8, 4) };
-                let _ = unsafe { RegSetValueExW(hkey, PCWSTR(name_show.as_ptr()), None, REG_DWORD, Some(bytes_show)) };
-                let _ = unsafe { RegCloseKey(hkey) };
-            }
+        let exe_path_buf = std::env::current_exe().ok();
+        let exe_path_str = exe_path_buf.as_ref().map(|p| p.to_string_lossy().to_string()).unwrap_or_else(|| "MusicBox.exe".to_string());
+        let icon_primary = icon_png_path.as_deref().unwrap_or(&exe_path_str);
+        let icon_default = icon_ico_path.as_deref().unwrap_or(&exe_path_str);
+
+        // Register AUMID entries in HKCU\Software\Classes\AppUserModelId\<id>
+        for id in ["msedgewebview2.exe", "com.cblade.musicbox", "MusicBox"] {
+            let key = format!("Software\\Classes\\AppUserModelId\\{}", id);
+            set_reg_str(HKEY_CURRENT_USER, &key, Some("DisplayName"), "MusicBox");
+            set_reg_str(HKEY_CURRENT_USER, &key, Some("IconUri"), icon_primary);
+            set_reg_str(HKEY_CURRENT_USER, &key, Some("IconBackgroundColor"), "00000000");
+            set_reg_dword(HKEY_CURRENT_USER, &key, "ShowInSettings", 1);
         }
 
-        // Create or update Start Menu shortcut with PKEY_AppUserModel_ID
-        if let Ok(exe_path) = std::env::current_exe() {
+        // Register in HKCU\Software\Classes\Applications\<app>
+        for app in ["msedgewebview2.exe", "MusicBox.exe"] {
+            let key = format!("Software\\Classes\\Applications\\{}", app);
+            set_reg_str(HKEY_CURRENT_USER, &key, Some("FriendlyAppName"), "MusicBox");
+            set_reg_str(HKEY_CURRENT_USER, &key, Some("ApplicationCompany"), "BladeWorks");
+            set_reg_str(HKEY_CURRENT_USER, &key, Some("Icon"), icon_primary);
+
+            let def_icon_key = format!("Software\\Classes\\Applications\\{}\\DefaultIcon", app);
+            set_reg_str(HKEY_CURRENT_USER, &def_icon_key, None, icon_default);
+        }
+
+        // Register in HKCU\Software\Classes\<app>
+        for app in ["msedgewebview2.exe", "MusicBox.exe"] {
+            let key = format!("Software\\Classes\\{}", app);
+            set_reg_str(HKEY_CURRENT_USER, &key, None, "MusicBox");
+            set_reg_str(HKEY_CURRENT_USER, &key, Some("FriendlyTypeName"), "MusicBox");
+
+            let def_icon_key = format!("Software\\Classes\\{}\\DefaultIcon", app);
+            set_reg_str(HKEY_CURRENT_USER, &def_icon_key, None, icon_default);
+        }
+
+        // Register in HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\<id>
+        for id in ["msedgewebview2.exe", "com.cblade.musicbox", "MusicBox"] {
+            let key = format!("Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings\\{}", id);
+            set_reg_dword(HKEY_CURRENT_USER, &key, "ShowInActionCenter", 1);
+        }
+
+        // Create or update Start Menu shortcuts with PKEY_AppUserModel_ID = "msedgewebview2.exe"
+        if let Some(ref exe_path) = exe_path_buf {
             if let Ok(appdata) = std::env::var("APPDATA") {
                 let lnk_path = std::path::Path::new(&appdata).join(r"Microsoft\Windows\Start Menu\Programs\MusicBox.lnk");
-                create_or_update_shortcut(&lnk_path, &exe_path, "com.cblade.musicbox");
+                create_or_update_shortcut(&lnk_path, exe_path, "msedgewebview2.exe");
             }
 
             if let Ok(progdata) = std::env::var("ProgramData") {
                 let lnk_path = std::path::Path::new(&progdata).join(r"Microsoft\Windows\Start Menu\Programs\MusicBox.lnk");
                 if lnk_path.exists() {
-                    create_or_update_shortcut(&lnk_path, &exe_path, "com.cblade.musicbox");
+                    create_or_update_shortcut(&lnk_path, exe_path, "msedgewebview2.exe");
                 }
             }
         }
@@ -468,7 +448,7 @@ pub mod win {
 
     pub fn init_taskbar(app_handle: &AppHandle, hwnd_raw: HWND) {
         set_app_user_model_id();
-        set_window_app_user_model_id(hwnd_raw, "com.cblade.musicbox");
+        set_window_app_user_model_id(hwnd_raw, "msedgewebview2.exe");
 
         unsafe {
             let msg = RegisterWindowMessageW(w!("TaskbarButtonCreated"));
