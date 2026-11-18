@@ -18,8 +18,13 @@ import {
   ArrowUpDown,
   LayoutTemplate,
   Image as ImageIcon,
+  DownloadCloud,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+  ArrowUpCircle,
 } from 'lucide-react';
-import { AppSettings, ArtSource, ThemeId, VisualizerMode, TableDensity, TrackSortField, ViewMode, AlbumArtMode } from '../types/music';
+import { AppSettings, ArtSource, ThemeId, VisualizerMode, TableDensity, TrackSortField, ViewMode, AlbumArtMode, UpdateCheckResult, PendingUpdateInfo, DownloadProgress } from '../types/music';
 import { TauriBridge } from '../services/tauriBridge';
 
 interface SettingsViewProps {
@@ -30,7 +35,7 @@ interface SettingsViewProps {
   onBack: () => void;
 }
 
-type SettingsTab = 'general' | 'appearance' | 'discord' | 'lastfm' | 'audio';
+type SettingsTab = 'general' | 'appearance' | 'discord' | 'lastfm' | 'audio' | 'updates';
 
 const DEFAULT_DISCORD_APP_ID = '1176718791388975124';
 
@@ -51,6 +56,93 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onBack,
 }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
+
+  // Update State
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [downloadingUpdate, setDownloadingUpdate] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState<DownloadProgress | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<UpdateCheckResult | null>(null);
+  const [pendingUpdate, setPendingUpdate] = useState<PendingUpdateInfo | null>(null);
+  const [updateStatusMsg, setUpdateStatusMsg] = useState<string | null>(null);
+
+  // Load pending update status & listen for background download events
+  React.useEffect(() => {
+    TauriBridge.getPendingUpdateStatus().then((p) => {
+      if (p) setPendingUpdate(p);
+    }).catch(() => {});
+
+    let unlistenProgress: (() => void) | undefined;
+    let unlistenDownloaded: (() => void) | undefined;
+
+    TauriBridge.onUpdateProgress((p) => {
+      setUpdateProgress(p);
+      setDownloadingUpdate(true);
+    }).then((un) => {
+      unlistenProgress = un;
+    }).catch(() => {});
+
+    TauriBridge.onUpdateDownloaded((ver) => {
+      setDownloadingUpdate(false);
+      setUpdateStatusMsg(`Update v${ver} is downloaded and ready to install.`);
+      TauriBridge.getPendingUpdateStatus().then((p) => {
+        if (p) setPendingUpdate(p);
+      }).catch(() => {});
+    }).then((un) => {
+      unlistenDownloaded = un;
+    }).catch(() => {});
+
+    return () => {
+      if (unlistenProgress) unlistenProgress();
+      if (unlistenDownloaded) unlistenDownloaded();
+    };
+  }, []);
+
+  const handleCheckUpdates = async () => {
+    setCheckingUpdate(true);
+    setUpdateStatusMsg(null);
+    try {
+      const pending = await TauriBridge.getPendingUpdateStatus();
+      setPendingUpdate(pending);
+      if (pending && pending.ready_to_install) {
+        setCheckingUpdate(false);
+        return;
+      }
+
+      const res = await TauriBridge.checkForUpdates();
+      setUpdateInfo(res);
+      if (!res.update_available) {
+        setUpdateStatusMsg('You are running the latest version of MusicBox.');
+      }
+    } catch {
+      setUpdateStatusMsg('Unable to check for updates. Please verify your connection.');
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+
+  const handleDownloadUpdate = async () => {
+    if (!updateInfo?.download_url) return;
+    setDownloadingUpdate(true);
+    setUpdateStatusMsg(null);
+    try {
+      await TauriBridge.downloadUpdate(updateInfo.download_url, updateInfo.latest_version);
+      const pending = await TauriBridge.getPendingUpdateStatus();
+      setPendingUpdate(pending);
+      setUpdateStatusMsg(`Version ${updateInfo.latest_version} downloaded! Ready to install.`);
+    } catch {
+      setUpdateStatusMsg('Failed to download update. Please try again.');
+    } finally {
+      setDownloadingUpdate(false);
+    }
+  };
+
+  const handleInstallNow = async () => {
+    try {
+      await TauriBridge.installPendingUpdate();
+    } catch {
+      setUpdateStatusMsg('Failed to launch updater installer.');
+    }
+  };
 
   const themes: { id: ThemeId; name: string; previewColor: string; desc: string }[] = [
     { id: 'feishin', name: 'Dark (Default)', previewColor: '#2f81f7', desc: 'True obsidian background with high-contrast accents' },
@@ -173,6 +265,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           >
             <Activity className="w-4 h-4 text-[var(--accent-color)]" />
             <span>Audio & Visualizer</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('updates')}
+            className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-md font-medium transition-all text-left ${
+              activeTab === 'updates'
+                ? 'bg-[var(--accent-color)]/15 text-white border-l-2 border-[var(--accent-color)] pl-2.5 shadow-sm'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <DownloadCloud className="w-4 h-4 text-[var(--accent-color)]" />
+            <div className="flex items-center justify-between flex-1">
+              <span>Updates</span>
+              {pendingUpdate?.ready_to_install && (
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Update ready to install" />
+              )}
+            </div>
           </button>
         </aside>
 
@@ -840,6 +949,190 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       className="w-full h-1.5 bg-zinc-800 accent-[var(--accent-color)] rounded-full appearance-none cursor-pointer"
                     />
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ================= Application Updates Tab ================= */}
+          {activeTab === 'updates' && (
+            <div className="space-y-6">
+              {/* Status Header Card */}
+              <div className="p-5 rounded-xl bg-white/[0.03] border border-white/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-lg bg-[var(--accent-color)]/15 border border-[var(--accent-color)]/25 flex items-center justify-center">
+                      <DownloadCloud className="w-5 h-5 text-[var(--accent-color)]" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-semibold text-white">MusicBox Desktop Updates</h2>
+                      <div className="flex items-center space-x-2 mt-0.5">
+                        <span className="text-xs text-zinc-400">Current version:</span>
+                        <span className="font-mono text-xs px-2 py-0.5 rounded bg-white/10 text-zinc-200 font-semibold">
+                          v0.1.0
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleCheckUpdates}
+                    disabled={checkingUpdate || downloadingUpdate}
+                    className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-[var(--accent-color)] hover:brightness-110 text-white text-xs font-medium transition-all shadow-md disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${checkingUpdate ? 'animate-spin' : ''}`} />
+                    <span>{checkingUpdate ? 'Checking GitHub...' : 'Check for Updates'}</span>
+                  </button>
+                </div>
+
+                {/* State 1: Update Ready to Install */}
+                {pendingUpdate?.ready_to_install && (
+                  <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 space-y-3">
+                    <div className="flex items-center space-x-2.5 text-emerald-300">
+                      <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                      <div>
+                        <div className="font-semibold text-sm">
+                          MusicBox v{pendingUpdate.version} is ready to install!
+                        </div>
+                        <div className="text-xs text-emerald-400/80 mt-0.5">
+                          The update has been downloaded in the background. It will install automatically next time you close or launch MusicBox, or you can restart now.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-1 flex items-center space-x-3">
+                      <button
+                        onClick={handleInstallNow}
+                        className="px-4 py-2 rounded-md bg-emerald-500 hover:bg-emerald-600 text-black font-semibold text-xs transition-colors shadow-md"
+                      >
+                        Restart & Install Update Now
+                      </button>
+                      <span className="text-[11px] text-zinc-400">
+                        (~{(pendingUpdate.file_size / (1024 * 1024)).toFixed(1)} MB installer verified)
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* State 2: Downloading in Progress */}
+                {downloadingUpdate && (
+                  <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center space-x-2 text-blue-300 font-medium">
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Downloading background update...</span>
+                      </div>
+                      <span className="font-mono text-blue-200 font-bold">
+                        {updateProgress?.percent ?? 0}%
+                      </span>
+                    </div>
+
+                    <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[var(--accent-color)] transition-all duration-200"
+                        style={{ width: `${updateProgress?.percent ?? 0}%` }}
+                      />
+                    </div>
+
+                    {updateProgress && updateProgress.total_bytes > 0 && (
+                      <div className="text-[11px] text-zinc-400 font-mono text-right">
+                        {(updateProgress.downloaded_bytes / (1024 * 1024)).toFixed(1)} MB / {(updateProgress.total_bytes / (1024 * 1024)).toFixed(1)} MB
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* State 3: Update Available (Not yet downloaded) */}
+                {!pendingUpdate?.ready_to_install && !downloadingUpdate && updateInfo?.update_available && (
+                  <div className="p-4 rounded-lg bg-[var(--accent-color)]/10 border border-[var(--accent-color)]/30 space-y-3">
+                    <div className="flex items-center space-x-2 text-white">
+                      <ArrowUpCircle className="w-5 h-5 text-[var(--accent-color)]" />
+                      <span className="font-semibold text-sm">
+                        New version available: {updateInfo.latest_version}
+                      </span>
+                    </div>
+
+                    {updateInfo.release_notes && (
+                      <div className="p-3 rounded bg-black/40 border border-white/5 text-xs text-zinc-300 max-h-40 overflow-y-auto whitespace-pre-wrap font-sans">
+                        {updateInfo.release_notes}
+                      </div>
+                    )}
+
+                    <div className="pt-1">
+                      <button
+                        onClick={handleDownloadUpdate}
+                        className="px-4 py-2 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white font-medium text-xs transition-all shadow-md"
+                      >
+                        Download Update in Background
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* State 4: Feedback Status Message */}
+                {updateStatusMsg && !pendingUpdate?.ready_to_install && !downloadingUpdate && !updateInfo?.update_available && (
+                  <div className="p-3 rounded-lg bg-white/5 text-xs text-zinc-300 flex items-center space-x-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span>{updateStatusMsg}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Automatic Update Settings */}
+              <div className="p-5 rounded-xl bg-white/[0.03] border border-white/10 space-y-5">
+                <div className="flex items-center space-x-2 text-white font-medium text-sm pb-2 border-b border-white/5">
+                  <Sliders className="w-4 h-4 text-[var(--accent-color)]" />
+                  <span>Update Preferences</span>
+                </div>
+
+                {/* Toggle: Enable Auto Updates */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-white block cursor-pointer">
+                      Automatically Check & Download Updates
+                    </label>
+                    <p className="text-xs text-zinc-400 leading-relaxed max-w-xl">
+                      When enabled, MusicBox quietly queries GitHub Releases on startup. If a newer build is released, it downloads automatically in the background without interrupting music playback.
+                    </p>
+                  </div>
+
+                  <label className="relative inline-flex items-center cursor-pointer flex-shrink-0 mt-1">
+                    <input
+                      type="checkbox"
+                      checked={settings.autoUpdateEnabled !== false}
+                      onChange={(e) => onUpdateSettings({ autoUpdateEnabled: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--accent-color)]" />
+                  </label>
+                </div>
+
+                {/* Toggle: Install Automatically on Next App Start */}
+                <div className="border-t border-white/5 pt-4 flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-white block cursor-pointer">
+                      Install Automatically on Next App Start
+                    </label>
+                    <p className="text-xs text-zinc-400 leading-relaxed max-w-xl">
+                      When an update finishes downloading, automatically apply it silently in the background when closing MusicBox so the new version is ready the next time you start the app.
+                    </p>
+                  </div>
+
+                  <label className="relative inline-flex items-center cursor-pointer flex-shrink-0 mt-1">
+                    <input
+                      type="checkbox"
+                      checked={settings.autoInstallOnNextStart !== false}
+                      onChange={(e) => onUpdateSettings({ autoInstallOnNextStart: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--accent-color)]" />
+                  </label>
+                </div>
+
+                {/* Release Channel Info */}
+                <div className="border-t border-white/5 pt-4 flex items-center justify-between text-xs text-zinc-500 font-mono">
+                  <span>Channel: Official Releases (cbladeOfficial/musicbox)</span>
+                  <span>Target: Windows x64 (NSIS)</span>
                 </div>
               </div>
             </div>

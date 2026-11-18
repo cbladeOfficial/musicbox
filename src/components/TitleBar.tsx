@@ -27,6 +27,7 @@ interface TitleBarProps {
   onNavigateForward?: () => void;
   canNavigateBack?: boolean;
   canNavigateForward?: boolean;
+  hasPendingUpdate?: boolean;
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({
@@ -42,6 +43,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onNavigateForward,
   canNavigateBack = false,
   canNavigateForward = false,
+  hasPendingUpdate = false,
 }) => {
   return (
     <header
@@ -134,10 +136,16 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         {/* Settings button */}
         <button
           onClick={onOpenSettings}
-          title="Settings"
-          className="p-1.5 text-zinc-300 hover:text-white hover:bg-white/10 rounded-md transition-colors mr-2"
+          title={hasPendingUpdate ? "Settings • Update ready to install" : "Settings"}
+          className="relative p-1.5 text-zinc-300 hover:text-white hover:bg-white/10 rounded-md transition-colors mr-2"
         >
           <SettingsIcon className="w-4 h-4" />
+          {hasPendingUpdate && (
+            <span
+              className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[var(--accent-color)] ring-2 ring-[var(--sidebar-color)] animate-pulse"
+              title="MusicBox update ready"
+            />
+          )}
         </button>
 
         {/* Native Windows Caption Controls - flush to top-right corner */}

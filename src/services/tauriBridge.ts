@@ -1,4 +1,4 @@
-import { TrackRecord, PlaylistRecord, RadioStation, RadioMetadata } from '../types/music';
+import { TrackRecord, PlaylistRecord, RadioStation, RadioMetadata, UpdateCheckResult, PendingUpdateInfo, DownloadProgress } from '../types/music';
 
 // Safely detect if running in Tauri desktop runtime
 export const isTauri = (): boolean => {
@@ -277,5 +277,45 @@ export const TauriBridge = {
   async showInFileManager(path: string): Promise<void> {
     if (!isTauri()) return;
     return safeInvoke<void>('show_in_file_manager', { path });
+  },
+
+  async checkForUpdates(): Promise<UpdateCheckResult> {
+    if (!isTauri()) {
+      return {
+        update_available: false,
+        current_version: '0.1.0',
+        latest_version: '0.1.0',
+      };
+    }
+    return safeInvoke<UpdateCheckResult>('check_for_updates');
+  },
+
+  async downloadUpdate(downloadUrl: string, targetVersion: string): Promise<string> {
+    if (!isTauri()) return '';
+    return safeInvoke<string>('download_update', { downloadUrl, targetVersion });
+  },
+
+  async installPendingUpdate(): Promise<void> {
+    if (!isTauri()) return;
+    return safeInvoke<void>('install_pending_update');
+  },
+
+  async getPendingUpdateStatus(): Promise<PendingUpdateInfo | null> {
+    if (!isTauri()) return null;
+    return safeInvoke<PendingUpdateInfo | null>('get_pending_update_status');
+  },
+
+  async onUpdateProgress(callback: (p: DownloadProgress) => void): Promise<(() => void) | undefined> {
+    if (!isTauri()) return undefined;
+    const { listen } = await import('@tauri-apps/api/event');
+    const unlisten = await listen<DownloadProgress>('update-download-progress', (e) => callback(e.payload));
+    return unlisten;
+  },
+
+  async onUpdateDownloaded(callback: (version: string) => void): Promise<(() => void) | undefined> {
+    if (!isTauri()) return undefined;
+    const { listen } = await import('@tauri-apps/api/event');
+    const unlisten = await listen<string>('update-downloaded', (e) => callback(e.payload));
+    return unlisten;
   },
 };

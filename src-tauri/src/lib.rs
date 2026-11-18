@@ -5,6 +5,7 @@ mod radio;
 mod scanner;
 mod server;
 mod taskbar;
+mod updater;
 
 use commands::*;
 use discord::DiscordManager;
@@ -123,7 +124,16 @@ pub fn run() {
             update_radio_presence,
             update_taskbar_playback_state,
             show_in_file_manager,
+            updater::check_for_updates,
+            updater::download_update,
+            updater::install_pending_update,
+            updater::get_pending_update_status,
         ])
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::Destroyed = event {
+                updater::try_apply_update_on_exit_silent(window.app_handle());
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error while building tauri application");
 }

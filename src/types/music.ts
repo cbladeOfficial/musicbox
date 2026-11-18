@@ -136,4 +136,31 @@ export interface AppSettings {
   lastfmSecret: string;
   lastfmUsername: string;
   lowMemoryMode: boolean;
+  autoUpdateEnabled?: boolean;
+  autoInstallOnNextStart?: boolean;
+}
+
+export interface UpdateCheckResult {
+  update_available: boolean;
+  current_version: string;
+  latest_version: string;
+  release_name?: string;
+  release_notes?: string;
+  published_at?: string;
+  download_url?: string;
+  file_size?: number;
+  file_name?: string;
+}
+
+export interface PendingUpdateInfo {
+  version: string;
+  file_name: string;
+  file_size: number;
+  ready_to_install: boolean;
+}
+
+export interface DownloadProgress {
+  percent: number;
+  downloaded_bytes: number;
+  total_bytes: number;
 }

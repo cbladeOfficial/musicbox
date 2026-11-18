@@ -60,6 +60,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   lastfmSecret: '',
   lastfmUsername: '',
   lowMemoryMode: false,
+  autoUpdateEnabled: true,
+  autoInstallOnNextStart: true,
 };
 
 export function App() {
@@ -135,6 +137,7 @@ export function App() {
   } | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isTotallyFullscreen, setIsTotallyFullscreen] = useState(false);
+  const [pendingUpdateVersion, setPendingUpdateVersion] = useState<string | null>(null);
 
   const showToast = useCallback((text: string, type: 'success' | 'info' = 'success') => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -343,6 +346,12 @@ export function App() {
           if (!parsed.albumArtMode) {
             parsed.albumArtMode = 'local_and_online';
           }
+          if (parsed.autoUpdateEnabled === undefined) {
+            parsed.autoUpdateEnabled = true;
+          }
+          if (parsed.autoInstallOnNextStart === undefined) {
+            parsed.autoInstallOnNextStart = true;
+          }
           setSettings((prev) => ({ ...prev, ...parsed }));
           if (isTauri()) {
             if (parsed.startMaximized === false) {
@@ -388,6 +397,58 @@ export function App() {
       }
     };
   }, []);
+
+  // Background Auto-Update Check & Background Download
+  useEffect(() => {
+    if (!isTauri()) return;
+
+    // Check if an update has already been downloaded and is waiting to install
+    TauriBridge.getPendingUpdateStatus().then((pending) => {
+      if (pending && pending.ready_to_install) {
+        setPendingUpdateVersion(pending.version);
+      }
+    }).catch(() => {});
+
+    let unlistenDownloaded: (() => void) | undefined;
+    TauriBridge.onUpdateDownloaded((ver) => {
+      setPendingUpdateVersion(ver);
+      showToast(`MusicBox v${ver} downloaded • Ready to install`, 'info');
+    }).then((un) => {
+      unlistenDownloaded = un;
+    }).catch(() => {});
+
+    if (settings.autoUpdateEnabled === false) {
+      return () => {
+        if (unlistenDownloaded) unlistenDownloaded();
+      };
+    }
+
+    // Delay 7 seconds so app startup, disk I/O and music playback start without any delay
+    const updateTimer = setTimeout(async () => {
+      try {
+        const pending = await TauriBridge.getPendingUpdateStatus();
+        if (pending && pending.ready_to_install) {
+          setPendingUpdateVersion(pending.version);
+          return;
+        }
+
+        const res = await TauriBridge.checkForUpdates();
+        if (res.update_available && res.download_url) {
+          console.log(`[Updater] Downloading new release ${res.latest_version} in background...`);
+          await TauriBridge.downloadUpdate(res.download_url, res.latest_version);
+          setPendingUpdateVersion(res.latest_version);
+          showToast(`MusicBox ${res.latest_version} downloaded • Will update on next launch`, 'info');
+        }
+      } catch (e) {
+        console.warn('[Updater] Background check failed:', e);
+      }
+    }, 7000);
+
+    return () => {
+      clearTimeout(updateTimer);
+      if (unlistenDownloaded) unlistenDownloaded();
+    };
+  }, [settings.autoUpdateEnabled, showToast]);
 
   const loadRadioStations = async () => {
     try {
@@ -1479,6 +1540,7 @@ export function App() {
         onNavigateForward={handleNavigateForward}
         canNavigateBack={navHistoryIndex > 0}
         canNavigateForward={navHistoryIndex < navHistory.length - 1}
+        hasPendingUpdate={Boolean(pendingUpdateVersion)}
       />
 
       {/* 2. Main Center Body */}
