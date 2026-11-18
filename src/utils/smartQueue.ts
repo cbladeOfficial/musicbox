@@ -18,145 +18,158 @@ export function generateSmartQueue(
   recentTrackIds: number[] = [],
   limit = 20
 ): TrackRecord[] {
-  if (!currentTrack || allTracks.length === 0) return [];
+  try {
+    if (!currentTrack || !allTracks || allTracks.length === 0) return [];
 
-  // Exclude current track and any track already in manual queue
-  const manualQueueIds = new Set(manualQueue.map((t) => t.id));
-  const recentIds = new Set(recentTrackIds.slice(-20)); // avoid recent tracks
+    // Exclude current track and any track already in manual queue
+    const manualQueueIds = new Set(manualQueue.map((t) => t?.id).filter(Boolean));
+    const recentIds = new Set(recentTrackIds.slice(-20)); // avoid recent tracks
 
-  // Extract reference properties
-  const currentArtists = currentTrack.artist
-    .toLowerCase()
-    .split(/[,&/]/)
-    .map((s) => s.trim())
-    .filter(Boolean);
+    // Extract reference properties safely
+    const curArtistRaw = (currentTrack.artist || '').trim();
+    const curArtistLower = curArtistRaw.toLowerCase();
+    const currentArtists = curArtistLower
+      ? curArtistLower.split(/[,&/]/).map((s) => s.trim()).filter(Boolean)
+      : [];
 
-  const currentGenres = (currentTrack.genre || '')
-    .toLowerCase()
-    .split(/[,/;&]/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const currentYear = currentTrack.year;
-  const currentAlbum = currentTrack.album?.trim().toLowerCase();
-
-  // Candidates: all tracks except current track and manual queue
-  const candidates = allTracks.filter(
-    (t) => t.id !== currentTrack.id && !manualQueueIds.has(t.id)
-  );
-
-  if (candidates.length === 0) return [];
-
-  // Score each candidate track
-  const scored = candidates.map((track) => {
-    let score = 0;
-
-    // 1. Artist Matching
-    const trackArtists = track.artist
+    const currentGenres = (currentTrack.genre || '')
       .toLowerCase()
-      .split(/[,&/]/)
+      .split(/[,/;&]/)
       .map((s) => s.trim())
       .filter(Boolean);
 
-    const hasExactArtist =
-      track.artist.trim().toLowerCase() === currentTrack.artist.trim().toLowerCase();
-    const hasSharedArtist = trackArtists.some((a) => currentArtists.includes(a));
+    const currentYear = currentTrack.year;
+    const currentAlbum = (currentTrack.album || '').trim().toLowerCase();
 
-    if (hasExactArtist) {
-      score += 35;
-    } else if (hasSharedArtist) {
-      score += 25;
+    // Candidates: all tracks except current track and manual queue
+    let candidates = allTracks.filter(
+      (t) => t && t.id !== currentTrack.id && !manualQueueIds.has(t.id)
+    );
+
+    // If manual queue has taken everything or library is small, allow manual queue tracks as secondary fallback
+    if (candidates.length === 0) {
+      candidates = allTracks.filter((t) => t && t.id !== currentTrack.id);
     }
 
-    // 2. Genre Matching
-    if (currentGenres.length > 0 && track.genre) {
-      const trackGenres = track.genre
-        .toLowerCase()
-        .split(/[,/;&]/)
-        .map((s) => s.trim())
-        .filter(Boolean);
+    if (candidates.length === 0) return [];
 
-      const matchingGenres = trackGenres.filter((g) => currentGenres.includes(g));
-      if (matchingGenres.length > 0) {
-        score += 30 + matchingGenres.length * 5;
+    // Score each candidate track
+    const scored = candidates.map((track) => {
+      let score = 0;
+
+      const trackArtistRaw = (track.artist || '').trim();
+      const trackArtistLower = trackArtistRaw.toLowerCase();
+
+      // 1. Artist Matching
+      if (curArtistLower && trackArtistLower) {
+        if (trackArtistLower === curArtistLower) {
+          score += 35;
+        } else {
+          const trackArtists = trackArtistLower
+            .split(/[,&/]/)
+            .map((s) => s.trim())
+            .filter(Boolean);
+          const hasSharedArtist = trackArtists.some((a) => currentArtists.includes(a));
+          if (hasSharedArtist) {
+            score += 25;
+          }
+        }
       }
-    }
 
-    // 3. Album proximity
-    if (currentAlbum && track.album && track.album.trim().toLowerCase() === currentAlbum) {
-      score += 20;
-    }
+      // 2. Genre Matching
+      if (currentGenres.length > 0 && track.genre) {
+        const trackGenres = track.genre
+          .toLowerCase()
+          .split(/[,/;&]/)
+          .map((s) => s.trim())
+          .filter(Boolean);
 
-    // 4. Era / Release Year Proximity
-    if (currentYear && track.year) {
-      const yearDiff = Math.abs(currentYear - track.year);
-      if (yearDiff <= 2) {
-        score += 15;
-      } else if (yearDiff <= 5) {
-        score += 10;
-      } else if (yearDiff <= 10) {
-        score += 5;
+        const matchingGenres = trackGenres.filter((g) => currentGenres.includes(g));
+        if (matchingGenres.length > 0) {
+          score += 30 + matchingGenres.length * 5;
+        }
       }
-    }
 
-    // 5. User affinity (favorites & play count)
-    if (track.is_favorite) {
-      score += 12;
-    }
-    if (track.play_count > 0) {
-      score += Math.min(10, track.play_count * 2);
-    }
-
-    // 6. Penalty for recently played to prevent looping the same songs
-    if (recentIds.has(track.id)) {
-      score -= 40;
-    }
-
-    // 7. Controlled random jitter (Smart Shuffle flavor)
-    score += Math.random() * 16;
-
-    return { track, score };
-  });
-
-  // Sort by score descending
-  scored.sort((a, b) => b.score - a.score);
-
-  // Diversity filter: don't have more than 2 consecutive songs by the same primary artist
-  const result: TrackRecord[] = [];
-  const selectedIds = new Set<number>();
-  let lastArtist = '';
-  let consecutiveArtistCount = 0;
-
-  for (const item of scored) {
-    if (result.length >= limit) break;
-    if (selectedIds.has(item.track.id)) continue;
-
-    const artist = item.track.artist.toLowerCase();
-    if (artist === lastArtist) {
-      if (consecutiveArtistCount >= 2 && scored.length > limit * 2) {
-        // Skip for now to maintain variety
-        continue;
+      // 3. Album proximity
+      const trackAlbum = (track.album || '').trim().toLowerCase();
+      if (currentAlbum && trackAlbum && trackAlbum === currentAlbum) {
+        score += 20;
       }
-      consecutiveArtistCount += 1;
-    } else {
-      lastArtist = artist;
-      consecutiveArtistCount = 1;
-    }
 
-    result.push(item.track);
-    selectedIds.add(item.track.id);
-  }
+      // 4. Era / Release Year Proximity
+      if (currentYear && track.year) {
+        const yearDiff = Math.abs(currentYear - track.year);
+        if (yearDiff <= 2) {
+          score += 15;
+        } else if (yearDiff <= 5) {
+          score += 10;
+        } else if (yearDiff <= 10) {
+          score += 5;
+        }
+      }
 
-  // If diversity filter left us short, fill up from remaining scored tracks
-  if (result.length < limit) {
+      // 5. User affinity (favorites & play count)
+      if (track.is_favorite) {
+        score += 12;
+      }
+      if (track.play_count && track.play_count > 0) {
+        score += Math.min(10, track.play_count * 2);
+      }
+
+      // 6. Penalty for recently played to prevent looping the same songs
+      if (recentIds.has(track.id)) {
+        score -= 40;
+      }
+
+      // 7. Controlled random jitter (Smart Shuffle flavor)
+      score += Math.random() * 16;
+
+      return { track, score };
+    });
+
+    // Sort by score descending
+    scored.sort((a, b) => b.score - a.score);
+
+    // Diversity filter: don't have more than 2 consecutive songs by the same primary artist
+    const result: TrackRecord[] = [];
+    const selectedIds = new Set<number>();
+    let lastArtist = '';
+    let consecutiveArtistCount = 0;
+
     for (const item of scored) {
       if (result.length >= limit) break;
-      if (!selectedIds.has(item.track.id)) {
-        result.push(item.track);
-        selectedIds.add(item.track.id);
+      if (selectedIds.has(item.track.id)) continue;
+
+      const artist = (item.track.artist || '').toLowerCase();
+      if (artist && artist === lastArtist) {
+        if (consecutiveArtistCount >= 2 && scored.length > limit * 2) {
+          // Skip for now to maintain variety
+          continue;
+        }
+        consecutiveArtistCount += 1;
+      } else {
+        lastArtist = artist;
+        consecutiveArtistCount = 1;
+      }
+
+      result.push(item.track);
+      selectedIds.add(item.track.id);
+    }
+
+    // If diversity filter left us short, fill up from remaining scored tracks
+    if (result.length < limit) {
+      for (const item of scored) {
+        if (result.length >= limit) break;
+        if (!selectedIds.has(item.track.id)) {
+          result.push(item.track);
+          selectedIds.add(item.track.id);
+        }
       }
     }
-  }
 
-  return result;
+    return result;
+  } catch (e) {
+    console.warn('[SmartQueue] Fallback due to exception in queue calculation:', e);
+    return allTracks.filter((t) => t && t.id !== currentTrack?.id).slice(0, limit);
+  }
 }

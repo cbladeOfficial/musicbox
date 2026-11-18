@@ -749,27 +749,38 @@ export function App() {
       recentTrackIdsRef.current = [...recentTrackIdsRef.current.slice(-19), currentTrack.id];
     }
 
-    const generated = generateSmartQueue(
-      currentTrack,
-      tracks,
-      queue,
-      recentTrackIdsRef.current,
-      20
-    );
-    setAutoQueue(generated);
+    try {
+      const generated = generateSmartQueue(
+        currentTrack,
+        tracks,
+        queue,
+        recentTrackIdsRef.current,
+        20
+      );
+      setAutoQueue(generated);
+    } catch (e) {
+      console.warn('[SmartQueue] Generation error:', e);
+      const fallback = tracks.filter((t) => t.id !== currentTrack.id).slice(0, 20);
+      setAutoQueue(fallback);
+    }
   }, [currentTrack?.id, tracks, queue]);
 
   const handleRefreshAutoQueue = useCallback(() => {
     if (!currentTrack || tracks.length === 0) return;
-    const generated = generateSmartQueue(
-      currentTrack,
-      tracks,
-      queue,
-      recentTrackIdsRef.current,
-      20
-    );
-    setAutoQueue(generated);
-  }, [currentTrack, tracks, queue]);
+    try {
+      const generated = generateSmartQueue(
+        currentTrack,
+        tracks,
+        queue,
+        recentTrackIdsRef.current,
+        20
+      );
+      setAutoQueue(generated);
+      showToast(`Regenerated smart auto-queue (${generated.length} tracks)`, 'info');
+    } catch (e) {
+      console.warn('[SmartQueue] Refresh error:', e);
+    }
+  }, [currentTrack, tracks, queue, showToast]);
 
   // PlayNext or skip track
   const handleNext = useCallback(() => {

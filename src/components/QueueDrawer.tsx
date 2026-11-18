@@ -174,7 +174,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
         </div>
 
         {/* Smart Auto-Queue Section (Spotify-like Recommendations) */}
-        {autoQueue.length > 0 && (
+        {autoQueue.length > 0 ? (
           <div className="space-y-2 pt-2 border-t border-white/5">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center space-x-2">
@@ -270,6 +270,27 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({
                 </div>
               ))}
             </div>
+          </div>
+        ) : (
+          <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center space-y-2.5">
+            <div className="flex items-center justify-center space-x-2 text-zinc-300 text-xs font-semibold uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Smart Queue</span>
+            </div>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              {currentTrack
+                ? 'Spotify-style recommendations based on artist, genre, and era.'
+                : 'Play a track to generate smart auto-queue recommendations.'}
+            </p>
+            {currentTrack && (
+              <button
+                onClick={onRefreshAutoQueue}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--accent-color)] text-white hover:brightness-110 transition-colors shadow-sm"
+              >
+                <RotateCw className="w-3.5 h-3.5" />
+                <span>Generate Smart Queue</span>
+              </button>
+            )}
           </div>
         )}
       </div>
