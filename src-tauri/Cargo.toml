@@ -2,7 +2,7 @@
 name = "musicbox"
 version = "0.1.0"
 description = "A modern Feishin-inspired local desktop music player"
-authors = ["cbladeOfficial"]
+authors = ["BladeWorks"]
 edition = "2024"
 rust-version = "1.90"
 

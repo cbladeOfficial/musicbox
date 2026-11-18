@@ -331,7 +331,7 @@ pub mod win {
                 let _ = unsafe { RegSetValueExW(hkey, PCWSTR(name_friendly.as_ptr()), None, REG_SZ, Some(bytes_friendly)) };
 
                 let name_comp: Vec<u16> = std::ffi::OsStr::new("ApplicationCompany").encode_wide().chain(std::iter::once(0)).collect();
-                let val_comp: Vec<u16> = std::ffi::OsStr::new("cblade").encode_wide().chain(std::iter::once(0)).collect();
+                let val_comp: Vec<u16> = std::ffi::OsStr::new("BladeWorks").encode_wide().chain(std::iter::once(0)).collect();
                 let bytes_comp = unsafe { std::slice::from_raw_parts(val_comp.as_ptr() as *const u8, val_comp.len() * 2) };
                 let _ = unsafe { RegSetValueExW(hkey, PCWSTR(name_comp.as_ptr()), None, REG_SZ, Some(bytes_comp)) };
 
