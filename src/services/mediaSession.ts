@@ -25,14 +25,13 @@ export function updateMediaSessionMetadata(params: MediaSessionMetadataParams) {
   const artwork: MediaImage[] = [];
   if (params.artworkUrl) {
     artwork.push(
-      { src: params.artworkUrl, sizes: '512x512', type: 'image/jpeg' },
-      { src: params.artworkUrl, sizes: '256x256', type: 'image/jpeg' },
-      { src: params.artworkUrl, sizes: '128x128', type: 'image/jpeg' },
-      { src: params.artworkUrl, sizes: '96x96', type: 'image/jpeg' }
+      { src: params.artworkUrl, sizes: '512x512' },
+      { src: params.artworkUrl, sizes: '256x256' },
+      { src: params.artworkUrl, sizes: '128x128' },
+      { src: params.artworkUrl, sizes: '96x96' }
     );
   } else {
     artwork.push(
-      { src: 'http://127.0.0.1:45321/icon', sizes: '512x512', type: 'image/png' },
       { src: '/icon.png', sizes: '512x512', type: 'image/png' },
       { src: '/app-icon.png', sizes: '128x128', type: 'image/png' }
     );
