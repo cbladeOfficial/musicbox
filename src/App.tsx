@@ -24,7 +24,7 @@ import { FullVisualizerView } from './components/FullVisualizerView';
 import { ConfirmModal } from './components/ConfirmModal';
 import { Toast, ToastMessage } from './components/Toast';
 
-import { TrackRecord, PlaylistRecord, RadioStation, RadioMetadata, ViewMode, AppSettings, VisualizerMode } from './types/music';
+import { TrackRecord, PlaylistRecord, RadioStation, RadioMetadata, ViewMode, AppSettings, VisualizerMode, VisualizerState } from './types/music';
 import { TauriBridge, isTauri } from './services/tauriBridge';
 import { audioEngine } from './services/audioEngine';
 import { lastFmScrobbler } from './services/lastfmScrobbler';
@@ -50,6 +50,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   trackSortAsc: true,
   visualizerMode: 'bars',
   visualizerHeight: 48,
+  visualizerState: 'bottom',
   discordRpcEnabled: true,
   discordClientId: '1176718791388975124',
   discordShowYear: true,
@@ -116,9 +117,23 @@ export function App() {
   const recentTrackIdsRef = useRef<number[]>([]);
 
   // Navigation & Views
-  const [currentView, setCurrentView] = useState<ViewMode>('home');
-  const [navHistory, setNavHistory] = useState<ViewMode[]>(['home']);
-  const [navHistoryIndex, setNavHistoryIndex] = useState(0);
+  const initialSavedVisState = (() => {
+    try {
+      const saved = localStorage.getItem('musicbox_visualizer_state');
+      if (saved === 'regular_fullscreen' || saved === 'bottom') return saved;
+    } catch {}
+    return 'bottom';
+  })();
+
+  const [currentView, setCurrentView] = useState<ViewMode>(
+    initialSavedVisState === 'regular_fullscreen' ? 'visualizer' : 'home'
+  );
+  const [navHistory, setNavHistory] = useState<ViewMode[]>(
+    initialSavedVisState === 'regular_fullscreen' ? ['home', 'visualizer'] : ['home']
+  );
+  const [navHistoryIndex, setNavHistoryIndex] = useState(
+    initialSavedVisState === 'regular_fullscreen' ? 1 : 0
+  );
   const [selectedAlbum, setSelectedAlbum] = useState<AlbumItem | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<ArtistGroup | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
@@ -147,6 +162,19 @@ export function App() {
     }, 3500);
   }, []);
 
+  const saveVisualizerState = useCallback((state: VisualizerState) => {
+    try {
+      localStorage.setItem('musicbox_visualizer_state', state);
+    } catch {}
+    TauriBridge.saveSetting('visualizer_state', state).catch(() => {});
+    setSettings((prev) => {
+      if (prev.visualizerState === state) return prev;
+      const updated = { ...prev, visualizerState: state };
+      TauriBridge.saveSetting('user_settings', JSON.stringify(updated)).catch(() => {});
+      return updated;
+    });
+  }, []);
+
   const navigateToView = useCallback((v: ViewMode) => {
     if (v === 'visualizer') {
       setIsTotallyFullscreen(false);
@@ -162,6 +190,21 @@ export function App() {
     setNavHistoryIndex((prev) => prev + 1);
   }, [navHistoryIndex]);
 
+  // Track and persist visualizer state ('regular_fullscreen' vs 'bottom')
+  // Note: 'totally_fullscreen' is deliberately NOT saved, per user requirement.
+  useEffect(() => {
+    if (currentView === 'visualizer') {
+      saveVisualizerState('regular_fullscreen');
+    } else if (
+      currentView !== 'settings' &&
+      currentView !== 'playlist_form' &&
+      currentView !== 'track_edit_form' &&
+      currentView !== 'radio_form'
+    ) {
+      saveVisualizerState('bottom');
+    }
+  }, [currentView, saveVisualizerState]);
+
   const handleNavigateBack = useCallback(() => {
     if (navHistoryIndex > 0) {
       const nextIdx = navHistoryIndex - 1;
@@ -173,8 +216,10 @@ export function App() {
       setStationToEdit(null);
       setPlaylistToEdit(null);
       setTrackToEdit(null);
+    } else if (currentView === 'visualizer') {
+      navigateToView('home');
     }
-  }, [navHistory, navHistoryIndex]);
+  }, [navHistory, navHistoryIndex, currentView, navigateToView]);
 
   const handleNavigateForward = useCallback(() => {
     if (navHistoryIndex < navHistory.length - 1) {
@@ -332,9 +377,16 @@ export function App() {
         try {
           const parsed = JSON.parse(saved);
           if (parsed.defaultStartingPage) {
-            setCurrentView(parsed.defaultStartingPage);
-            setNavHistory([parsed.defaultStartingPage]);
-            setNavHistoryIndex(0);
+            const savedVis = localStorage.getItem('musicbox_visualizer_state');
+            if (savedVis === 'regular_fullscreen') {
+              setNavHistory([parsed.defaultStartingPage, 'visualizer']);
+              setNavHistoryIndex(1);
+              setCurrentView('visualizer');
+            } else {
+              setCurrentView(parsed.defaultStartingPage);
+              setNavHistory([parsed.defaultStartingPage]);
+              setNavHistoryIndex(0);
+            }
           }
           if (parsed.discordClientId === '1306646875971485777') {
             parsed.discordClientId = DEFAULT_SETTINGS.discordClientId;
@@ -388,6 +440,17 @@ export function App() {
         const val = saved === 'true';
         setIsShuffle(val);
         localStorage.setItem('musicbox_shuffle', String(val));
+      }
+    }).catch(() => {});
+
+    TauriBridge.loadSetting('visualizer_state').then((saved) => {
+      if (saved === 'regular_fullscreen') {
+        saveVisualizerState('regular_fullscreen');
+        setCurrentView('visualizer');
+        setNavHistory((prev) => (prev.includes('visualizer') ? prev : [...prev, 'visualizer']));
+        setNavHistoryIndex((prevIdx) => (prevIdx > 0 ? prevIdx : 1));
+      } else if (saved === 'bottom') {
+        saveVisualizerState('bottom');
       }
     }).catch(() => {});
 

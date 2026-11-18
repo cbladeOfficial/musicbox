@@ -24,7 +24,7 @@ import {
   RefreshCw,
   ArrowUpCircle,
 } from 'lucide-react';
-import { AppSettings, ArtSource, ThemeId, VisualizerMode, TableDensity, TrackSortField, ViewMode, AlbumArtMode, UpdateCheckResult, PendingUpdateInfo, DownloadProgress } from '../types/music';
+import { AppSettings, ArtSource, ThemeId, VisualizerMode, VisualizerState, TableDensity, TrackSortField, ViewMode, AlbumArtMode, UpdateCheckResult, PendingUpdateInfo, DownloadProgress } from '../types/music';
 import { TauriBridge } from '../services/tauriBridge';
 
 interface SettingsViewProps {
@@ -928,6 +928,40 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <label className="text-xs text-zinc-300 block mb-2 font-medium">
+                      Visualizer View Mode
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: 'bottom', label: 'Bottom Strip', desc: 'Display visualizer docked above bottom player bar' },
+                        { id: 'regular_fullscreen', label: 'Regular Fullscreen', desc: 'Default to regular fullscreen visualizer view' },
+                      ].map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            onUpdateSettings({ visualizerState: item.id as VisualizerState });
+                            try {
+                              localStorage.setItem('musicbox_visualizer_state', item.id);
+                            } catch {}
+                            TauriBridge.saveSetting('visualizer_state', item.id).catch(() => {});
+                          }}
+                          className={`p-3 rounded-lg text-left transition-colors border ${
+                            (settings.visualizerState || 'bottom') === item.id
+                              ? 'bg-[var(--accent-color)]/15 border-[var(--accent-color)] text-white'
+                              : 'bg-[var(--surface-color)] border-[var(--border-color)] text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          <div className="text-xs font-semibold text-white">{item.label}</div>
+                          <div className="text-[11px] text-zinc-400 mt-0.5">{item.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-zinc-500 mt-1.5">
+                      Note: Totally fullscreen mode (F / Double-click) is temporary and never persisted across app restarts.
+                    </p>
                   </div>
 
                   <div className="pt-2">

@@ -106,6 +106,8 @@ export type VisualizerMode =
   | 'particles'
   | 'off';
 
+export type VisualizerState = 'regular_fullscreen' | 'bottom';
+
 export type ThemeId = 'feishin' | 'amoled' | 'nord' | 'catppuccin' | 'cyberpunk';
 
 export type ArtSource = 'itunes' | 'wikipedia' | 'lastfm' | 'jiosaavn';
@@ -126,6 +128,7 @@ export interface AppSettings {
   trackSortAsc: boolean;
   visualizerMode: VisualizerMode;
   visualizerHeight: number;
+  visualizerState?: VisualizerState;
   discordRpcEnabled: boolean;
   discordClientId: string;
   discordShowYear: boolean;
