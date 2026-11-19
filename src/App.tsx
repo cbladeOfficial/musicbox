@@ -63,7 +63,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   discordShowYear: true,
   artSourcePriority: ['itunes', 'wikipedia', 'jiosaavn', 'lastfm'],
   albumArtMode: 'local_and_online',
-  albumTrackOrder: 'track_number',
+  albumTrackOrder: 'alphabetical',
   lastfmEnabled: true,
   lastfmApiKey: '',
   lastfmSecret: '',
@@ -432,7 +432,7 @@ export function App() {
             parsed.albumArtMode = 'local_and_online';
           }
           if (!parsed.albumTrackOrder) {
-            parsed.albumTrackOrder = 'track_number';
+            parsed.albumTrackOrder = 'alphabetical';
           }
           if (parsed.autoUpdateEnabled === undefined) {
             parsed.autoUpdateEnabled = true;

@@ -23,7 +23,7 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
   album,
   streamPort,
   albumArtMode = 'local_and_online',
-  albumTrackOrder = 'track_number',
+  albumTrackOrder = 'alphabetical',
   onBack,
   onPlayTrack,
   onPlayAlbum,
