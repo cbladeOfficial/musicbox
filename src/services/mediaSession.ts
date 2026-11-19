@@ -42,11 +42,6 @@ export function updateMediaSessionMetadata(params: MediaSessionMetadataParams) {
       { src: params.artworkUrl, sizes: '128x128' },
       { src: params.artworkUrl, sizes: '96x96' }
     );
-  } else {
-    artwork.push(
-      { src: '/icon.png', sizes: '512x512', type: 'image/png' },
-      { src: '/app-icon.png', sizes: '128x128', type: 'image/png' }
-    );
   }
 
   try {

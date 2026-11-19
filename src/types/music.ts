@@ -167,3 +167,37 @@ export interface DownloadProgress {
   downloaded_bytes: number;
   total_bytes: number;
 }
+
+/**
+ * Sorts album tracks strictly following disc_number (ascending) and track_number (ascending 1..N).
+ * Unnumbered tracks follow numbered tracks in a deterministic natural order (title / path).
+ */
+export function sortAlbumTracks(tracks: TrackRecord[]): TrackRecord[] {
+  return [...tracks].sort((a, b) => {
+    // 1. Disc number ascending (defaulting to 1)
+    const discA = a.disc_number || 1;
+    const discB = b.disc_number || 1;
+    if (discA !== discB) return discA - discB;
+
+    // 2. Track number ascending (prioritize present positive track numbers)
+    const hasTrackA = a.track_number != null && a.track_number > 0;
+    const hasTrackB = b.track_number != null && b.track_number > 0;
+    if (hasTrackA && hasTrackB) {
+      if (a.track_number !== b.track_number) {
+        return (a.track_number as number) - (b.track_number as number);
+      }
+    } else if (hasTrackA && !hasTrackB) {
+      return -1; // Numbered tracks come first
+    } else if (!hasTrackA && hasTrackB) {
+      return 1; // Unnumbered tracks come after
+    }
+
+    // 3. Natural sort by title
+    const titleCmp = (a.title || '').localeCompare(b.title || '', undefined, { numeric: true, sensitivity: 'base' });
+    if (titleCmp !== 0) return titleCmp;
+
+    // 4. Stable tiebreaker: file path / id
+    return (a.path || '').localeCompare(b.path || '');
+  });
+}
+

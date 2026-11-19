@@ -13,6 +13,7 @@ pub mod win {
         DefSubclassProc, ITaskbarList3, SetCurrentProcessExplicitAppUserModelID,
         SetWindowSubclass, TaskbarList, THBF_ENABLED, THB_FLAGS, THB_ICON, THB_TOOLTIP,
         THUMBBUTTON, IShellLinkW, ShellLink,
+        SHChangeNotify, SHCNE_ASSOCCHANGED, SHCNE_CREATE, SHCNF_PATHW, SHCNF_IDLIST,
     };
     use windows::Win32::UI::Shell::PropertiesSystem::{
         IPropertyStore, SHGetPropertyStoreForWindow,
@@ -154,7 +155,7 @@ pub mod win {
         unsafe { DefSubclassProc(hwnd, msg, wparam, lparam) }
     }
 
-    fn create_or_update_shortcut(lnk_path: &std::path::Path, exe_path: &std::path::Path, aumid: &str) {
+    fn create_or_update_shortcut(lnk_path: &std::path::Path, exe_path: &std::path::Path, aumid: &str, icon_path: Option<&str>) {
         unsafe {
             if let Some(parent) = lnk_path.parent() {
                 let _ = std::fs::create_dir_all(parent);
@@ -172,7 +173,14 @@ pub mod win {
                     let wide_dir: Vec<u16> = dir.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
                     let _ = shell_link.SetWorkingDirectory(PCWSTR(wide_dir.as_ptr()));
                 }
-                let _ = shell_link.SetIconLocation(PCWSTR(wide_exe.as_ptr()), 0);
+
+                // If explicit .ico file is provided, set icon directly to that file; otherwise use exe
+                if let Some(ico) = icon_path {
+                    let wide_ico: Vec<u16> = std::ffi::OsStr::new(ico).encode_wide().chain(std::iter::once(0)).collect();
+                    let _ = shell_link.SetIconLocation(PCWSTR(wide_ico.as_ptr()), 0);
+                } else {
+                    let _ = shell_link.SetIconLocation(PCWSTR(wide_exe.as_ptr()), 0);
+                }
 
                 let desc: Vec<u16> = std::ffi::OsStr::new("MusicBox").encode_wide().chain(std::iter::once(0)).collect();
                 let _ = shell_link.SetDescription(PCWSTR(desc.as_ptr()));
@@ -211,6 +219,20 @@ pub mod win {
                 if let Ok(persist_file) = shell_link.cast::<IPersistFile>() {
                     let _ = persist_file.Save(PCWSTR(wide_lnk.as_ptr()), true);
                 }
+
+                // Notify Windows Shell immediately so AppResolver and Action Center reload the shortcut
+                SHChangeNotify(
+                    SHCNE_CREATE,
+                    SHCNF_PATHW,
+                    Some(wide_lnk.as_ptr() as *const _),
+                    None,
+                );
+                SHChangeNotify(
+                    SHCNE_ASSOCCHANGED,
+                    SHCNF_IDLIST,
+                    None,
+                    None,
+                );
             }
         }
     }
@@ -340,19 +362,22 @@ pub mod win {
         for id in ["com.cblade.musicbox", "MusicBox"] {
             let key = format!("Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings\\{}", id);
             set_reg_dword(HKEY_CURRENT_USER, &key, "ShowInActionCenter", 1);
+            set_reg_str(HKEY_CURRENT_USER, &key, Some("DisplayName"), "MusicBox");
+            set_reg_str(HKEY_CURRENT_USER, &key, Some("IconUri"), icon_primary);
+            set_reg_str(HKEY_CURRENT_USER, &key, Some("Icon"), icon_default);
         }
 
         // Create or update Start Menu shortcuts with PKEY_AppUserModel_ID = "com.cblade.musicbox"
         if let Some(ref exe_path) = exe_path_buf {
             if let Ok(appdata) = std::env::var("APPDATA") {
                 let lnk_path = std::path::Path::new(&appdata).join(r"Microsoft\Windows\Start Menu\Programs\MusicBox.lnk");
-                create_or_update_shortcut(&lnk_path, exe_path, "com.cblade.musicbox");
+                create_or_update_shortcut(&lnk_path, exe_path, "com.cblade.musicbox", icon_ico_path.as_deref());
             }
 
             if let Ok(progdata) = std::env::var("ProgramData") {
                 let lnk_path = std::path::Path::new(&progdata).join(r"Microsoft\Windows\Start Menu\Programs\MusicBox.lnk");
                 if lnk_path.exists() {
-                    create_or_update_shortcut(&lnk_path, exe_path, "com.cblade.musicbox");
+                    create_or_update_shortcut(&lnk_path, exe_path, "com.cblade.musicbox", icon_ico_path.as_deref());
                 }
             }
         }
@@ -438,7 +463,9 @@ pub mod win {
                     let mut pv = PROPVARIANT::default();
                     pv.Anonymous.Anonymous = std::mem::ManuallyDrop::new(inner);
 
-                    let _ = store.SetValue(&app_id_key, &pv);
+                    if store.SetValue(&app_id_key, &pv).is_ok() {
+                        let _ = store.Commit();
+                    }
                     let _ = PropVariantClear(&mut pv);
                 }
             }
@@ -604,11 +631,29 @@ pub mod win {
         };
         if let Some(controls) = lock.as_mut() {
             let dur = duration_secs.and_then(|d| if d > 0.0 { Some(std::time::Duration::from_secs_f64(d)) } else { None });
+
+            // If no cover_url is provided, fallback to the local app_icon.png as file:// URL
+            let fallback_cover = if cover_url.is_none() || cover_url.map(|s| s.is_empty()).unwrap_or(false) {
+                if let Ok(appdata) = std::env::var("APPDATA") {
+                    let p = std::path::Path::new(&appdata).join("com.cblade.musicbox").join("app_icon.png");
+                    if p.exists() {
+                        Some(format!("file://{}", p.to_string_lossy().replace('\\', "/")))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            let effective_cover = cover_url.or(fallback_cover.as_deref());
+
             let _ = controls.set_metadata(MediaMetadata {
                 title: Some(title),
                 artist,
                 album,
-                cover_url,
+                cover_url: effective_cover,
                 duration: dur,
             });
         }

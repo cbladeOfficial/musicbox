@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Play, Shuffle, Disc3, Clock, Sparkles, ArrowLeft, Volume2 } from 'lucide-react';
 import { AlbumItem } from './AlbumGrid';
-import { TrackRecord, AlbumInfo, AlbumArtMode } from '../types/music';
+import { TrackRecord, AlbumInfo, AlbumArtMode, sortAlbumTracks } from '../types/music';
 import { MetadataService } from '../services/metadataService';
 import { getCoverUrl } from '../utils/cover';
 import { ArtistLinks } from './ArtistLinks';
@@ -32,6 +32,12 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
   const [albumInfo, setAlbumInfo] = useState<AlbumInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [imgError, setImgError] = useState(false);
+
+  const sortedTracks = React.useMemo(() => sortAlbumTracks(album.tracks), [album.tracks]);
+  const sortedAlbum = React.useMemo(() => ({
+    ...album,
+    tracks: sortedTracks,
+  }), [album, sortedTracks]);
 
   useEffect(() => {
     let isMounted = true;
@@ -112,14 +118,14 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
 
           <div className="flex items-center space-x-3 pt-2">
             <button
-              onClick={() => onPlayAlbum(album, false)}
+              onClick={() => onPlayAlbum(sortedAlbum, false)}
               className="flex items-center space-x-2 px-5 py-2.5 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white text-sm font-medium shadow-md transition-opacity active:opacity-75"
             >
               <Play className="w-4 h-4 fill-current" />
               <span>Play Album</span>
             </button>
             <button
-              onClick={() => onPlayAlbum(album, true)}
+              onClick={() => onPlayAlbum(sortedAlbum, true)}
               className="flex items-center space-x-2 px-4 py-2.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-medium transition-colors duration-150"
             >
               <Shuffle className="w-4 h-4" />
@@ -155,12 +161,12 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
             <Clock className="w-3.5 h-3.5 inline" />
           </div>
         </div>
-        {album.tracks.map((t, idx) => {
+        {sortedTracks.map((t, idx) => {
           const isCurrent = currentTrackId === t.id;
           return (
             <div
               key={t.id}
-              onDoubleClick={() => onPlayTrack(t, album)}
+              onDoubleClick={() => onPlayTrack(t, sortedAlbum)}
               className={`group flex items-center px-4 py-3 text-[14px] rounded-lg cursor-pointer transition-colors outline-none select-none ${
                 isCurrent
                   ? 'text-[var(--accent-color)] font-medium bg-[var(--accent-color)]/15 shadow-sm'
@@ -174,7 +180,7 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
                   <>
                     <span className="group-hover:hidden">{t.track_number || idx + 1}</span>
                     <button
-                      onClick={() => onPlayTrack(t, album)}
+                      onClick={() => onPlayTrack(t, sortedAlbum)}
                       className="hidden group-hover:block text-white hover:text-[var(--accent-color)] transition-colors"
                     >
                       <Play className="w-3.5 h-3.5 fill-current" />
