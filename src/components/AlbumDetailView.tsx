@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Play, Shuffle, Disc3, Clock, Sparkles, ArrowLeft, Volume2 } from 'lucide-react';
 import { AlbumItem } from './AlbumGrid';
-import { TrackRecord, AlbumInfo, AlbumArtMode, sortAlbumTracks } from '../types/music';
+import { TrackRecord, AlbumInfo, AlbumArtMode, AlbumTrackOrder, sortAlbumTracks } from '../types/music';
 import { MetadataService } from '../services/metadataService';
 import { getCoverUrl } from '../utils/cover';
 import { ArtistLinks } from './ArtistLinks';
@@ -10,6 +10,7 @@ interface AlbumDetailViewProps {
   album: AlbumItem;
   streamPort: number;
   albumArtMode?: AlbumArtMode;
+  albumTrackOrder?: AlbumTrackOrder;
   onBack: () => void;
   onPlayTrack: (track: TrackRecord, album?: AlbumItem) => void;
   onPlayAlbum: (album: AlbumItem, shuffle?: boolean) => void;
@@ -22,6 +23,7 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
   album,
   streamPort,
   albumArtMode = 'local_and_online',
+  albumTrackOrder = 'track_number',
   onBack,
   onPlayTrack,
   onPlayAlbum,
@@ -33,7 +35,7 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
   const [loading, setLoading] = useState(false);
   const [imgError, setImgError] = useState(false);
 
-  const sortedTracks = React.useMemo(() => sortAlbumTracks(album.tracks), [album.tracks]);
+  const sortedTracks = React.useMemo(() => sortAlbumTracks(album.tracks, albumTrackOrder), [album.tracks, albumTrackOrder]);
   const sortedAlbum = React.useMemo(() => ({
     ...album,
     tracks: sortedTracks,
@@ -178,7 +180,9 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
                   <Volume2 className="w-4 h-4 text-[var(--accent-color)] animate-pulse" />
                 ) : (
                   <>
-                    <span className="group-hover:hidden">{t.track_number || idx + 1}</span>
+                    <span className="group-hover:hidden">
+                      {albumTrackOrder === 'alphabetical' ? idx + 1 : (t.track_number || idx + 1)}
+                    </span>
                     <button
                       onClick={() => onPlayTrack(t, sortedAlbum)}
                       className="hidden group-hover:block text-white hover:text-[var(--accent-color)] transition-colors"

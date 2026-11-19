@@ -23,8 +23,9 @@ import {
   AlertCircle,
   RefreshCw,
   ArrowUpCircle,
+  ListOrdered,
 } from 'lucide-react';
-import { AppSettings, ArtSource, ThemeId, VisualizerMode, VisualizerState, TableDensity, TrackSortField, ViewMode, AlbumArtMode, UpdateCheckResult, PendingUpdateInfo, DownloadProgress } from '../types/music';
+import { AppSettings, ArtSource, ThemeId, VisualizerMode, VisualizerState, TableDensity, TrackSortField, ViewMode, AlbumArtMode, AlbumTrackOrder, UpdateCheckResult, PendingUpdateInfo, DownloadProgress } from '../types/music';
 import { TauriBridge } from '../services/tauriBridge';
 
 interface SettingsViewProps {
@@ -264,7 +265,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             }`}
           >
             <Activity className="w-4 h-4 text-[var(--accent-color)]" />
-            <span>Audio & Visualizer</span>
+            <span>Playback & Audio</span>
           </button>
 
           <button
@@ -888,9 +889,63 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           )}
 
-          {/* ================= Audio & Visualizer Tab ================= */}
+          {/* ================= Playback & Audio Tab ================= */}
           {activeTab === 'audio' && (
             <div className="space-y-6">
+              {/* Album Playback Order */}
+              <div className="space-y-3 pb-6 border-b border-[var(--border-color)]">
+                <div className="flex items-center space-x-2">
+                  <ListOrdered className="w-4 h-4 text-[var(--accent-color)]" />
+                  <h2 className="text-base font-medium text-white">Album Playback Order</h2>
+                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Choose how tracks are sorted and queued when playing albums or using Repeat All within an album.
+                </p>
+
+                <div className="pt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {[
+                      {
+                        id: 'track_number',
+                        label: 'Track Number Priority (Default)',
+                        desc: 'Albums with embedded track numbers play in numerical sequence (1, 2, 3...). Unnumbered tracks follow alphabetically by title.',
+                      },
+                      {
+                        id: 'alphabetical',
+                        label: 'Alphabetical (A–Z)',
+                        desc: 'Strictly sort all album tracks alphabetically by song title (A–Z), regardless of embedded ID3 track numbers (and not by filename).',
+                      },
+                    ].map((item) => {
+                      const isSelected = (settings.albumTrackOrder || 'track_number') === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            onUpdateSettings({ albumTrackOrder: item.id as AlbumTrackOrder });
+                            try {
+                              localStorage.setItem('musicbox_album_track_order', item.id);
+                            } catch {}
+                            TauriBridge.saveSetting('album_track_order', item.id).catch(() => {});
+                          }}
+                          className={`p-3.5 rounded-lg text-left transition-colors border ${
+                            isSelected
+                              ? 'bg-[var(--accent-color)]/15 border-[var(--accent-color)] text-white shadow-sm'
+                              : 'bg-[var(--surface-color)] border-[var(--border-color)] text-zinc-400 hover:text-white hover:border-zinc-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-white">{item.label}</span>
+                            {isSelected && <Check className="w-3.5 h-3.5 text-[var(--accent-color)]" />}
+                          </div>
+                          <div className="text-[11px] text-zinc-400 mt-1 leading-relaxed">{item.desc}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Audio Visualizer Engine */}
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
                   <Activity className="w-4 h-4 text-[var(--accent-color)]" />

@@ -3,7 +3,7 @@
  * Provides rich metadata (Title, Artist, Album, Artwork), playback status, and Action Center controls.
  */
 
-import { TauriBridge } from './tauriBridge';
+import { TauriBridge, isTauri } from './tauriBridge';
 
 export interface MediaSessionMetadataParams {
   title: string;
@@ -32,7 +32,11 @@ export function updateMediaSessionMetadata(params: MediaSessionMetadataParams) {
     durationSecs: params.durationSecs,
   }).catch(() => {});
 
-  if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+  // When running inside Tauri (Windows desktop), native SMTC is managed by MusicBox.exe via souvlaki
+  // with the explicit AppUserModelId ("com.cblade.musicbox").
+  // Calling navigator.mediaSession inside WebView2 causes Chromium (msedgewebview2.exe) to register
+  // an anonymous media session that Windows Action Center displays as "Unknown app".
+  if (isTauri() || typeof window === 'undefined' || !('mediaSession' in navigator)) return;
 
   const artwork: MediaImage[] = [];
   if (params.artworkUrl) {
@@ -60,7 +64,7 @@ export function updateMediaSessionPlaybackState(isPlaying: boolean) {
   // Sync with native SMTC in Rust (MusicBox.exe)
   TauriBridge.updateSmtcPlayback(isPlaying).catch(() => {});
 
-  if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+  if (isTauri() || typeof window === 'undefined' || !('mediaSession' in navigator)) return;
   try {
     navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
   } catch (err) {
@@ -74,7 +78,7 @@ export function updateMediaSessionPosition(currentTime: number, duration: number
     TauriBridge.updateSmtcPlayback(isPlaying, currentTime).catch(() => {});
   }
 
-  if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+  if (isTauri() || typeof window === 'undefined' || !('mediaSession' in navigator)) return;
   if (!('setPositionState' in navigator.mediaSession)) return;
   if (!duration || isNaN(duration) || !isFinite(duration) || duration <= 0) return;
 
@@ -91,7 +95,9 @@ export function updateMediaSessionPosition(currentTime: number, duration: number
 }
 
 export function setupMediaSessionActions(callbacks: MediaSessionActionCallbacks): () => void {
-  if (typeof window === 'undefined' || !('mediaSession' in navigator)) {
+  // In Tauri desktop, media keys and SMTC actions are handled directly via native souvlaki in Rust
+  // and emitted to App.tsx via Tauri events (media-toggle-play, media-next, media-previous, etc.).
+  if (isTauri() || typeof window === 'undefined' || !('mediaSession' in navigator)) {
     return () => {};
   }
 

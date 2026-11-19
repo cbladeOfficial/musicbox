@@ -63,6 +63,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   discordShowYear: true,
   artSourcePriority: ['itunes', 'wikipedia', 'jiosaavn', 'lastfm'],
   albumArtMode: 'local_and_online',
+  albumTrackOrder: 'track_number',
   lastfmEnabled: true,
   lastfmApiKey: '',
   lastfmSecret: '',
@@ -430,6 +431,9 @@ export function App() {
           if (!parsed.albumArtMode) {
             parsed.albumArtMode = 'local_and_online';
           }
+          if (!parsed.albumTrackOrder) {
+            parsed.albumTrackOrder = 'track_number';
+          }
           if (parsed.autoUpdateEnabled === undefined) {
             parsed.autoUpdateEnabled = true;
           }
@@ -653,7 +657,7 @@ export function App() {
               type: 'album',
               name: albName,
               artist: track.album_artist || track.artist || 'Unknown Artist',
-              tracks: sortAlbumTracks(albTracks),
+              tracks: sortAlbumTracks(albTracks, settings.albumTrackOrder),
             };
             setActiveContext(albumContext);
             activeContextRef.current = albumContext;
@@ -1519,12 +1523,12 @@ export function App() {
     }
 
     for (const item of map.values()) {
-      item.tracks = sortAlbumTracks(item.tracks);
+      item.tracks = sortAlbumTracks(item.tracks, settings.albumTrackOrder);
       item.trackCount = item.tracks.length;
     }
 
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [tracks]);
+  }, [tracks, settings.albumTrackOrder]);
 
   // Group tracks into Artists (properly indexing each individual artist when tracks feature multiple artists)
   const artistGroups = useMemo(() => {
@@ -1739,7 +1743,7 @@ export function App() {
   const handlePlayAlbum = useCallback(
     (album: AlbumItem, shuffle = false) => {
       if (album.tracks.length === 0) return;
-      const albumTracks = shuffle ? [...album.tracks].sort(() => Math.random() - 0.5) : sortAlbumTracks(album.tracks);
+      const albumTracks = shuffle ? [...album.tracks].sort(() => Math.random() - 0.5) : sortAlbumTracks(album.tracks, settings.albumTrackOrder);
       const albumContext: ActivePlaybackContext = {
         type: 'album',
         name: album.name,
@@ -1754,7 +1758,7 @@ export function App() {
       autoQueueRef.current = [];
       handlePlayTrack(albumTracks[0], false, true);
     },
-    [handlePlayTrack]
+    [handlePlayTrack, settings.albumTrackOrder]
   );
 
   const handlePlayTrackInAlbum = useCallback(
@@ -1763,7 +1767,7 @@ export function App() {
         handlePlayTrack(track, false, false);
         return;
       }
-      const sorted = sortAlbumTracks(album.tracks);
+      const sorted = sortAlbumTracks(album.tracks, settings.albumTrackOrder);
       const albumContext: ActivePlaybackContext = {
         type: 'album',
         name: album.name,
@@ -1778,7 +1782,7 @@ export function App() {
       autoQueueRef.current = [];
       handlePlayTrack(track, false, true);
     },
-    [handlePlayTrack]
+    [handlePlayTrack, settings.albumTrackOrder]
   );
 
   const handlePlayAlbumByName = useCallback(
@@ -2180,6 +2184,7 @@ export function App() {
                 album={selectedAlbum}
                 streamPort={streamPort}
                 albumArtMode={settings.albumArtMode}
+                albumTrackOrder={settings.albumTrackOrder}
                 onBack={() => setSelectedAlbum(null)}
                 onPlayTrack={handlePlayTrackInAlbum}
                 onPlayAlbum={handlePlayAlbum}

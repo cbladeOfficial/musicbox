@@ -116,6 +116,8 @@ export type TrackSortField = 'title' | 'artist' | 'album' | 'duration' | 'date_a
 
 export type AlbumArtMode = 'local_and_online' | 'local_only' | 'disabled';
 
+export type AlbumTrackOrder = 'track_number' | 'alphabetical';
+
 export interface AppSettings {
   defaultStartingPage?: ViewMode;
   musicFolders: string[];
@@ -134,6 +136,7 @@ export interface AppSettings {
   discordShowYear: boolean;
   artSourcePriority: ArtSource[];
   albumArtMode: AlbumArtMode;
+  albumTrackOrder?: AlbumTrackOrder;
   lastfmEnabled: boolean;
   lastfmApiKey: string;
   lastfmSecret: string;
@@ -172,8 +175,28 @@ export interface DownloadProgress {
  * Sorts album tracks strictly following disc_number (ascending) and track_number (ascending 1..N).
  * Unnumbered tracks follow numbered tracks in a deterministic natural order (title / path).
  */
-export function sortAlbumTracks(tracks: TrackRecord[]): TrackRecord[] {
+export function sortAlbumTracks(tracks: TrackRecord[], order: AlbumTrackOrder = 'track_number'): TrackRecord[] {
   return [...tracks].sort((a, b) => {
+    if (order === 'alphabetical') {
+      // Strictly sort by song title (A-Z) regardless of track numbers and not by filename
+      const titleA = (a.title || '').trim();
+      const titleB = (b.title || '').trim();
+      const titleCmp = titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' });
+      if (titleCmp !== 0) return titleCmp;
+
+      // Tiebreakers
+      const discA = a.disc_number || 1;
+      const discB = b.disc_number || 1;
+      if (discA !== discB) return discA - discB;
+
+      const trackA = a.track_number || 0;
+      const trackB = b.track_number || 0;
+      if (trackA !== trackB) return trackA - trackB;
+
+      return (a.path || '').localeCompare(b.path || '');
+    }
+
+    // Default 'track_number' priority:
     // 1. Disc number ascending (defaulting to 1)
     const discA = a.disc_number || 1;
     const discB = b.disc_number || 1;
@@ -192,8 +215,8 @@ export function sortAlbumTracks(tracks: TrackRecord[]): TrackRecord[] {
       return 1; // Unnumbered tracks come after
     }
 
-    // 3. Natural sort by title
-    const titleCmp = (a.title || '').localeCompare(b.title || '', undefined, { numeric: true, sensitivity: 'base' });
+    // 3. Natural sort by title (A-Z)
+    const titleCmp = (a.title || '').trim().localeCompare((b.title || '').trim(), undefined, { numeric: true, sensitivity: 'base' });
     if (titleCmp !== 0) return titleCmp;
 
     // 4. Stable tiebreaker: file path / id
