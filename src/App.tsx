@@ -63,7 +63,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   discordShowYear: true,
   artSourcePriority: ['itunes', 'wikipedia', 'jiosaavn', 'lastfm'],
   albumArtMode: 'local_and_online',
-  albumTrackOrder: 'alphabetical',
+  albumTrackOrder: 'track_number',
   lastfmEnabled: true,
   lastfmApiKey: '',
   lastfmSecret: '',
@@ -432,7 +432,7 @@ export function App() {
             parsed.albumArtMode = 'local_and_online';
           }
           if (!parsed.albumTrackOrder) {
-            parsed.albumTrackOrder = 'alphabetical';
+            parsed.albumTrackOrder = 'track_number';
           }
           if (parsed.autoUpdateEnabled === undefined) {
             parsed.autoUpdateEnabled = true;
@@ -2185,6 +2185,7 @@ export function App() {
                 streamPort={streamPort}
                 albumArtMode={settings.albumArtMode}
                 albumTrackOrder={settings.albumTrackOrder}
+                onChangeTrackOrder={(newOrder) => handleUpdateSettings({ albumTrackOrder: newOrder })}
                 onBack={() => setSelectedAlbum(null)}
                 onPlayTrack={handlePlayTrackInAlbum}
                 onPlayAlbum={handlePlayAlbum}

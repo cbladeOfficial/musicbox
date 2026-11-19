@@ -175,7 +175,7 @@ export interface DownloadProgress {
  * Sorts album tracks strictly following disc_number (ascending) and track_number (ascending 1..N).
  * Unnumbered tracks follow numbered tracks in a deterministic natural order (title / path).
  */
-export function sortAlbumTracks(tracks: TrackRecord[], order: AlbumTrackOrder = 'alphabetical'): TrackRecord[] {
+export function sortAlbumTracks(tracks: TrackRecord[], order: AlbumTrackOrder = 'track_number'): TrackRecord[] {
   return [...tracks].sort((a, b) => {
     if (order === 'alphabetical') {
       // Strictly sort by song title (A-Z) regardless of track numbers and not by filename

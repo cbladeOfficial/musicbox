@@ -906,17 +906,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {[
                       {
-                        id: 'alphabetical',
-                        label: 'Alphabetical (A–Z) (Default)',
-                        desc: 'Strictly sort all album tracks alphabetically by song title (A–Z), regardless of embedded ID3 track numbers (and not by filename).',
-                      },
-                      {
                         id: 'track_number',
-                        label: 'Track Number Priority',
+                        label: 'Track Number Priority (Default)',
                         desc: 'Albums with embedded track numbers play in numerical sequence (1, 2, 3...). Unnumbered tracks follow alphabetically by title.',
                       },
+                      {
+                        id: 'alphabetical',
+                        label: 'Alphabetical (A–Z)',
+                        desc: 'Strictly sort all album tracks alphabetically by song title (A–Z), regardless of embedded ID3 track numbers (and not by filename).',
+                      },
                     ].map((item) => {
-                      const isSelected = (settings.albumTrackOrder || 'alphabetical') === item.id;
+                      const isSelected = (settings.albumTrackOrder || 'track_number') === item.id;
                       return (
                         <button
                           key={item.id}

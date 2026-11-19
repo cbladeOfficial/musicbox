@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Play, Shuffle, Disc3, Clock, Sparkles, ArrowLeft, Volume2 } from 'lucide-react';
+import { Play, Shuffle, Disc3, Clock, Sparkles, ArrowLeft, Volume2, ArrowUpDown } from 'lucide-react';
 import { AlbumItem } from './AlbumGrid';
 import { TrackRecord, AlbumInfo, AlbumArtMode, AlbumTrackOrder, sortAlbumTracks } from '../types/music';
 import { MetadataService } from '../services/metadataService';
@@ -11,6 +11,7 @@ interface AlbumDetailViewProps {
   streamPort: number;
   albumArtMode?: AlbumArtMode;
   albumTrackOrder?: AlbumTrackOrder;
+  onChangeTrackOrder?: (newOrder: AlbumTrackOrder) => void;
   onBack: () => void;
   onPlayTrack: (track: TrackRecord, album?: AlbumItem) => void;
   onPlayAlbum: (album: AlbumItem, shuffle?: boolean) => void;
@@ -23,7 +24,8 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
   album,
   streamPort,
   albumArtMode = 'local_and_online',
-  albumTrackOrder = 'alphabetical',
+  albumTrackOrder = 'track_number',
+  onChangeTrackOrder,
   onBack,
   onPlayTrack,
   onPlayAlbum,
@@ -118,7 +120,7 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
             <span>{mins} mins</span>
           </div>
 
-          <div className="flex items-center space-x-3 pt-2">
+          <div className="flex flex-wrap items-center gap-3 pt-2">
             <button
               onClick={() => onPlayAlbum(sortedAlbum, false)}
               className="flex items-center space-x-2 px-5 py-2.5 rounded-md bg-[var(--accent-color)] hover:brightness-110 text-white text-sm font-medium shadow-md transition-opacity active:opacity-75"
@@ -133,6 +135,24 @@ export const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({
               <Shuffle className="w-4 h-4" />
               <span>Shuffle</span>
             </button>
+            {onChangeTrackOrder && (
+              <button
+                onClick={() => {
+                  const nextOrder: AlbumTrackOrder =
+                    albumTrackOrder === 'alphabetical' ? 'track_number' : 'alphabetical';
+                  onChangeTrackOrder(nextOrder);
+                }}
+                className="flex items-center space-x-2 px-3.5 py-2.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 hover:text-white text-xs font-medium transition-colors duration-150"
+                title={`Album order: ${
+                  albumTrackOrder === 'alphabetical' ? 'Alphabetical (A–Z)' : 'Track Number Priority'
+                }. Click to toggle.`}
+              >
+                <ArrowUpDown className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+                <span>
+                  {albumTrackOrder === 'alphabetical' ? 'Order: Alphabetical (A–Z)' : 'Order: Track Number'}
+                </span>
+              </button>
+            )}
           </div>
         </div>
       </div>
